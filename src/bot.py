@@ -25,7 +25,7 @@ class ChaseBot:
         self.jiggle = jiggle
         self.rng = np.random.default_rng(seed)
 
-    def act(self, state, players) -> np.ndarray:
+    def act(self, state, players, n_red: int = 1) -> np.ndarray:
         """state: GameState; players: index array of columns to control -> bins (N, K, 3)."""
         ball = state.ball_pos[:, None, :]  # (N, 1, 2)
         pos = state.player_pos[:, players, :]  # (N, K, 2)
@@ -33,6 +33,12 @@ class ChaseBot:
         dist = np.hypot(d[..., 0], d[..., 1])
         ang = np.arctan2(d[..., 1], d[..., 0]) + self.rng.normal(0.0, self.jiggle, dist.shape)
         dx, dy = np.cos(ang), np.sin(ang)
+        # In HaxballGym, actions are in policy frame (un-mirrored by env.step for blue).
+        # For Blue players, forward (towards ball/goal on the left) is bin 2 (+1 in policy frame).
+        p_arr = np.asarray(players)
+        is_blue = p_arr >= n_red
+        if np.any(is_blue):
+            dx[..., is_blue] = -dx[..., is_blue]
         bx = np.where(dx > 0.33, 2, np.where(dx < -0.33, 0, 1))
         by = np.where(dy > 0.33, 2, np.where(dy < -0.33, 0, 1))
         kick = (dist < self.kick_dist).astype(np.int64)

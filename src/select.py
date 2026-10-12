@@ -1,15 +1,15 @@
-"""Pick the strongest checkpoint from a training run, then make it the shipped model.
+"""Pick the strongest checkpoint from a training run via Round-Robin tournament.
 
     uv run src/select.py            # round-robin models/ckpts/*.pt (+ model_final.pt), winner -> model.pt
 
-net-vs-chase saturates and is noisy, so `train.py` can't reliably pick the best checkpoint
-while training. This plays every saved checkpoint against every other (head-to-head, both
-colors; goals counted from `state.scored`, so it's reward-independent) and copies the one with
-the best overall goal share to `models/model.pt` (+ `meta.json`). No external bots involved.
+Plays every saved checkpoint against every other (head-to-head, both colors; goals counted
+from `state.scored`, so it's reward-independent) and copies the one with the best overall
+goal share to `models/model.pt` (+ `meta.json`).
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -36,9 +36,9 @@ def load(path: Path):
 
 
 @torch.no_grad()
-def h2h(a, b, n_envs=256, steps=400):
+def h2h(a, b, stadium: str | None = None, n_envs: int = 128, steps: int = 350):
     """Goals (a, b) with `a`=red, `b`=blue over one set of games."""
-    env = make_default_env(n_envs, 1, 1)
+    env = make_default_env(n_envs, 1, 1, stadium=stadium)
     obs = env.reset()
     od = obs.shape[-1]
     ag = bg = 0
@@ -53,36 +53,68 @@ def h2h(a, b, n_envs=256, steps=400):
 
 
 def main():
+    meta_path = MODELS / "meta_final.json"
+    default_stadium = "futsal-classic"
+    if meta_path.exists():
+        try:
+            default_stadium = json.loads(meta_path.read_text()).get("stadium", default_stadium)
+        except Exception:
+            pass
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--stadium", default=default_stadium, help="stadium name or .hbs path")
+    ap.add_argument("--envs", type=int, default=128, help="parallel tournament games")
+    ap.add_argument("--steps", type=int, default=300, help="steps per match")
+    args = ap.parse_args()
+
     paths = sorted((MODELS / "ckpts").glob("it*.pt"), key=lambda p: int(p.stem[2:]))
-    for extra in ("model.pt", "model_final.pt"):  # also consider best-by-chase + final
-        if (MODELS / extra).exists():
-            paths.append(MODELS / extra)
+    if (MODELS / "model_final.pt").exists() and (MODELS / "model_final.pt") not in paths:
+        paths.append(MODELS / "model_final.pt")
+
     if len(paths) < 2:
         print("need >=2 checkpoints in models/ckpts/ (train with --save-every)")
         return
+
+    print(f"\n{'='*70}")
+    print(f"TOURNAMENT SELECTION — {len(paths)} Checkpoints on {args.stadium}")
+    print(f"{'='*70}\n")
+
     nets = {p.stem: load(p) for p in paths}
     gf = dict.fromkeys(nets, 0)
     ga = dict.fromkeys(nets, 0)
     names = list(nets)
-    for i, x in enumerate(names):  # round-robin, each pair once (both colors)
+
+    # Round-robin, each pair once with color swap
+    total_pairs = len(names) * (len(names) - 1) // 2
+    pair_count = 0
+    for i, x in enumerate(names):
         for y in names[i + 1 :]:
-            xr, yb = h2h(nets[x], nets[y])  # x red, y blue
-            yr, xb = h2h(nets[y], nets[x])  # swap colors
+            pair_count += 1
+            xr, yb = h2h(nets[x], nets[y], stadium=args.stadium, n_envs=args.envs, steps=args.steps)
+            yr, xb = h2h(nets[y], nets[x], stadium=args.stadium, n_envs=args.envs, steps=args.steps)
             gf[x] += xr + xb
             ga[x] += yb + yr
             gf[y] += yr + yb
             ga[y] += xb + xr
 
-    ranked = sorted(names, key=lambda k: gf[k] / max(gf[k] + ga[k], 1), reverse=True)
-    print("checkpoint            goal-share")
-    for k in ranked:
-        print(f"  {k:18s}  {gf[k] / max(gf[k] + ga[k], 1):.3f}")
+    ranked = sorted(names, key=lambda k: (gf[k] / max(gf[k] + ga[k], 1), gf[k] - ga[k]), reverse=True)
+    print(f"{'RANK':<5} {'CHECKPOINT':<18} {'GOAL SHARE':<12} {'GOLS PRO':<10} {'GOLS CONTRA':<12} {'SALDO':<8}")
+    print("-" * 70)
+    for rank, k in enumerate(ranked, 1):
+        share = gf[k] / max(gf[k] + ga[k], 1)
+        net_diff = gf[k] - ga[k]
+        print(f"{rank:<5} {k:<18} {share:<12.3f} {gf[k]:<10} {ga[k]:<12} {net_diff:+<8d}")
+    print("-" * 70)
+
     win = ranked[0]
     torch.save(nets[win].state_dict(), MODELS / "model.pt")
-    meta = json.loads((MODELS / "meta_final.json").read_text())  # arch is identical across ckpts
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+    else:
+        meta = {}
     meta["selected"] = win
     (MODELS / "meta.json").write_text(json.dumps(meta))
-    print(f"\nstrongest = {win} -> copied to models/model.pt")
+    print(f"\n🏆 Campeão Absoluto: [{win}] -> copiado para models/model.pt e models/meta.json\n")
 
 
 if __name__ == "__main__":
