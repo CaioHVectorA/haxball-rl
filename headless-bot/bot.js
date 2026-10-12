@@ -162,15 +162,12 @@ function controlBot(room) {
   }
   const key = Utils.keyState(sx * dx, CONFIG.flipY ? -dy : dy, kick);
   after(() => {
-    if (rocket && kick) {
-      // rapid-fire ("rocket"): release the kick bit then re-press every tick so the ball is
-      // re-kicked continuously — the deploy-side equivalent of the engine's intra-frame re-arm.
+    if (kick) {
+      // Pulse kick: release bit then re-press every tick so Haxball re-arms and executes the kick!
       room.fakeSendPlayerInput(key & ~16, BOT_ID);
       room.fakeSendPlayerInput(key, BOT_ID);
       lastKey = key;
-    } else if (key !== lastKey || kick !== me.isKicking) {
-      // to re-kick when the keystate is unchanged, release the kick bit first
-      if (key === lastKey && kick && !me.isKicking) room.fakeSendPlayerInput(key & ~16, BOT_ID);
+    } else {
       room.fakeSendPlayerInput(key, BOT_ID);
       lastKey = key;
     }

@@ -27,6 +27,7 @@ from haxballgym import (
     GoalCondition,
     GoalReward,
     TimeoutCondition,
+    TouchVelocityToGoal,
     TransitionEngine,
     VelocityBallToGoal,
     VelocityPlayerToBall,
@@ -71,7 +72,7 @@ def create_training_env(n_envs: int, n_red: int, n_blue: int, stadium: str | Non
         action_parser=DiscreteAction(kick_values=2),
         reward_fn=CombinedReward(
             (VelocityPlayerToBall(), 1.0),
-            (VelocityBallToGoal(), 1.0),
+            (TouchVelocityToGoal(scale=1.5), 1.0),
             (GoalReward(), 5.0),
         ),
         termination_cond=GoalCondition(),
@@ -91,7 +92,7 @@ def create_eval_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, t
         action_parser=DiscreteAction(kick_values=2),
         reward_fn=CombinedReward(
             (VelocityPlayerToBall(), 1.0),
-            (VelocityBallToGoal(), 1.0),
+            (TouchVelocityToGoal(scale=1.5), 1.0),
             (GoalReward(), 5.0),
         ),
         termination_cond=GoalCondition(),
