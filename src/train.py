@@ -1,14 +1,7 @@
-"""Train a WazBot by self-play PPO — self-contained, one command:
+"""Train a WazBot by self-play PPO — calibrated with longer temporal horizons
+and rich randomized in-game scenarios.
 
-    uv run src/train.py                                  # 1v1 on classic, ~45 min on a laptop CPU
-    uv run src/train.py --iters 6000 --stadium big --red 3 --blue 3
-
-The learner controls RED; the opponent (BLUE) is a FROZEN copy of the policy — usually the
-current one, sometimes an older snapshot from a pool. Training against frozen past selves
-(instead of a live mirror of itself) is what keeps self-play stable: a plain live mirror
-co-adapts and collapses. The observation is goal-relative, so a red-trained net plays either
-side at deploy time. Reward = HaxballGym's default (move-to-ball + ball-to-goal shaping with a
-goal reward weighted far higher). Saves the best checkpoint to `models/model.pt` (+ `meta.json`).
+    uv run src/train.py --stadium futsal-classic --iters 1500 --save-every 250
 """
 
 from __future__ import annotations
@@ -24,37 +17,105 @@ import torch
 import torch.nn as nn
 
 from bot import ChaseBot
-from haxballgym import BLUE, RED, make_default_env
+from haxballgym import (
+    BLUE,
+    RED,
+    CombinedReward,
+    DefaultObs,
+    DiscreteAction,
+    Env,
+    GoalCondition,
+    GoalReward,
+    TimeoutCondition,
+    TransitionEngine,
+    VelocityBallToGoal,
+    VelocityPlayerToBall,
+)
+from haxballgym.mutator import MultiSetter, RandomStateMutator, StateSetterMutator
 from model import Policy
 from replay import dump_replay
 
-# PPO / GAE hyperparameters (CleanRL-style; the defaults that worked best in our ablations).
-T, EPOCHS, N_MB = 64, 4, 4  # rollout length, update epochs, minibatches per epoch
+# PPO / GAE hyperparameters
+T, EPOCHS, N_MB = 64, 6, 4  # rollout length, 6 update epochs, 4 minibatches per epoch
 CLIP, VF_COEF, MAX_GRAD, LAM = 0.2, 0.5, 0.5, 0.95
-LR, ENT0, ENT1 = 3e-4, 0.01, 0.01  # constant entropy — sustained exploration prevents collapse
-HALF_LIFE_S = 5.0  # discount: value 5 s of play at half weight
-# Snapshot pool: add every 20 iters, keep 40 (spans ~800 iters), face a PAST self 50% of games.
-# High diversity is the anti-collapse lever — the learner can't co-adapt with its current mirror.
+LR, ENT0, ENT1 = 3e-4, 0.02, 0.01  # annealing exploration entropy
+HALF_LIFE_S = 12.0  # discount: 12 seconds half-life (allows long counter-attacks and build-up)
 SNAPSHOT_EVERY, POOL_SIZE, POOL_PROB = 20, 40, 0.5
 
 
+class KickoffSetter(StateSetterMutator):
+    """Standard Haxball kickoff positions (spawns + motionless ball)."""
+
+    def sample(self, engine: TransitionEngine, n: int):
+        bp = np.zeros((n, 2))
+        bv = np.zeros((n, 2))
+        pp = np.zeros((n, engine.n_players, 2))
+        pp[:, 0] = [-200.0, 0.0]  # Red
+        if engine.n_players > 1:
+            pp[:, 1] = [200.0, 0.0]  # Blue
+        pv = np.zeros((n, engine.n_players, 2))
+        return bp, bv, pp, pv
+
+
+def create_training_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int):
+    """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
+    engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
+    obs_builder = DefaultObs(pos_coef="auto")
+    mutator = MultiSetter(
+        [KickoffSetter(), RandomStateMutator(ball_speed=3.0)],
+        weights=[0.4, 0.6],
+    )
+    return Env(
+        engine=engine,
+        obs_builder=obs_builder,
+        action_parser=DiscreteAction(kick_values=2),
+        reward_fn=CombinedReward(
+            (VelocityPlayerToBall(), 1.0),
+            (VelocityBallToGoal(), 1.0),
+            (GoalReward(), 5.0),
+        ),
+        termination_cond=GoalCondition(),
+        truncation_cond=TimeoutCondition(2000),
+        state_mutator=mutator,
+    )
+
+
+def create_eval_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int):
+    """Creates evaluation environment with standard kickoff resets."""
+    engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
+    obs_builder = DefaultObs(pos_coef="auto")
+    mutator = KickoffSetter()
+    return Env(
+        engine=engine,
+        obs_builder=obs_builder,
+        action_parser=DiscreteAction(kick_values=2),
+        reward_fn=CombinedReward(
+            (VelocityPlayerToBall(), 1.0),
+            (VelocityBallToGoal(), 1.0),
+            (GoalReward(), 5.0),
+        ),
+        termination_cond=GoalCondition(),
+        truncation_cond=TimeoutCondition(2000),
+        state_mutator=mutator,
+    )
+
+
 @torch.no_grad()
-def eval_vs_chase(model, dev, n_red, n_blue, stadium, tick_skip, n_envs=256, steps=400):
-    """Net goals of `model` (red) vs a scripted ChaseBot (blue). Goals via `state.scored`
-    (reward-independent). A decent bot is strongly positive; a random one is negative."""
-    env = make_default_env(n_envs, n_red, n_blue, stadium=stadium, tick_skip=tick_skip)
-    obs = env.reset()
+def eval_vs_chase(eval_env, model, dev, n_red, n_blue, steps=350):
+    """Net goals of model (red) vs ChaseBot (blue) over persistent eval_env."""
+    obs = eval_env.reset()
     chase = ChaseBot(seed=0)
     P, od = n_red + n_blue, obs.shape[-1]
+    n_envs = eval_env.engine.n_envs
     red_i, blue_i = np.arange(n_red), np.arange(n_red, P)
     rg = bg = 0
     for _ in range(steps):
         red = model.act(torch.as_tensor(obs[:, red_i].reshape(-1, od), dtype=torch.float32, device=dev))
         full = np.empty((n_envs, P, 3), dtype=np.int64)
         full[:, red_i] = red.cpu().numpy().reshape(n_envs, n_red, 3)
-        full[:, blue_i] = chase.act(env.prev_state, blue_i)
-        obs, rew, term, trunc = env.step(full)
-        sc = env.prev_state.scored
+        full[:, blue_i] = chase.act(eval_env.prev_state, blue_i, n_red=n_red)
+        obs, rew, term, trunc = eval_env.step(full)
+        sc = eval_env.prev_state.scored
         rg += int((sc == BLUE).sum())  # blue conceded -> red scored
         bg += int((sc == RED).sum())
     return rg - bg
@@ -62,40 +123,33 @@ def eval_vs_chase(model, dev, n_red, n_blue, stadium, tick_skip, n_envs=256, ste
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--iters", type=int, default=4000)
+    ap.add_argument("--iters", type=int, default=1500)
     ap.add_argument("--envs", type=int, default=512, help="parallel games")
     ap.add_argument("--red", type=int, default=1)
     ap.add_argument("--blue", type=int, default=1)
-    ap.add_argument("--stadium", default=None, help="bundled name or .hbs path (default classic)")
+    ap.add_argument("--stadium", default="futsal-classic", help="bundled name or .hbs path")
     ap.add_argument("--tick-skip", type=int, default=8)
     ap.add_argument("--device", default="cpu", help="cpu | cuda | mps")
-    ap.add_argument("--seed", type=int, default=0, help="RNG seed (reproducible runs on a given machine)")
+    ap.add_argument("--seed", type=int, default=0, help="RNG seed")
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "models"))
-    ap.add_argument("--save-every", type=int, default=1000, help="also snapshot ckpts/it{N}.pt every N iters")
-    ap.add_argument(
-        "--replay-every", type=int, default=0, help="dump a watchable replay every N iters (0=off)"
-    )
-    ap.add_argument(
-        "--record-js", default=None, help="path to HaxballGym's record_replay.js (for .hbr2 output)"
-    )
+    ap.add_argument("--save-every", type=int, default=250, help="snapshot ckpts/it{N}.pt every N iters")
+    ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
+    ap.add_argument("--record-js", default=None)
     args = ap.parse_args()
 
     dev = torch.device(args.device)
-    # Seed everything so a run is reproducible on a given machine: torch (model init + action
-    # sampling), global numpy (the PPO minibatch shuffle), and our pool-selection rng. (RL across
-    # different machines is never bit-identical — thread count / float order — but this kills the
-    # big run-to-run variance.)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
-    env = make_default_env(args.envs, args.red, args.blue, tick_skip=args.tick_skip, stadium=args.stadium)
+
+    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip)
+    eval_env = create_eval_env(128, args.red, args.blue, args.stadium, args.tick_skip)
+
     P = args.red + args.blue
     obs_dim = env.obs_dim
-    n_acts = env.action_space  # (3, 3, kick_n) — sizes come from the env, nothing hardcoded
+    n_acts = env.action_space
     gamma = math.exp(math.log(0.5) / ((60 / args.tick_skip) * HALF_LIFE_S))
 
-    # Slot bookkeeping: players are flattened to (env*P + local). Learner = red columns, frozen
-    # opponent = blue columns. Only learner slots are trained on.
     slots = np.arange(args.envs * P).reshape(args.envs, P)
     learner_idx = slots[:, : args.red].reshape(-1)
     opp_idx = slots[:, args.red :].reshape(-1)
@@ -107,7 +161,7 @@ def main():
     opp = Policy(obs_dim, n_acts).to(dev)
     opp.eval()
     opt = torch.optim.Adam(model.parameters(), lr=LR)
-    pool: list[dict] = []  # frozen past snapshots (cpu state_dicts)
+    pool: list[dict] = []
 
     def snapshot():
         return {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
@@ -133,15 +187,15 @@ def main():
     for it in range(1, args.iters + 1):
         frac = (it - 1) / max(1, args.iters - 1)
         for g in opt.param_groups:
-            g["lr"] = LR * (1 - frac) + (LR / 3) * frac  # anneal LR -> LR/3
+            g["lr"] = LR * (1 - frac) + (LR / 3) * frac
         ent_coef = ENT0 * (1 - frac) + ENT1 * frac
 
-        # pick the frozen opponent for this iter: current copy (stay sharp) or a past snapshot
+        # pick frozen opponent: current copy or past snapshot
         opp.load_state_dict(
             pool[rng.integers(len(pool))] if (pool and rng.random() < POOL_PROB) else snapshot()
         )
 
-        # --- rollout (learner=red trains, opponent=blue is frozen) ---
+        # --- rollout ---
         for t in range(T):
             o = torch.as_tensor(obs, dtype=torch.float32, device=dev)
             with torch.no_grad():
@@ -157,7 +211,7 @@ def main():
             S_rew[t] = torch.as_tensor(rew.reshape(-1)[learner_idx], dtype=torch.float32, device=dev)
             S_done[t] = torch.as_tensor(done[learner_idx], device=dev)
 
-        # --- GAE(lambda) advantages ---
+        # --- GAE advantages ---
         with torch.no_grad():
             last_val = model._logits(torch.as_tensor(obs, dtype=torch.float32, device=dev)[learner_t])[1]
         adv = torch.zeros(T, B, device=dev)
@@ -191,34 +245,20 @@ def main():
                 nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)
                 opt.step()
 
-        if it % SNAPSHOT_EVERY == 0:  # grow the opponent pool
+        if it % SNAPSHOT_EVERY == 0:
             pool.append(snapshot())
             if len(pool) > POOL_SIZE:
                 pool.pop(0)
 
-        if args.save_every and it % args.save_every == 0:  # periodic checkpoints for later selection
+        if args.save_every and it % args.save_every == 0:
             (out / "ckpts").mkdir(exist_ok=True)
             torch.save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
 
-        if args.replay_every and it % args.replay_every == 0:  # watchable .hbr2 of the current bot
-            (out / "replays").mkdir(exist_ok=True)
-            dump_replay(
-                model,
-                out / "replays" / f"it{it}.hbr2",
-                stadium=args.stadium,
-                n_red=args.red,
-                n_blue=args.blue,
-                tick_skip=args.tick_skip,
-                record_js=args.record_js,
-                background=True,
-            )
-
-        # --- eval + checkpoint ---
         if it % 50 == 0 or it == args.iters:
-            net = eval_vs_chase(model, dev, args.red, args.blue, args.stadium, args.tick_skip)
+            net = eval_vs_chase(eval_env, model, dev, args.red, args.blue)
             sps = (it * T * B) / (time.perf_counter() - t0)
 
-            def meta(n):  # arch + which map/teams, plus this checkpoint's score
+            def meta(n):
                 return json.dumps(
                     {
                         "obs_dim": obs_dim,
@@ -229,11 +269,10 @@ def main():
                         "n_blue": args.blue,
                         "stadium": args.stadium or "classic",
                         "net_vs_chase": n,
+                        "it": it,
                     }
                 )
 
-            # `model.pt` = best-by-chase; `model_final.pt` = latest weights. net-vs-chase
-            # saturates/is noisy, so keep BOTH and let an Elo run vs real bots pick the winner.
             torch.save(model.state_dict(), out / "model_final.pt")
             (out / "meta_final.json").write_text(meta(net))
             tag = ""
