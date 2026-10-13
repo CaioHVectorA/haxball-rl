@@ -1,34 +1,28 @@
-# TODO.md — Roadmap & Project Milestones
+# Roadmap
 
-This file tracks the active tasks and upcoming development phases for the Haxball RL project.
+## Prioridade: consolidar 1v1 em futsal-classic
 
----
+- [ ] Separar execuções por pasta e salvar configuração completa, seeds, versão do código e dependências.
+- [ ] Unificar condições de benchmark, torneio e avaliação interna.
+- [ ] Avaliar nos dois lados e com várias seeds; distinguir proporção de gols de taxa de vitória.
+- [ ] Expandir adversários: Chase determinístico, Chase com ruído, defensor, interceptador e snapshots.
+- [ ] Medir contribuições de recompensa por episódio.
+- [x] Implementar tabela de três termos (gol ±25, aproximação 0,6, progresso assinado 0,08) e POC pareado.
+- [ ] Ampliar comparação com orçamento maior e self-play após o POC curto.
+- [ ] Comparar execução greedy e amostrada e inspecionar replays.
+- [ ] Definir critérios de aprovação e validar o checkpoint selecionado em sala real.
+- [ ] Corrigir rastreabilidade dos metadados após seleção de checkpoint.
 
-## Active Phase: 1v1 Futsal Self-Play Convergence
+## Depois: equipes e fine-tuning
 
-- [x] Snapshot full v0 implementation into branch `v0_it_failed`.
-- [x] Verify bit-exact collision handling and custom stadium support in Rust core.
-- [x] Configure clean `uv` environment with CPU PyTorch wheels (preventing disk bloat).
-- [x] Reset `main` branch to the clean HaxballGym architecture.
-- [x] Author comprehensive documentation (`AGENTS.md`, `CONTEXT.md`, `PROTOCOL.md`, `TODO.md`).
-- [/] **In Progress**: Run full 1v1 PPO self-play training on `futsal-classic` (4,000 iterations).
-- [ ] Evaluate saved checkpoints via Round-Robin tournament (`uv run src/select.py`).
-- [ ] Generate visual `.hbr2` match replays and verify play quality on `haxball.com/replay`.
+- [ ] Corrigir resets para múltiplos jogadores e validar observações/recompensas.
+- [ ] Comparar treino do zero com transferência parcial/fine-tuning do agente 1v1.
+- [ ] Começar com 2v2 e avaliar coordenação antes de avançar para 3v3.
+- [ ] Adaptar exportador e observações da sala, hoje restritos ao 1v1.
 
----
+## Manutenção
 
-## Phase 2: Multi-Agent Scaling (2v2 & 3v3 Futsal)
+- [ ] Organizar scripts exploratórios e selecionar verificações reutilizáveis.
+- [ ] Salvar estado de otimização e pool se retomada exata de treino for necessária.
 
-- [ ] Configure multi-agent environment with custom stadium (`maps/futsal_3v3.hbs`).
-- [ ] Implement parameter sharing policy for 3v3 teamplay.
-- [ ] Evaluate transfer learning (warm-starting 3v3 policy from converged 1v1 weights vs scratch).
-- [ ] Train 3v3 self-play with snapshot pool.
-- [ ] Verify emergent multi-agent coordination (passing, goal-line covering, wall bank passes).
-
----
-
-## Phase 3: Deployment & Room Hosting
-
-- [ ] Connect trained 3v3 / 1v1 model to the headless room bridge (`play.py` with Node token).
-- [ ] Test live room gameplay against human players in real-time.
-- [ ] Benchmark latency and inference response time during live matches.
+A duração de uma execução ou o número de iterações, isoladamente, não é critério de conclusão.

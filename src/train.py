@@ -58,23 +58,137 @@ class KickoffSetter(StateSetterMutator):
         return bp, bv, pp, pv
 
 
-def create_training_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int):
+from haxballgym.reward import RewardFunction, VelocityBallToGoal
+
+
+class DeltaBreakawayReward(RewardFunction):
+    """Rewards overcoming/dribbling past the defender:
+    Gives positive reward ONLY at the moment when the ball-carrier gains a goal-side
+    advantage over the defender (i.e. breaks past the defender line towards goal)."""
+
+    def __init__(self, scale: float = 250.0, mult: float = 3.0):
+        self.scale = scale
+        self.mult = mult
+
+    def _phi(self, state):
+        d_ball = np.linalg.norm(state.ball_pos[:, None, :] - state.player_pos, axis=-1)
+        has_ball = d_ball == d_ball.min(axis=-1, keepdims=True)
+        attacked = state.goal_center(attacked=True)
+        my_d = np.linalg.norm(state.player_pos - attacked, axis=-1)
+        diff = state.player_pos[:, None, :, :] - attacked[:, :, None, :]
+        d_o = np.linalg.norm(diff, axis=-1)
+        opp = state.team[:, None, :] != state.team[:, :, None]
+        def_d = np.where(opp, d_o, np.inf).min(axis=-1)
+        ahead = np.minimum(np.maximum(def_d - my_d, 0.0) / self.scale, 1.0)
+        return (has_ball * ahead).astype(np.float32)
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        curr_phi = self._phi(state)
+        prev_phi = self._phi(prev) if prev is not None else curr_phi
+        delta = np.maximum(curr_phi - prev_phi, 0.0)
+        return (delta * self.mult).astype(np.float32)
+
+
+class ShotVelocityToGoal(RewardFunction):
+    """Event-style reward: credits ball speed toward opponent goal on touches and kicks.
+    Robust to discrete tick-skips (34px range evaluated across previous and current tick)."""
+
+    def __init__(self, contact_dist: float = 34.0, scale: float = 2.0):
+        self.contact_dist = contact_dist
+        self.vbg = VelocityBallToGoal(attacked=True)
+        self.scale = scale
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        curr_d = np.linalg.norm(state.ball_pos[:, None, :] - state.player_pos, axis=-1)
+        touch_curr = curr_d < self.contact_dist
+        touch_prev = False
+        if prev is not None:
+            prev_d = np.linalg.norm(prev.ball_pos[:, None, :] - prev.player_pos, axis=-1)
+            touch_prev = prev_d < self.contact_dist
+        touching = touch_curr | touch_prev
+        v = self.vbg.get_rewards(state, prev, terminated, truncated)
+        return (np.maximum(v, 0.0) * touching * self.scale).astype(np.float32)
+
+
+class TangentialGoalShotReward(RewardFunction):
+    """Rewards accelerating the ball towards the opponent's goal mouth (between the posts),
+    NOT into corners/walls."""
+    def __init__(self, post_y_limit: float = 65.0, scale: float = 3.0):
+        self.post_y_limit = post_y_limit
+        self.scale = scale
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        if prev is None:
+            return np.zeros((state.ball_pos.shape[0], state.player_pos.shape[1]), dtype=np.float32)
+        target = state.goal_center(attacked=True)
+        goal_x = target[:, :, 0]
+        ball_disp = state.ball_pos - prev.ball_pos
+        dx = ball_disp[:, 0:1]
+        dy = ball_disp[:, 1:2]
+        is_toward_goal = np.sign(dx) == np.sign(goal_x)
+        dist_x = np.maximum(np.abs(goal_x - state.ball_pos[:, 0:1]), 1.0)
+        proj_y = state.ball_pos[:, 1:2] + dy * (dist_x / (np.abs(dx) + 1e-4))
+        in_mouth = (np.abs(proj_y) <= self.post_y_limit) | (np.abs(state.ball_pos[:, 1:2]) <= self.post_y_limit)
+        speed = np.linalg.norm(ball_disp, axis=-1, keepdims=True)
+        d_ball = np.linalg.norm(state.player_pos - state.ball_pos[:, None, :], axis=-1)
+        touch = d_ball < 36.0
+        shot_val = is_toward_goal * in_mouth * speed * touch * self.scale
+        return shot_val.astype(np.float32)
+
+
+class PenaltyTackleLostReward(RewardFunction):
+    """Discrete penalty when player had breakaway advantage but lost ball directly to defender."""
+    def __init__(self, penalty: float = -0.5):
+        self.penalty = penalty
+        self.breakaway = DeltaBreakawayReward()
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        if prev is None:
+            return np.zeros((state.ball_pos.shape[0], state.player_pos.shape[1]), dtype=np.float32)
+        prev_phi = self.breakaway._phi(prev)
+        d_ball = np.linalg.norm(state.ball_pos[:, None, :] - state.player_pos, axis=-1)
+        has_ball = d_ball == d_ball.min(axis=-1, keepdims=True)
+        had_adv = prev_phi > 0.2
+        lost = ~has_ball
+        opp_contact = d_ball.min(axis=-1, keepdims=True) < 34.0
+        tackle = had_adv & lost & opp_contact
+        return (tackle * self.penalty).astype(np.float32)
+
+
+def build_reward(table="simple"):
+    """Signed shaping; retain the previous table for controlled POC comparisons."""
+    if table in ("simple", "simple_progress1"):
+        return CombinedReward(
+            (VelocityPlayerToBall(), 0.6),
+            (VelocityBallToGoal(attacked=True), 0.08 if table == "simple" else 1.0),
+            (GoalReward(), 25.0),
+        )
+    if table == "previous":
+        return CombinedReward(
+            (VelocityPlayerToBall(), 0.7),
+            (VelocityBallToGoal(attacked=True), 1.0),
+            (TangentialGoalShotReward(post_y_limit=65.0, scale=3.0), 3.0),
+            (DeltaBreakawayReward(mult=2.0), 2.0),
+            (PenaltyTackleLostReward(penalty=-0.5), 1.0),
+            (GoalReward(), 20.0),
+        )
+    raise ValueError(f"Unknown reward table: {table}")
+
+
+def create_training_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int, seed: int | None = None):
     """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
     obs_builder = DefaultObs(pos_coef="auto")
     mutator = MultiSetter(
-        [KickoffSetter(), RandomStateMutator(ball_speed=3.0)],
+        [KickoffSetter(), RandomStateMutator(ball_speed=3.0, rng=seed)],
         weights=[0.4, 0.6],
+        rng=seed,
     )
     return Env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=DiscreteAction(kick_values=2),
-        reward_fn=CombinedReward(
-            (VelocityPlayerToBall(), 1.0),
-            (TouchVelocityToGoal(scale=1.5), 1.0),
-            (GoalReward(), 5.0),
-        ),
+        reward_fn=build_reward(),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -90,11 +204,7 @@ def create_eval_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, t
         engine=engine,
         obs_builder=obs_builder,
         action_parser=DiscreteAction(kick_values=2),
-        reward_fn=CombinedReward(
-            (VelocityPlayerToBall(), 1.0),
-            (TouchVelocityToGoal(scale=1.5), 1.0),
-            (GoalReward(), 5.0),
-        ),
+        reward_fn=build_reward(),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -136,6 +246,7 @@ def main():
     ap.add_argument("--save-every", type=int, default=250, help="snapshot ckpts/it{N}.pt every N iters")
     ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
     ap.add_argument("--record-js", default=None)
+    ap.add_argument("--warm-start", default=None, help="path to existing .pt checkpoint to continue training")
     args = ap.parse_args()
 
     dev = torch.device(args.device)
@@ -143,7 +254,7 @@ def main():
     np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
 
-    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip)
+    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip, seed=args.seed)
     eval_env = create_eval_env(128, args.red, args.blue, args.stadium, args.tick_skip)
 
     P = args.red + args.blue
@@ -159,10 +270,17 @@ def main():
     B = learner_idx.size
 
     model = Policy(obs_dim, n_acts).to(dev)
+    if args.warm_start:
+        ws_path = Path(args.warm_start)
+        if ws_path.exists():
+            print(f"Warm-starting policy weights from {ws_path}")
+            model.load_state_dict(torch.load(ws_path, map_location=dev))
     opp = Policy(obs_dim, n_acts).to(dev)
     opp.eval()
     opt = torch.optim.Adam(model.parameters(), lr=LR)
     pool: list[dict] = []
+    if args.warm_start and Path(args.warm_start).exists():
+        pool.append({k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
 
     def snapshot():
         return {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}

@@ -1,0 +1,816 @@
+{
+  "config": {
+    "iters": 30,
+    "envs": 64,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "eval_seeds": [
+      10,
+      11
+    ],
+    "eval_envs": 16,
+    "eval_steps": 300,
+    "warm_start": "experiments/reward_progress008_poc_20261013/initial.pt",
+    "tables": [
+      "simple_progress1",
+      "simple"
+    ],
+    "out": "experiments/reward_progress008_seeded_poc_20261013"
+  },
+  "checkpoint_sha256": "6ddaf3b735167597c1e0473b720a802a5c1771291883702e42fa9a5cc9829333",
+  "controlled": {
+    "player_max_speed": 0.11865168539325842,
+    "forward": [
+      2.0227272510528564,
+      -2.0227272510528564
+    ],
+    "backward": [
+      -2.0227272510528564,
+      2.0227272510528564
+    ],
+    "undiscounted_roundtrip": 0.0,
+    "scored": [
+      25.0,
+      -25.0
+    ],
+    "conceded": [
+      -25.0,
+      25.0
+    ],
+    "engine_shots": {
+      "blocked": {
+        "progress_sum": -0.5279606656967959,
+        "red_goals": 0.0,
+        "min_vx": -0.524755325046865,
+        "max_vx": 6.00706796072576,
+        "decisions": 100
+      },
+      "open": {
+        "progress_sum": 30.826630475195685,
+        "red_goals": 1.0,
+        "min_vx": 2.406939941099719,
+        "max_vx": 6.00706796072576,
+        "decisions": 13
+      }
+    }
+  },
+  "limitation": "Short fine-tuning against Chase, not self-play convergence; greedy evaluation. Goals are aggregated over fixed windows, not match win rates.",
+  "runs": [
+    {
+      "table": "simple_progress1",
+      "seed": 0,
+      "contributions": {
+        "VelocityPlayerToBall": 254475.00896165162,
+        "VelocityBallToGoal": 57481.03937130044,
+        "GoalReward": 425.0
+      },
+      "evaluation": [
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 0,
+          "gf": 37,
+          "ga": 0,
+          "net": 37
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 1,
+          "gf": 37,
+          "ga": 0,
+          "net": 37
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 0,
+          "gf": 31,
+          "ga": 0,
+          "net": 31
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 1,
+          "gf": 32,
+          "ga": 0,
+          "net": 32
+        }
+      ]
+    },
+    {
+      "table": "simple",
+      "seed": 0,
+      "contributions": {
+        "VelocityPlayerToBall": 254604.67611199964,
+        "VelocityBallToGoal": 1766.586284209122,
+        "GoalReward": 175.0
+      },
+      "evaluation": [
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 2,
+          "ga": 0,
+          "net": 2
+        },
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 0,
+          "gf": 16,
+          "ga": 0,
+          "net": 16
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 1,
+          "gf": 16,
+          "ga": 0,
+          "net": 16
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 0,
+          "gf": 14,
+          "ga": 0,
+          "net": 14
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 1,
+          "gf": 14,
+          "ga": 0,
+          "net": 14
+        }
+      ]
+    },
+    {
+      "table": "simple_progress1",
+      "seed": 1,
+      "contributions": {
+        "VelocityPlayerToBall": 261379.73336963824,
+        "VelocityBallToGoal": 72707.28913488699,
+        "GoalReward": 600.0
+      },
+      "evaluation": [
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 0,
+          "gf": 46,
+          "ga": 0,
+          "net": 46
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 1,
+          "gf": 46,
+          "ga": 0,
+          "net": 46
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 1,
+          "ga": 0,
+          "net": 1
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 0,
+          "gf": 30,
+          "ga": 0,
+          "net": 30
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 1,
+          "gf": 30,
+          "ga": 0,
+          "net": 30
+        }
+      ]
+    },
+    {
+      "table": "simple",
+      "seed": 1,
+      "contributions": {
+        "VelocityPlayerToBall": 258084.50049186527,
+        "VelocityBallToGoal": 1585.312837107177,
+        "GoalReward": 475.0
+      },
+      "evaluation": [
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 0,
+          "gf": 30,
+          "ga": 0,
+          "net": 30
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 1,
+          "gf": 30,
+          "ga": 0,
+          "net": 30
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 0,
+          "gf": 23,
+          "ga": 0,
+          "net": 23
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 1,
+          "gf": 23,
+          "ga": 0,
+          "net": 23
+        }
+      ]
+    },
+    {
+      "table": "simple_progress1",
+      "seed": 2,
+      "contributions": {
+        "VelocityPlayerToBall": 248965.36831972504,
+        "VelocityBallToGoal": 13463.274970520195,
+        "GoalReward": 600.0
+      },
+      "evaluation": [
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 112,
+          "net": -112
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 112,
+          "net": -112
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 0,
+          "gf": 3,
+          "ga": 0,
+          "net": 3
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 1,
+          "gf": 3,
+          "ga": 0,
+          "net": 3
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 112,
+          "net": -112
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 112,
+          "net": -112
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 0,
+          "gf": 6,
+          "ga": 0,
+          "net": 6
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 1,
+          "gf": 6,
+          "ga": 0,
+          "net": 6
+        }
+      ]
+    },
+    {
+      "table": "simple",
+      "seed": 2,
+      "contributions": {
+        "VelocityPlayerToBall": 248529.99667263965,
+        "VelocityBallToGoal": 459.2030040201572,
+        "GoalReward": 375.0
+      },
+      "evaluation": [
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 1,
+          "net": -1
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 0,
+          "gf": 6,
+          "ga": 0,
+          "net": 6
+        },
+        {
+          "seed": 10,
+          "opponent": "random",
+          "side": 1,
+          "gf": 6,
+          "ga": 0,
+          "net": 6
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 0,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "chase_no_noise",
+          "side": 1,
+          "gf": 0,
+          "ga": 0,
+          "net": 0
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 0,
+          "gf": 7,
+          "ga": 0,
+          "net": 7
+        },
+        {
+          "seed": 11,
+          "opponent": "random",
+          "side": 1,
+          "gf": 7,
+          "ga": 0,
+          "net": 7
+        }
+      ]
+    }
+  ],
+  "baseline": [
+    {
+      "seed": 10,
+      "opponent": "chase",
+      "side": 0,
+      "gf": 1,
+      "ga": 0,
+      "net": 1
+    },
+    {
+      "seed": 10,
+      "opponent": "chase",
+      "side": 1,
+      "gf": 1,
+      "ga": 0,
+      "net": 1
+    },
+    {
+      "seed": 10,
+      "opponent": "chase_no_noise",
+      "side": 0,
+      "gf": 0,
+      "ga": 0,
+      "net": 0
+    },
+    {
+      "seed": 10,
+      "opponent": "chase_no_noise",
+      "side": 1,
+      "gf": 0,
+      "ga": 0,
+      "net": 0
+    },
+    {
+      "seed": 10,
+      "opponent": "random",
+      "side": 0,
+      "gf": 47,
+      "ga": 0,
+      "net": 47
+    },
+    {
+      "seed": 10,
+      "opponent": "random",
+      "side": 1,
+      "gf": 47,
+      "ga": 0,
+      "net": 47
+    },
+    {
+      "seed": 11,
+      "opponent": "chase",
+      "side": 0,
+      "gf": 0,
+      "ga": 0,
+      "net": 0
+    },
+    {
+      "seed": 11,
+      "opponent": "chase",
+      "side": 1,
+      "gf": 0,
+      "ga": 0,
+      "net": 0
+    },
+    {
+      "seed": 11,
+      "opponent": "chase_no_noise",
+      "side": 0,
+      "gf": 0,
+      "ga": 0,
+      "net": 0
+    },
+    {
+      "seed": 11,
+      "opponent": "chase_no_noise",
+      "side": 1,
+      "gf": 0,
+      "ga": 0,
+      "net": 0
+    },
+    {
+      "seed": 11,
+      "opponent": "random",
+      "side": 0,
+      "gf": 38,
+      "ga": 0,
+      "net": 38
+    },
+    {
+      "seed": 11,
+      "opponent": "random",
+      "side": 1,
+      "gf": 38,
+      "ga": 0,
+      "net": 38
+    }
+  ],
+  "elapsed_s": 95.9978373720005,
+  "reward_tables": {
+    "simple_progress1": {
+      "VelocityPlayerToBall": 0.6,
+      "VelocityBallToGoal": 1.0,
+      "GoalReward": 25.0
+    },
+    "simple": {
+      "VelocityPlayerToBall": 0.6,
+      "VelocityBallToGoal": 0.08,
+      "GoalReward": 25.0
+    }
+  }
+}

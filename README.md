@@ -1,71 +1,47 @@
-# Haxball RL ⚽🤖
+# Haxball RL
 
-Autonomous Reinforcement Learning agents for [Haxball](https://www.haxball.com) trained via PPO self-play and deployed straight into live multiplayer rooms.
+Agentes de reinforcement learning para Haxball, treinados com PPO e self-play sobre HaxballGym. A prioridade atual é consolidar o 1v1 em `futsal-classic`, com avaliação reproduzível, antes de experimentar equipes e fine-tuning.
 
----
+## Uso
 
-## ⚡ Architecture Overview
-
-1. **Analytical Engine**: Powered by [HaxballGym](https://github.com/HaxballGym/HaxballGym) — Rust simulation core delivering bit-exact ($10^{-9}$) analytical collision physics identical to the official Haxball game.
-2. **High-Throughput PPO**: Runs 512 parallel game instances using Rayon multithreading, reaching up to **50,000 steps/sec** on CPU.
-3. **Multi-Agent Self-Play**: Self-play training with snapshot pools, goal-dominated rewards, and symmetric observation normalization.
-4. **Zero-Lag Headless Bot Integration**: Policies export directly to lightweight JSON (`policy.json`) for seamless real-time execution in official Haxball rooms via the Headless Room API.
-
----
-
-## 🚀 Quick Start
-
-### 1. Requirements & Setup
-
-This repository uses [uv](https://github.com/astral-sh/uv) for fast and reproducible Python package management.
+Python >=3.12, uv e PyTorch CPU conforme `pyproject.toml` e `uv.lock`:
 
 ```bash
-# Clone the repository
-git clone https://github.com/CaioHVectorA/haxball-rl.git
-cd haxball-rl
-
-# Sync Python virtual environment
 uv sync
+uv run src/train.py --stadium futsal-classic --red 1 --blue 1 --envs 512 --iters 1500 --out models/run_1v1_seed0 --seed 0
 ```
 
-### 2. Training an Agent
+Use uma pasta por execução. O treinamento grava pesos e metadados, mas ainda não salva a configuração completa, estado do otimizador ou pool de adversários. `--warm-start` carrega apenas os pesos.
 
-Train a 1v1 PPO policy on the futsal stadium across 512 parallel environments:
+Os comandos abaixo leem os modelos da pasta padrão `models/`:
 
 ```bash
-uv run src/train.py --stadium futsal-classic --red 1 --blue 1 --envs 512 --iters 4000
+uv run src/eval.py --benchmark --stadium futsal-classic
+uv run src/select.py --stadium futsal-classic
 ```
 
-Checkpoints are automatically saved to `models/`.
+`select.py` promove o vencedor para `models/model.pt` e atualiza `meta.json`. A avaliação atual usa gols agregados; ainda não oferece uma bateria de múltiplas seeds nem taxa de vitória por partida.
 
-### 3. Deploying to Live Haxball Rooms
+## Sala real
 
-You can deploy your trained policy directly against real human players:
+Execute a partir da raiz do repositório:
 
 ```bash
+uv run headless-bot/export_policy.py models/model.pt --stadium futsal-classic
 cd headless-bot
 npm install
-
-# Export the latest PyTorch checkpoint to JSON policy
-uv run export_policy.py
-
-# Launch the official Headless Room
-HEADLESS_TOKEN="<your_token_from_haxball_com>" node bot.js
+HEADLESS_TOKEN="<token>" node bot.js
 ```
 
-Obtain your room token at [haxball.com/headlesstoken](https://www.haxball.com/headlesstoken). Join the room via the printed URL and play 1v1 against the RL agent!
+O exportador atual aceita observações de 16 dimensões e uma rede de duas camadas, para 1v1. A transferência para a sala precisa ser validada em partidas reais; equivalência de física, observações e latência não é certificada por este repositório. Veja `headless-bot/README.md`.
 
----
+## Organização
 
-## 📂 Repository Structure
+- `src/model.py`, `src/bot.py`: política e bots de referência.
+- `src/train.py`: PPO, recompensas e self-play.
+- `src/eval.py`, `src/select.py`: benchmark e torneio de checkpoints.
+- `src/replay.py`: utilitários de replay.
+- `maps/`: estádios; `models/`: pesos e metadados.
+- Scripts `inspect_*` e `test_*` na raiz: diagnósticos e experimentos, sem uma suíte unificada.
 
-- `src/` — PPO training loop, neural network architecture, evaluation suites, and self-play management.
-- `headless-bot/` — Node.js loader and export pipeline for live room deployment.
-- `maps/` — Standard and custom Haxball stadium definitions (`.hbs`).
-- `models/` — Saved model weights and metadata.
-- `CONTEXT.md` / `PROTOCOL.md` / `AGENTS.md` — In-depth architectural details, protocol specs, and agent roles.
-
----
-
-## 📜 License
-MIT
+`AGENTS.md` descreve a arquitetura implementada; `PROTOCOL.md`, os parâmetros e recompensas; `TODO.md`, as próximas etapas; `CONTEXT.md`, o histórico e as limitações dos resultados disponíveis.

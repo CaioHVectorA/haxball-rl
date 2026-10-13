@@ -1,64 +1,96 @@
-# PROTOCOL.md — Training, Reward & Evaluation Protocols
+# Protocolo de treinamento e avaliação
 
-This document defines the mathematical formulation, hyperparameter choices, and verification procedures governing our reinforcement learning pipeline.
+Valores conferidos em `src/train.py`. Este documento distingue implementação atual de experimentos propostos.
 
----
+## PPO atual
 
-## 1. PPO Self-Play Training Protocol
+| Parâmetro | Valor padrão |
+|---|---|
+| Ambientes / jogadores | 512 / 1v1 |
+| Rollout / épocas / minibatches | 64 / 6 / 4 |
+| Amostras por iteração em 1v1 | 32.768 |
+| Tick skip | 8 (~7,5 decisões/s a 60 ticks/s) |
+| Discount | meia-vida de 12 s; gamma ≈ 0,99233 |
+| GAE lambda / clip | 0,95 / 0,20 |
+| Learning rate | 3e−4 → 1e−4, linear |
+| Entropia | 0,02 → 0,01, linear |
+| Coeficiente de valor / norma máxima de gradiente | 0,5 / 0,5 |
+| Limite de episódio | 2.000 ticks = 250 decisões com tick skip 8 |
+| Resets de treino | 40% kickoff, 60% estado aleatório (`ball_speed=3`) |
 
-### 1.1 Hyperparameter Specifications
+A perda de valor já inclui fator 0,5 antes de receber `VF_COEF`. O GAE trata tanto término quanto truncamento como fim sem bootstrap; revisar essa escolha para timeouts. `--warm-start` reinicia otimizador, schedules e contador, carregando somente pesos.
 
-| Parameter | Value | Rationale |
-|---|---|---|
-| Parallel Envs (`envs`) | 512 | Maximizes CPU core utilization across Rust simulation threads |
-| Rollout Steps ($T$) | 64 | Captures multi-second ball trajectories and offensive sequences |
-| Total Steps per Iteration | $32,768$ | $512 \text{ envs} \times 64 \text{ steps}$ |
-| PPO Epochs | 4 | Balances sample reuse without policy drift |
-| Minibatches ($N_{\text{MB}}$) | 4 | Batch size of $8,192$ per gradient step |
-| Discount ($\gamma$) | $\approx 0.98$ | Calibrated to 5.0 seconds half-life: $\gamma = \exp(\ln(0.5) / ((60/\text{skip}) \times 5.0))$ |
-| GAE Lambda ($\lambda$) | 0.95 | Standard Generalized Advantage Estimation smoothing |
-| PPO Clip ($\epsilon$) | 0.20 | Standard policy ratio clipping threshold |
-| Value Loss Coef ($c_1$) | 0.50 | Scales critic gradient with respect to policy loss |
-| Entropy Coef ($c_2$) | 0.01 | Sustained exploration entropy to prevent policy collapse |
-| Learning Rate ($\alpha$) | $3 \times 10^{-4} \to 1 \times 10^{-4}$ | Linearly annealed across total training iterations |
-| Max Grad Norm | 0.50 | Gradient clipping for numerical stability |
-| Tick Skip | 8 | Physics ticks per agent decision step (~7.5 decisions/sec) |
+## Tabela atual de recompensas
 
----
+A tabela padrão agora é `build_reward("simple")`: gol ±25, aproximação com peso 0,6 e progresso com peso 0,08. Os dois termos de velocidade preservam sinais positivos e negativos. Treino e avaliação interna compartilham essa fábrica.
 
-## 2. Reward Formulation Protocol
+A tabela anterior permanece disponível como `build_reward("previous")` para comparação controlada:
 
-### 2.1 The Goal-Dominated Reward Function
-The reward signal at time $t$ for player $i$ is defined as:
+### Tabela anterior
 
-$$R_t^{(i)} = R_{\text{goal}}^{(i)}(s_t) + R_{\text{dense}}^{(i)}(s_t, a_t)$$
+Treino e avaliação interna usam a mesma composição. O multiplicador interno se combina com o peso de `CombinedReward`:
 
-#### Sparse Goal Reward ($R_{\text{goal}}$)
-$$R_{\text{goal}}^{(i)}(s_t) = \begin{cases} +10.0 & \text{if team of player } i \text{ scores} \\ -10.0 & \text{if opponent scores} \\ 0.0 & \text{otherwise} \end{cases}$$
+| Termo | Peso externo | Fator interno | Contribuição efetiva |
+|---|---:|---:|---|
+| `VelocityPlayerToBall` | 0,7 | — | 0,7 × velocidade projetada, normalizada por `player_max_speed` |
+| `VelocityBallToGoal` | 1,0 | — | velocidade projetada para a linha do gol adversário / `player_max_speed` |
+| `TangentialGoalShotReward` | 3,0 | 3,0 | 9 × deslocamento da bola por decisão, quando os filtros passam |
+| `DeltaBreakawayReward` | 2,0 | 2,0 | 4 × max(phi atual − phi anterior, 0) |
+| `PenaltyTackleLostReward` | 1,0 | −0,5 | −0,5 quando o evento definido na função ocorre |
+| `GoalReward` | 20,0 | ±1 | +20 ao marcar, −20 ao sofrer |
 
-#### Dense Shaping Reward ($R_{\text{dense}}$)
-$$R_{\text{dense}}^{(i)}(s_t, a_t) = w_{\text{move}} \cdot \left(\vec{v}_{\text{player}} \cdot \hat{u}_{\text{to\_ball}}\right) + w_{\text{prog}} \cdot \left(\vec{v}_{\text{ball}} \cdot \hat{u}_{\text{to\_opp\_goal}}\right)$$
+O chute usa deslocamento, não velocidade normalizada: sua escala depende do tick skip. O filtro aceita trajetória projetada na boca do gol **ou** bola já na faixa |y| ≤ 65, e usa proximidade <36 como contato. Não identifica necessariamente um chute efetivo.
 
-- $w_{\text{move}}, w_{\text{prog}} \sim 0.01$: Small kinematic compass guiding early exploration.
-- Because $\left|R_{\text{goal}}\right| \gg \left|R_{\text{dense}}\right|$, no local micro-movement can compensate for conceding or failing to score.
+A ultrapassagem define posse como ser o jogador mais próximo da bola, sem distância máxima. Só recompensa aumentos da vantagem: perder e recuperar vantagem pode gerar pagamentos repetidos. Não é shaping baseado em potencial com preservação garantida do objetivo.
 
----
+Não está demonstrado que o gol domine a soma dos termos densos. Medir contribuições acumuladas por episódio e sua relação com gols antes de ajustar pesos. `ShotVelocityToGoal` está definido no arquivo, mas não participa da composição atual.
 
-## 3. Evaluation & Tournament Protocol
+### Experimento proposto: simplificar
 
-### 3.1 Live Sanity Evaluation (`eval_vs_chase`)
-- Executed every 50 iterations during training.
-- Plays 400 steps over 256 games against the heuristic `ChaseBot`.
-- Computes net goal differential: $\Delta_{\text{goals}} = G_{\text{agent}} - G_{\text{chase}}$.
-- Useful for detecting immediate regressions or early learning progress, but noisy for subtle late-stage checkpoint selection.
+Comparar a tabela atual com uma base de três termos: gol, aproximação do jogador e progresso da bola. Remover inicialmente chute tangencial, ultrapassagem e penalidade de desarme na variante experimental. Calibrar os dois pesos densos usando suas contribuições acumuladas e comparar com orçamento igual de amostras e várias seeds. A variante de três termos foi aplicada ao treinamento. O POC compara as duas variantes.
 
-### 3.2 Head-to-Head Checkpoint Tournament (`select.py`)
-- After training completes, all periodic checkpoints in `models/ckpts/` (e.g. `it1000.pt`, `it2000.pt`, ..., `it4000.pt`) compete in a full round-robin tournament.
-- Each pair $(C_i, C_j)$ plays $N$ headless matches with alternating sides (Red vs Blue) to cancel initial-condition bias.
-- The winrate matrix $W \in \mathbb{R}^{K \times K}$ is constructed:
-  - If progress is transitive and monotonic, $W_{i, j} > 0.5$ for all $i > j$.
-  - The checkpoint with the highest net score / TrueSkill rating is promoted to `models/model.pt`.
+## Avaliação implementada
 
-### 3.3 Visual Replay Verification
-- Selected checkpoints can be rendered to `.hbr2` format via `src/replay.py`.
-- Replays are loaded directly into the official web visualizer at [haxball.com/replay](https://www.haxball.com/replay) to inspect shot mechanics, rebounds, and defensive positioning.
+- `eval_vs_chase`: a cada 50 iterações e no fim, 128 ambientes × 350 decisões, learner vermelho com ações amostradas, Chase azul com seed 0 e resets de kickoff. Saldo de gols seleciona `model.pt`.
+- `src/eval.py`: padrão de 256 ambientes × 600 decisões, NeuralBot greedy; benchmark contra Chase e Random. O indicador chamado “winrate estimada” é proporção dos gols, não taxa de vitória por partida.
+- `src/select.py`: torneio de checkpoints em `models/ckpts/` e modelo final; cada par joga nos dois lados, com ações amostradas. Ranking por proporção de gols, desempate por saldo. Não usa TrueSkill nem matriz de vitórias. Promove o vencedor sobrescrevendo `model.pt`; metadados herdados do modelo final podem não descrever a iteração do vencedor.
+
+Esses caminhos usam configurações de ambiente distintas: treino/avaliação interna criam o ambiente explicitamente; benchmark/torneio usam `make_default_env`. Alinhar condições para comparações reproduzíveis.
+
+## Avaliação planejada para consolidar o 1v1
+
+1. Fixar configuração e registrar seeds de treino, cenário e ações; começar com pelo menos três seeds de treino e cinco de avaliação.
+2. Avaliar nos dois lados contra Random, Chase sem ruído, Chase com ruído, um defensor e um bot com interceptação, além de snapshots históricos. Os dois últimos bots ainda precisam ser implementados.
+3. Reportar gols pró/contra, saldo, vitórias/empates/derrotas por partida, duração e dispersão entre seeds. Identificar explicitamente resultados greedy e amostrados.
+4. Comparar variantes de recompensa com orçamento igual; reservar adversários/cenários para validação final.
+5. Inspecionar replays e partidas reais para confirmar finalização, defesa e ausência de exploração da recompensa.
+
+Definir duração e limiar de aprovação antes dos experimentos. Um único saldo contra Chase não estabelece consolidação.
+
+## POC curto reproduzível
+
+```bash
+uv run src/poc_reward.py --out experiments/minha_comparacao --iters 30 --envs 64 --seeds 0 1 2 --eval-seeds 10 11
+```
+
+O POC usa o mesmo checkpoint inicial, seed e orçamento para cada variante; faz fine-tuning contra Chase (não self-play) e avaliação greedy nos dois lados contra Chase com/sem ruído e Random. Grava configuração, hash do checkpoint, contribuições dos termos, cenários controlados e resultados em pasta nova. Não sobrescreve os modelos principais. Os cenários incluem sinais positivos/negativos, gols e trajetórias no simulador com defensor dentro/fora da linha do chute.
+
+Trinta iterações servem para detectar regressões rápidas; não demonstram convergência nem permitem declarar uma tabela vencedora definitiva.
+
+### Alerta encontrado no POC
+
+No ambiente instalado, `futsal-classic` fornece `player_max_speed ≈ 0,11865`. A função de progresso divide por esse valor: um chute livre controlado acumulou aproximadamente 385 de shaping em 13 decisões, além do gol +25. A tabela simples ainda precisa de verificação/correção da normalização antes de treinos longos. Consulte `experiments/reward_simple_poc_20261013/REPORT.md`; o POC curto não demonstrou melhoria da variante simples.
+
+### Variante com progresso 0,08
+
+A tabela padrão passa a gol ±25, aproximação 0,6 e progresso 0,08. `simple_progress1` preserva a variante de progresso 1,0 para comparação pareada no POC.
+
+```bash
+uv run src/poc_reward.py --out experiments/comparacao_008 --tables simple_progress1 simple
+```
+
+Na trajetória controlada de chute livre, a contribuição ponderada de progresso cai de +385,33 para +30,83. Com defensor na linha, cai de −6,60 para −0,53. Essas são somas sem desconto só do termo de progresso; aproximação e gol são parcelas separadas. Uma decisão com velocidade projetada 3 gera aproximadamente ±2,02 com peso 0,08.
+
+Os geradores de reset de treino agora recebem `--seed` explicitamente. A comparação anterior não controlava esses geradores; a repetição corrigida está em `experiments/reward_progress008_seeded_poc_20261013/`.
+
+Diagnóstico posterior: o saldo 0 × 448 corresponde à mesma derrota de kickoff repetida deterministicamente. O checkpoint 0,08 evita essa sequência, mas leva a bola ao canto e termina por timeout, sem consolidar ataque ou defesa. Veja `experiments/reward_progress008_seeded_poc_20261013/diagnosis_long/REPORT.md`.
