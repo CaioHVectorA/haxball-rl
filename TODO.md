@@ -26,3 +26,14 @@
 - [ ] Salvar estado de otimização e pool se retomada exata de treino for necessária.
 
 A duração de uma execução ou o número de iterações, isoladamente, não é critério de conclusão.
+
+## Correção em gpt
+
+- [x] Reproduzir falha de kickoff e estagnação no canto.
+- [x] Corrigir paredes num estádio local e testar colisões.
+- [x] Substituir sinais de velocidade por deslocamento real, mantendo pesos ±25 / 0,6 / 0,08.
+- [x] Alinhar rearmamento de chute no simulador e na exportação.
+- [x] Implementar avaliação com cenários variados, modos greedy/amostrado e bola parada.
+- [x] Validar candidato em seeds separadas no simulador e exportar.
+- [ ] Melhorar consistência entre seeds e desempenho em posições aleatórias.
+- [ ] Validar transferência para sala real.

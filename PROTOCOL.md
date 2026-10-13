@@ -2,6 +2,22 @@
 
 Valores conferidos em `src/train.py`. Este documento distingue implementação atual de experimentos propostos.
 
+## Correções na branch gpt
+
+O treino usa por padrão `maps/futsal_1v1.hbs`. Removemos o bias das paredes do mapa original após reproduzir escape da bola para cantos externos; testes verificam rebote nas duas laterais. Isso altera o estádio: uma política exportada deve carregar o mesmo mapa. A equivalência com física oficial não foi certificada.
+
+A tabela mantém os pesos desejados (gol ±25, aproximação 0,6, progresso 0,08), mas usa deslocamento efetivo:
+
+- `MotionPlayerToBall`: projeta o deslocamento do jogador na direção anterior da bola. Jogador preso sem mudar de posição recebe zero, mesmo que o engine reporte velocidade.
+- `MotionBallToGoal`: redução assinada da distância da bola ao segmento finito do gol adversário. Um percurso de ida/volta fechado cancela sem desconto.
+- Ambos dividem pelo deslocamento livre máximo esperado em uma decisão: acceleration × damping / (1 − damping) × tick_skip. No mapa atual, 21,12 unidades por decisão, em vez do player_max_speed ≈0,119 informado pela dependência.
+
+A ação de pressionar chute agora rearma repetidamente no simulador. A exportação inclui `repeat_kick`; bot.js executa a mesma intenção entre decisões quando esse campo é true. Checkpoints antigos sem esse campo preservam seu comportamento anterior na sala.
+
+`src/repair_bot.py` faz fine-tuning contra Chase e avaliação nos dois lados, com kickoff e resets aleatórios, ações greedy/amostradas, múltiplas seeds de avaliação, vitórias/empates/derrotas por episódio e fração de decisões com bola parada. O treino principal continua com PPO self-play; este experimento curto não comprova convergência. As seeds de seleção não substituem validação independente.
+
+As tabelas `simple`, `simple_progress1` e `previous` permanecem para reproduzir recompensas anteriores. São sinais diferentes da tabela corrigida: pesos iguais não implicam magnitude igual.
+
 ## PPO atual
 
 | Parâmetro | Valor padrão |
@@ -18,11 +34,11 @@ Valores conferidos em `src/train.py`. Este documento distingue implementação a
 | Limite de episódio | 2.000 ticks = 250 decisões com tick skip 8 |
 | Resets de treino | 40% kickoff, 60% estado aleatório (`ball_speed=3`) |
 
-A perda de valor já inclui fator 0,5 antes de receber `VF_COEF`. O GAE trata tanto término quanto truncamento como fim sem bootstrap; revisar essa escolha para timeouts. `--warm-start` reinicia otimizador, schedules e contador, carregando somente pesos.
+A perda de valor já inclui fator 0,5 antes de receber `VF_COEF`. O GAE trata tanto término quanto truncamento como fim sem bootstrap; revisar essa escolha para timeouts. `--warm-start` reinicia otimizador, schedules e contador. Por padrão, carrega a política e zera a cabeça de valor para adaptar a escala corrigida de recompensa. `--keep-critic` preserva a cabeça de valor quando apropriado. Essa reinicialização não altera os logits iniciais de ação.
 
 ## Tabela atual de recompensas
 
-A tabela padrão agora é `build_reward("simple")`: gol ±25, aproximação com peso 0,6 e progresso com peso 0,08. Os dois termos de velocidade preservam sinais positivos e negativos. Treino e avaliação interna compartilham essa fábrica.
+Antes da branch gpt, a tabela padrão era `build_reward("simple")`: gol ±25, aproximação com peso 0,6 e progresso com peso 0,08. Agora o padrão é `corrected`, descrito acima. Os dois termos de velocidade preservam sinais positivos e negativos. Treino e avaliação interna compartilham essa fábrica.
 
 A tabela anterior permanece disponível como `build_reward("previous")` para comparação controlada:
 

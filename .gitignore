@@ -178,3 +178,6 @@ models/ckpts/
 models/replays/
 models/model_final.pt
 models/meta_final.json
+
+# Temporary smoke-test checkpoints
+experiments/gpt_smoke/

@@ -17,3 +17,7 @@ Não se presume que haja treinamento ativo a partir desses arquivos. O status de
 ## Direção acordada
 
 Consolidar o 1v1 primeiro: várias seeds, adversários diversos, avaliação nos dois lados, inspeção de comportamento e comparação controlada de recompensas. Depois, investigar equipes e transferência/fine-tuning, validando mudanças de observação e resets. Implementação atual e propostas estão separadas em `PROTOCOL.md` e `TODO.md`.
+
+## Trabalho na branch gpt
+
+As mudanças anteriores foram salvas na main em 063a4e5. A branch gpt corrige mapa, sinais de deslocamento, rearmamento do chute e avaliação, e promove um candidato após validação independente no simulador. O relatório atual é `experiments/gpt_repair_reset_value/REPORT.md`. O desempenho melhorou no kickoff, mas a variação entre seeds e a defesa em posições aleatórias ainda exigem trabalho. Sala real não foi testada.

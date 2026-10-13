@@ -1,0 +1,33 @@
+{
+  "obs_dim": 16,
+  "n_acts": [
+    3,
+    3,
+    2
+  ],
+  "hidden": 256,
+  "depth": 2,
+  "n_red": 1,
+  "n_blue": 1,
+  "stadium": "maps/futsal_1v1.hbs",
+  "reward_table": "corrected",
+  "reward_weights": {
+    "goal": 25,
+    "approach": 0.6,
+    "progress": 0.08
+  },
+  "repeat_kick": true,
+  "seed": 0,
+  "fine_tune_iters": 100,
+  "value_reset": true,
+  "selected": "experiments/gpt_repair_reset_value/corrected_seed0.pt",
+  "validation": {
+    "seeds": [
+      200,
+      201
+    ],
+    "episode_score_before": 0.5691544611977782,
+    "episode_score_after": 0.654746332286849,
+    "limitation": "Gain concentrated at kickoff; random-position performance declined."
+  }
+}

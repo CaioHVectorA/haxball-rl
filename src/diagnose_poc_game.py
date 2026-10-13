@@ -14,7 +14,7 @@ def trace(checkpoint, *, steps=300, greedy=True, jitter=0., scenario='kickoff', 
     torch.manual_seed(seed)
     model=Policy(16)
     model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
-    env=(create_training_env(1,1,1,'futsal-classic',8,seed=seed) if scenario=='random' else create_eval_env(1,1,1,'futsal-classic',8))
+    env=(create_training_env(1,1,1,'futsal-classic',8,seed=seed,repeat_kick=False) if scenario=='random' else create_eval_env(1,1,1,'futsal-classic',8,repeat_kick=False))
     obs=env.reset()
     if scenario=='offset':
         st=env.prev_state

@@ -16,7 +16,9 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from haxballgym import BLUE, RED, make_default_env
+from haxballgym import BLUE, RED
+from train import create_eval_env
+from environment import STADIUM
 from model import Policy
 
 MODELS = Path(__file__).resolve().parent.parent / "models"
@@ -38,7 +40,7 @@ def load(path: Path):
 @torch.no_grad()
 def h2h(a, b, stadium: str | None = None, n_envs: int = 128, steps: int = 350):
     """Goals (a, b) with `a`=red, `b`=blue over one set of games."""
-    env = make_default_env(n_envs, 1, 1, stadium=stadium)
+    env = create_eval_env(n_envs, 1, 1, stadium or STADIUM, 8)
     obs = env.reset()
     od = obs.shape[-1]
     ag = bg = 0
@@ -53,8 +55,8 @@ def h2h(a, b, stadium: str | None = None, n_envs: int = 128, steps: int = 350):
 
 
 def main():
-    meta_path = MODELS / "meta_final.json"
-    default_stadium = "futsal-classic"
+    meta_path = MODELS / "meta.json"
+    default_stadium = STADIUM
     if meta_path.exists():
         try:
             default_stadium = json.loads(meta_path.read_text()).get("stadium", default_stadium)
@@ -112,6 +114,11 @@ def main():
         meta = json.loads(meta_path.read_text())
     else:
         meta = {}
+    meta.update(obs_dim=nets[win].trunk[0].in_features, hidden=nets[win].trunk[0].out_features,
+                depth=len(nets[win].trunk)//2, n_acts=list(nets[win].n_acts),
+                n_red=1, n_blue=1, stadium=args.stadium, repeat_kick=True)
+    meta.pop("it", None)
+    meta.pop("net_vs_chase", None)
     meta["selected"] = win
     (MODELS / "meta.json").write_text(json.dumps(meta))
     print(f"\n🏆 Campeão Absoluto: [{win}] -> copiado para models/model.pt e models/meta.json\n")

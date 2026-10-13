@@ -6,9 +6,9 @@ Este documento descreve o código atual. A prioridade é o 1v1; comportamento co
 
 `src/model.py` implementa `Policy`: MLP com duas camadas de 256 unidades e Tanh, três cabeças categóricas independentes (X, Y, chute) e uma cabeça de valor. Usa a inicialização padrão de `torch.nn.Linear`; não há inicialização ortogonal explícita.
 
-O ambiente usa `DefaultObs(pos_coef="auto")`, de HaxballGym. Os checkpoints 1v1 disponíveis têm 16 entradas. A dimensão e o formato das observações dependem do builder e do número de jogadores; a definição exata está na dependência instalada.
+O ambiente usa `DefaultObs(pos_coef="auto")`, de HaxballGym. O mapa padrão é `maps/futsal_1v1.hbs`, uma cópia local de futsal-classic com paredes sem bias e damping explícito. Os checkpoints 1v1 disponíveis têm 16 entradas. A dimensão e o formato das observações dependem do builder e do número de jogadores; a definição exata está na dependência instalada.
 
-As ações são bins `[0, 1, 2]` para movimento (−1, 0, +1) e `[0, 1]` para chute (soltar, pressionar). O ambiente converte o eixo X do time azul para o referencial da política.
+As ações são bins `[0, 1, 2]` para movimento (−1, 0, +1) e `[0, 1]` para chute (soltar, pressionar). `RepeatKickAction` converte pressão em input 2 do engine, rearmando dentro da janela de ticks; as cabeças da política continuam com duas opções. O exportador grava `repeat_kick`, e a sala rearma entre decisões quando esse campo está ativo. O ambiente converte o eixo X do time azul para o referencial da política.
 
 `NeuralBot` carrega `model.pt` e `meta.json`, com ações greedy por padrão. Treinamento, avaliação interna e torneio amostram ações; essa diferença deve ser considerada na validação.
 

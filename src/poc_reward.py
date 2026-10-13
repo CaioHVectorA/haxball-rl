@@ -12,6 +12,7 @@ import torch
 from bot import ChaseBot, RandomBot
 from haxballgym import BLUE, RED
 from model import Policy
+from environment import STADIUM
 from train import (build_reward, create_training_env, create_eval_env, T, EPOCHS,
                    N_MB, CLIP, VF_COEF, MAX_GRAD, LAM, LR, ENT0, ENT1, HALF_LIFE_S)
 
@@ -22,13 +23,13 @@ def seed_all(seed):
 
 
 def controlled_checks():
-    env = create_eval_env(1, 1, 1, "futsal-classic", 8)
+    env = create_eval_env(1, 1, 1, "futsal-classic", 8, table="simple")
     env.reset()
     state = env.engine.snapshot()
     state = replace(state, ball_pos=np.array([[0., 0.]]),
                     player_pos=np.array([[[-100., 0.], [100., 0.]]]),
                     player_vel=np.zeros((1, 2, 2)), scored=np.array([-1]))
-    reward = build_reward()
+    reward = build_reward("simple")
     def value(vx=0., pv=0., scored=-1):
         st = replace(state, ball_vel=np.array([[vx, 0.]]),
                      player_vel=np.array([[[pv, 0.], [0., 0.]]]), scored=np.array([scored]))
@@ -75,13 +76,13 @@ def controlled_checks():
 
 
 @torch.no_grad()
-def evaluate(model, seeds, n, steps):
+def evaluate(model, seeds, n, steps, stadium=STADIUM):
     rows = []
     for seed in seeds:
         for opponent in ("chase", "chase_no_noise", "random"):
             for side in (0, 1):
                 seed_all(seed)
-                env = create_eval_env(n, 1, 1, "futsal-classic", 8)
+                env = create_eval_env(n, 1, 1, stadium, 8)
                 obs = env.reset()
                 bot = RandomBot(seed) if opponent == "random" else ChaseBot(seed=seed, jiggle=0. if opponent == "chase_no_noise" else .25)
                 gf = ga = 0
@@ -100,10 +101,13 @@ def evaluate(model, seeds, n, steps):
 
 def train(table, seed, args, initial):
     seed_all(seed)
-    env = create_training_env(args.envs, 1, 1, "futsal-classic", 8, seed=seed)
-    env.reward_fn = build_reward(table)
+    env = create_training_env(args.envs, 1, 1, args.stadium, 8, seed=seed, table=table)
+    env.reward_fn = build_reward(table, args.stadium, 8)
     model = Policy(env.obs_dim, env.action_space)
     model.load_state_dict(initial)
+    if getattr(args, "reset_value", False):
+        torch.nn.init.zeros_(model.value.weight)
+        torch.nn.init.zeros_(model.value.bias)
     opt = torch.optim.Adam(model.parameters(), lr=LR)
     chase = ChaseBot(seed=seed)
     obs = env.reset()
@@ -160,7 +164,7 @@ def train(table, seed, args, initial):
             print(f'{table} seed={seed} iteration={it+1}/{args.iters}', flush=True)
     torch.save(model.state_dict(), args.out / f'{table}_seed{seed}.pt')
     return dict(table=table, seed=seed, contributions=totals,
-                evaluation=evaluate(model, args.eval_seeds, args.eval_envs, args.eval_steps))
+                evaluation=evaluate(model, args.eval_seeds, args.eval_envs, args.eval_steps, args.stadium))
 
 
 def main():
@@ -172,7 +176,8 @@ def main():
     ap.add_argument('--eval-envs', type=int, default=16)
     ap.add_argument('--eval-steps', type=int, default=300)
     ap.add_argument('--warm-start', type=Path, default=Path('models/model.pt'))
-    ap.add_argument('--tables', nargs='+', choices=['previous', 'simple_progress1', 'simple'], default=['previous', 'simple'])
+    ap.add_argument('--tables', nargs='+', choices=['previous', 'simple_progress1', 'simple', 'corrected'], default=['previous', 'simple'])
+    ap.add_argument('--stadium', default=STADIUM)
     ap.add_argument('--out', type=Path, required=True)
     args = ap.parse_args()
     torch.set_num_threads(2)
@@ -189,7 +194,7 @@ def main():
                   controlled=controlled_checks(),
                   limitation='Short fine-tuning against Chase, not self-play convergence; greedy evaluation. Goals are aggregated over fixed windows, not match win rates.', runs=[])
     baseline = Policy(16); baseline.load_state_dict(initial)
-    report['baseline'] = evaluate(baseline, args.eval_seeds, args.eval_envs, args.eval_steps)
+    report['baseline'] = evaluate(baseline, args.eval_seeds, args.eval_envs, args.eval_steps, args.stadium)
     start = time.perf_counter()
     for seed in args.seeds:
         for table in args.tables:

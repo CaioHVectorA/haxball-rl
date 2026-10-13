@@ -7,13 +7,13 @@
 A partir da raiz do repositório:
 
 ```bash
-uv run headless-bot/export_policy.py models/model.pt --stadium futsal-classic
+uv run headless-bot/export_policy.py models/model.pt
 cd headless-bot
 npm install
 HEADLESS_TOKEN="<token>" node bot.js
 ```
 
-Forneça explicitamente o checkpoint: o caminho padrão antigo do exportador aponta para `rl/checkpoints/`, enquanto o treinamento atual grava em `models/` ou no diretório de `--out`.
+O caminho padrão do exportador é `models/`. O estádio vem de `meta.json`; forneça `--stadium` apenas para sobrescrever essa escolha. Políticas corrigidas incluem `repeat_kick`, rearmando o chute entre decisões na sala, assim como no simulador.
 
 O exportador exige observações de 16 dimensões e duas camadas na política. Não está preparado para equipes. Reexporte depois de escolher um checkpoint e confira os metadados e o estádio usados.
 

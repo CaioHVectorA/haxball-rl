@@ -14,16 +14,19 @@ from pathlib import Path
 import numpy as np
 
 from bot import ChaseBot, NeuralBot, RandomBot
-from haxballgym import BLUE, RED, make_default_env
+from haxballgym import BLUE, RED
+from train import create_eval_env
+from environment import STADIUM
 
 
 def play_matchup(red_bot, blue_bot, stadium: str | None, n_envs: int, steps: int):
-    env = make_default_env(n_envs, 1, 1, stadium=stadium)
+    env = create_eval_env(n_envs, 1, 1, stadium or STADIUM, 8)
     obs = env.reset()
     rg = bg = 0
     for _ in range(steps):
         # Red action
-        a_red = red_bot.act(obs[:, 0:1]).reshape(n_envs, 1, 3)
+        a_red = (red_bot.act(env.prev_state, [0]) if isinstance(red_bot, ChaseBot)
+                 else red_bot.act(obs[:, 0:1])).reshape(n_envs, 1, 3)
 
         # Blue action
         if isinstance(blue_bot, ChaseBot):
@@ -57,7 +60,7 @@ def main():
     ap.add_argument("--self", action="store_true", help="NeuralBot vs NeuralBot")
     args = ap.parse_args()
 
-    stadium_name = args.stadium or "futsal-classic"
+    stadium_name = args.stadium or STADIUM
 
     if args.benchmark:
         print(f"\n{'='*65}")
@@ -76,7 +79,7 @@ def main():
             total = rg + bg
             winrate = (rg / total * 100) if total > 0 else 50.0
             print(f"[{r_name}] vs [{b_name}]:")
-            print(f"  Gols: {rg} - {bg} (Saldo: {net:+d}) | Winrate estimada: {winrate:.1f}%\n")
+            print(f"  Gols: {rg} - {bg} (Saldo: {net:+d}) | Proporção dos gols: {winrate:.1f}%\n")
         print(f"{'='*65}\n")
     else:
         red_bot = NeuralBot(greedy=True)

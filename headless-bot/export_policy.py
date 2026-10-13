@@ -19,7 +19,7 @@ from pathlib import Path
 import torch
 
 HERE = Path(__file__).parent
-CKPT = HERE.parent / "rl" / "checkpoints"
+CKPT = HERE.parent / "models"
 
 
 def resolve(arg: str | None) -> tuple[Path, dict]:
@@ -88,6 +88,7 @@ def main():
         name = sd_path.stem
     policy = {
         "obs_dim": obs_dim,
+        "repeat_kick": bool(meta.get("repeat_kick", False)),
         "name": name,
         "stadium_name": stadium,
         "pos_coef": pos_coef,  # [px, py] obs position scale — map-aware (DefaultObs 'auto')

@@ -138,7 +138,15 @@ function startIfReady(room) {
 }
 
 function controlBot(room) {
-  if (++tick % CONFIG.tickSkip !== 0) return;
+  if (++tick % CONFIG.tickSkip !== 0) {
+    if (P.repeat_kick && lastKey >= 0 && (lastKey & 16)) {
+      after(() => {
+        room.fakeSendPlayerInput(lastKey & ~16, BOT_ID);
+        room.fakeSendPlayerInput(lastKey, BOT_ID);
+      });
+    }
+    return;
+  }
   room.extrapolate();
   const me = room.getPlayer(BOT_ID);
   const self = me?.disc?.ext;
@@ -163,7 +171,7 @@ function controlBot(room) {
   const key = Utils.keyState(sx * dx, CONFIG.flipY ? -dy : dy, kick);
   after(() => {
     if (kick) {
-      // Pulse kick: release bit then re-press every tick so Haxball re-arms and executes the kick!
+      // Re-arm on decisions; repeat_kick policies also re-arm between decisions.
       room.fakeSendPlayerInput(key & ~16, BOT_ID);
       room.fakeSendPlayerInput(key, BOT_ID);
       lastKey = key;
@@ -261,6 +269,7 @@ Room.create(
       room.onGameEnd = () => setTimeout(() => startIfReady(room), 3000);
       room.onTeamGoal = () => startIfReady(room);
 
+      room.onGameStart = () => { tick = 0; lastKey = -1; decisions = 0; };
       room.onGameTick = () => controlBot(room);
     },
     onClose: (msg) => {

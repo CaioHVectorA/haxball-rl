@@ -34,6 +34,7 @@ from haxballgym import (
 )
 from haxballgym.mutator import MultiSetter, RandomStateMutator, StateSetterMutator
 from model import Policy
+from environment import STADIUM, motion_scale, MotionPlayerToBall, MotionBallToGoal, RepeatKickAction
 from replay import dump_replay
 
 # PPO / GAE hyperparameters
@@ -155,8 +156,15 @@ class PenaltyTackleLostReward(RewardFunction):
         return (tackle * self.penalty).astype(np.float32)
 
 
-def build_reward(table="simple"):
+def build_reward(table="corrected", stadium=STADIUM, tick_skip=8):
     """Signed shaping; retain the previous table for controlled POC comparisons."""
+    if table == "corrected":
+        scale = motion_scale(stadium, tick_skip)
+        return CombinedReward(
+            (MotionPlayerToBall(scale), 0.6),
+            (MotionBallToGoal(scale), 0.08),
+            (GoalReward(), 25.0),
+        )
     if table in ("simple", "simple_progress1"):
         return CombinedReward(
             (VelocityPlayerToBall(), 0.6),
@@ -175,7 +183,10 @@ def build_reward(table="simple"):
     raise ValueError(f"Unknown reward table: {table}")
 
 
-def create_training_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int, seed: int | None = None):
+def create_training_env(
+    n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
+    seed: int | None = None, table: str = "corrected", repeat_kick: bool = True,
+):
     """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
     obs_builder = DefaultObs(pos_coef="auto")
@@ -187,15 +198,18 @@ def create_training_env(n_envs: int, n_red: int, n_blue: int, stadium: str | Non
     return Env(
         engine=engine,
         obs_builder=obs_builder,
-        action_parser=DiscreteAction(kick_values=2),
-        reward_fn=build_reward(),
+        action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
+        reward_fn=build_reward(table, stadium, tick_skip),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
     )
 
 
-def create_eval_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int):
+def create_eval_env(
+    n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
+    table: str = "corrected", repeat_kick: bool = True,
+):
     """Creates evaluation environment with standard kickoff resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
     obs_builder = DefaultObs(pos_coef="auto")
@@ -203,8 +217,8 @@ def create_eval_env(n_envs: int, n_red: int, n_blue: int, stadium: str | None, t
     return Env(
         engine=engine,
         obs_builder=obs_builder,
-        action_parser=DiscreteAction(kick_values=2),
-        reward_fn=build_reward(),
+        action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
+        reward_fn=build_reward(table, stadium, tick_skip),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -238,18 +252,22 @@ def main():
     ap.add_argument("--envs", type=int, default=512, help="parallel games")
     ap.add_argument("--red", type=int, default=1)
     ap.add_argument("--blue", type=int, default=1)
-    ap.add_argument("--stadium", default="futsal-classic", help="bundled name or .hbs path")
+    ap.add_argument("--stadium", default=STADIUM, help="bundled name or .hbs path")
     ap.add_argument("--tick-skip", type=int, default=8)
     ap.add_argument("--device", default="cpu", help="cpu | cuda | mps")
+    ap.add_argument("--threads", type=int, default=2, help="PyTorch CPU threads")
     ap.add_argument("--seed", type=int, default=0, help="RNG seed")
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "models"))
     ap.add_argument("--save-every", type=int, default=250, help="snapshot ckpts/it{N}.pt every N iters")
     ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
     ap.add_argument("--record-js", default=None)
     ap.add_argument("--warm-start", default=None, help="path to existing .pt checkpoint to continue training")
+    ap.add_argument("--keep-critic", action="store_true", help="keep old value head on warm-start")
     args = ap.parse_args()
 
     dev = torch.device(args.device)
+    if dev.type == "cpu":
+        torch.set_num_threads(args.threads)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
@@ -272,9 +290,14 @@ def main():
     model = Policy(obs_dim, n_acts).to(dev)
     if args.warm_start:
         ws_path = Path(args.warm_start)
+        if not ws_path.is_file():
+            raise FileNotFoundError(f"Warm-start checkpoint not found: {ws_path}")
         if ws_path.exists():
             print(f"Warm-starting policy weights from {ws_path}")
             model.load_state_dict(torch.load(ws_path, map_location=dev))
+            if not args.keep_critic:
+                nn.init.zeros_(model.value.weight)
+                nn.init.zeros_(model.value.bias)
     opp = Policy(obs_dim, n_acts).to(dev)
     opp.eval()
     opt = torch.optim.Adam(model.parameters(), lr=LR)
@@ -387,6 +410,10 @@ def main():
                         "n_red": args.red,
                         "n_blue": args.blue,
                         "stadium": args.stadium or "classic",
+                        "reward_table": "corrected",
+                        "reward_weights": {"goal": 25, "approach": 0.6, "progress": 0.08},
+                        "repeat_kick": True,
+                        "seed": args.seed,
                         "net_vs_chase": n,
                         "it": it,
                     }
