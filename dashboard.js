@@ -68,7 +68,7 @@ function render(){
  let phase=phases[live.phase]||live.phase||'Aguardando';if(live.phase==='rollout')phase+=' · '+fmt(live.rollout_step)+' / '+fmt(c.rollout_steps)+' decisões';if(live.phase==='evaluating')phase+=' · '+fmt(live.evaluation_completed)+' / '+fmt(live.evaluation_total)+' casos';$('phase').textContent=phase;
  $('samples').textContent=fmt(last?.samples||0);$('setup').textContent=c.envs?`${c.envs} ambientes · ${c.threads} threads PyTorch`:'—';
  $('speed').textContent=last?fmt(last.training_samples_per_second,0)+' amostras/s':'—';
- if(last){const recent=state.training.slice(-20);const seconds=recent.reduce((n,r)=>n+r.iteration_seconds,0)/recent.length*Math.max(0,c.iters-live.completed_iterations);$('eta').textContent='Treino restante: ~'+fmt(seconds/60,0)+' min + avaliações';}
+ if(last){const recent=state.training.slice(-20);const seconds=recent.reduce((n,r)=>n+r.iteration_seconds,0)/recent.length*Math.max(0,c.iters-live.completed_iterations);$('eta').textContent='Treino restante: ~'+fmt(seconds/60,0)+' min + avaliações';}else $('eta').textContent='Tempo restante: —';
  $('score').textContent=evalu?percent(evalu.score):'—';$('eval-age').textContent=evalu?'Avaliação completa da iteração '+evalu.iteration:'Ainda sem avaliação concluída';
  $('configuration').textContent=c.reward_weights?`Gol ±${c.reward_weights.goal} · aproximação ${c.reward_weights.approach} · progresso ${c.reward_weights.progress} · seed ${c.seed}`:'—';
  const performance=Object.keys(names).filter(bot=>state.visible.has(bot)).map(bot=>({label:names[bot],color:colors[bot],points:state.evaluations.map(e=>({x:e.iteration,y:group(e).find(r=>r.bot===bot).score}))}));plot('performance-chart',performance,{min:0,max:1,percentage:true});

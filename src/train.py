@@ -161,12 +161,12 @@ class PenaltyTackleLostReward(RewardFunction):
         return (tackle * self.penalty).astype(np.float32)
 
 
-def build_reward(table="corrected", stadium=STADIUM, tick_skip=8):
+def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.6):
     """Signed shaping; retain the previous table for controlled POC comparisons."""
     if table == "corrected":
         scale = motion_scale(stadium, tick_skip)
         return CombinedReward(
-            (MotionPlayerToBall(scale), 0.6),
+            (MotionPlayerToBall(scale), approach_weight),
             (MotionBallToGoal(scale), 0.08),
             (GoalReward(), 25.0),
         )
@@ -190,7 +190,7 @@ def build_reward(table="corrected", stadium=STADIUM, tick_skip=8):
 
 def create_training_env(
     n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
-    seed: int | None = None, table: str = "corrected", repeat_kick: bool = True,
+    seed: int | None = None, table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.6,
 ):
     """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
@@ -204,7 +204,7 @@ def create_training_env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
-        reward_fn=build_reward(table, stadium, tick_skip),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -213,7 +213,7 @@ def create_training_env(
 
 def create_eval_env(
     n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
-    table: str = "corrected", repeat_kick: bool = True,
+    table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.6,
 ):
     """Creates evaluation environment with standard kickoff resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
@@ -223,7 +223,7 @@ def create_eval_env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
-        reward_fn=build_reward(table, stadium, tick_skip),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -267,6 +267,7 @@ def main():
     ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
     ap.add_argument("--record-js", default=None)
     ap.add_argument("--warm-start", default=None, help="path to existing .pt checkpoint to continue training")
+    ap.add_argument("--approach-weight", type=float, default=0.6)
     ap.add_argument("--eval-every", type=int, default=50)
     ap.add_argument("--eval-envs", type=int, default=16)
     ap.add_argument("--eval-steps", type=int, default=400)
@@ -280,7 +281,7 @@ def main():
     np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
 
-    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip, seed=args.seed)
+    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip, seed=args.seed, approach_weight=args.approach_weight)
     eval_env = create_eval_env(128, args.red, args.blue, args.stadium, args.tick_skip)
 
     P = args.red + args.blue
@@ -335,7 +336,7 @@ def main():
     t0 = time.perf_counter()
     config = dict(vars(args), obs_dim=obs_dim, n_acts=list(n_acts), hidden=256, depth=2,
                   rollout_steps=T, epochs=EPOCHS, minibatches=N_MB, gamma=gamma,
-                  reward_weights={"goal":25,"approach":0.6,"progress":0.08},
+                  reward_weights={"goal":25,"approach":args.approach_weight,"progress":0.08},
                   repeat_kick=True, samples_per_iteration=T*B,
                   revision=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip())
     config['warm_start_sha256'] = hashlib.sha256(Path(args.warm_start).read_bytes()).hexdigest() if args.warm_start else None
@@ -448,6 +449,7 @@ def main():
                samples_per_second=T*B/iteration_seconds,training_samples_per_second=it*T*B/train_seconds,
                wall_samples_per_second=it*T*B/(time.perf_counter()-t0),
                reward_mean=float(S_rew.mean()),reward_terms_per_sample={k:v/(T*B) for k,v in meter.sums.items()},
+               reward_terms_absolute_per_sample={k:v/(T*B) for k,v in meter.absolute_sums.items()},
                goals_for=meter.gf,goals_against=meter.ga,completed_episodes=meter.finished,
                stationary_fraction=meter.stationary/max(1,meter.transitions),
                policy_loss=float(means[0]),value_loss=float(means[1]),entropy=float(means[2]),

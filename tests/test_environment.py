@@ -58,6 +58,13 @@ class EnvironmentChecks(unittest.TestCase):
         np.testing.assert_array_equal(b,np.array([[[1,0,2]]]))
         self.assertEqual(a[0,0,2],1)
 
+    def test_approach_weight_changes_only_one_reward(self):
+        from train import build_reward
+        control=build_reward(approach_weight=.6)
+        reduced=build_reward(approach_weight=.05)
+        self.assertEqual([weight for _,weight in control.terms],[.6,.08,25.])
+        self.assertEqual([weight for _,weight in reduced.terms],[.05,.08,25.])
+
     def test_motion_scale_matches_free_run(self):
         for _ in range(50):st=self.env.engine.step(np.array([[[1,0,0],[-1,0,0]]]))
         # Walls interfere with positions; velocities are still bounded by the free speed.

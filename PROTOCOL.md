@@ -120,3 +120,11 @@ Avaliação padrão: 16 ambientes × 400 decisões, seeds 1701/1702, ambos os la
 Métricas PPO: perdas de política/valor, entropia somada das três cabeças, KL aproximada, fração de clipping e variância explicada calculada com valores do rollout. Métricas de jogo: gols, episódios completos, bola parada (deslocamento <0,01 por decisão), contato e pressão de chute dentro de 24,8 unidades. A frequência de bola parada inclui kickoffs normais e não mede sozinha travamento. A pontuação não classifica quem deu o último toque de cada gol.
 
 Dashboard: stream de eventos a cada segundo, histórico da execução selecionada, cenário selecionável e linhas por adversário. Detecta perda de conexão, interrupção de processo e heartbeat atrasado. O servidor local é somente leitura e não inicia POCs.
+
+## Comparação controlada após 1.000 iterações
+
+`src/reward_sweep.py` executa seis treinos de self-play: aproximação 0,60 / 0,15 / 0,05, seeds 0 e 1, 300 iterações × 256 ambientes × 64 decisões por treino (4.915.200 amostras). Todos partem do mesmo checkpoint it650, mantêm gol ±25 e progresso 0,08 e reiniciam o critic. A ordem dos pesos é invertida na segunda seed. O runtime de simulação usa quatro threads e PyTorch duas para compartilhar CPU com a sala real.
+
+Cada execução mantém a mesma avaliação por adversário e grava inspeção de comportamento do checkpoint final. Comparar endpoints e cenários aleatórios; registrar melhor checkpoint separadamente. Os seis treinos são uma triagem, não prova de convergência robusta nem extrapolação para 20 mil iterações. O dashboard acompanha a execução ativa; os históricos anteriores permanecem em suas pastas.
+
+A inspeção registra distância da bola, intenção de chute durante proximidade, alinhamento aproximado com o gol, posição defensiva e períodos com bola parada. Essas métricas não identificam com certeza chutes efetivos nem autoria de gols. As parcelas absolutas de recompensa passam a ser gravadas para evitar confundir cancelamento do saldo de gols com ausência de sinal de gol.

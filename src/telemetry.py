@@ -42,6 +42,7 @@ class RewardMeter:
 
     def clear(self):
         self.sums = {type(fn).__name__: 0. for fn, _ in self.reward.terms}
+        self.absolute_sums = dict.fromkeys(self.sums, 0.)
         self.gf = self.ga = self.finished = self.stationary = self.transitions = 0
 
     def reset(self, state):
@@ -54,6 +55,7 @@ class RewardMeter:
             part = fn.get_rewards(state, prev, terminated, truncated)*weight
             result += part
             self.sums[type(fn).__name__] += float(part[:, 0].sum())
+            self.absolute_sums[type(fn).__name__] += float(np.abs(part[:,0]).sum())
         self.gf += int((state.scored==BLUE).sum())
         self.ga += int((state.scored==RED).sum())
         self.finished += int((terminated|truncated).sum())

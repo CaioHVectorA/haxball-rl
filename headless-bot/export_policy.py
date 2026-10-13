@@ -38,6 +38,8 @@ def resolve(arg: str | None) -> tuple[Path, dict]:
         if not sd_path.exists():
             sd_path = run / "model.pt"
         meta_path = run / "meta.json"
+    if not meta_path.exists() and sd_path.parent.name == "ckpts":
+        meta_path = sd_path.parent.parent / "config.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
     return sd_path, meta
 
