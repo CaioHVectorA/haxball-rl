@@ -161,7 +161,7 @@ class PenaltyTackleLostReward(RewardFunction):
         return (tackle * self.penalty).astype(np.float32)
 
 
-def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.6):
+def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.15):
     """Signed shaping; retain the previous table for controlled POC comparisons."""
     if table == "corrected":
         scale = motion_scale(stadium, tick_skip)
@@ -190,7 +190,7 @@ def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weigh
 
 def create_training_env(
     n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
-    seed: int | None = None, table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.6,
+    seed: int | None = None, table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.15,
 ):
     """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
@@ -213,7 +213,7 @@ def create_training_env(
 
 def create_eval_env(
     n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
-    table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.6,
+    table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.15,
 ):
     """Creates evaluation environment with standard kickoff resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
@@ -267,7 +267,7 @@ def main():
     ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
     ap.add_argument("--record-js", default=None)
     ap.add_argument("--warm-start", default=None, help="path to existing .pt checkpoint to continue training")
-    ap.add_argument("--approach-weight", type=float, default=0.6)
+    ap.add_argument("--approach-weight", type=float, default=0.15)
     ap.add_argument("--eval-every", type=int, default=50)
     ap.add_argument("--eval-envs", type=int, default=16)
     ap.add_argument("--eval-steps", type=int, default=400)

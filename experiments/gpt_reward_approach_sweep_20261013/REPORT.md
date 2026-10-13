@@ -44,4 +44,4 @@ The 0.15 policies scored in this exact-pattern screen on both training seeds, wh
 
 ## Next experiment
 
-Use 0.15 as the provisional anchor and include rare wall-corner states and a stationary opponent in training. Keep the current goal and ball-progress terms while testing this state-distribution change; the corner screen shows a useful gain without an added angle reward. Reassess the same fixed states and normal matches before promoting a policy.
+The default for new training on branch `gpt` is now 0.15, with goal ±25 and ball progress 0.08 unchanged. This is a provisional reward setting; the live room and its `it650` checkpoint were not changed. Next, include rare wall-corner states and a stationary opponent in training. Keep the current reward terms while testing that state-distribution change, then reassess the same fixed states and normal matches before promoting a policy.
