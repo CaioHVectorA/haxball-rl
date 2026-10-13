@@ -110,3 +110,13 @@ Na trajetória controlada de chute livre, a contribuição ponderada de progress
 Os geradores de reset de treino agora recebem `--seed` explicitamente. A comparação anterior não controlava esses geradores; a repetição corrigida está em `experiments/reward_progress008_seeded_poc_20261013/`.
 
 Diagnóstico posterior: o saldo 0 × 448 corresponde à mesma derrota de kickoff repetida deterministicamente. O checkpoint 0,08 evita essa sequência, mas leva a bola ao canto e termina por timeout, sem consolidar ataque ou defesa. Veja `experiments/reward_progress008_seeded_poc_20261013/diagnosis_long/REPORT.md`.
+
+## Telemetria do self-play monitorado
+
+O treinador grava `training.jsonl` (uma linha por iteração), `evaluation_cases.jsonl` (cada caso), `evaluations.jsonl` (painel completo) e `live.json` (heartbeat/estado). Configuração, revisão Git e hash do warm-start ficam em `config.json`. `initial_policy.pt` congela o adversário neural de referência.
+
+Avaliação padrão: 16 ambientes × 400 decisões, seeds 1701/1702, ambos os lados, kickoff e estados aleatórios, cinco adversários, learner greedy. Cada caso recebe peso igual na pontuação de seleção. Na ausência de episódios completos a pontuação é desconhecida, não zero. Avaliação inicial e a cada 50 iterações; snapshots de self-play continuam a cada 20 iterações. A avaliação preserva o estado RNG do PyTorch do treino.
+
+Métricas PPO: perdas de política/valor, entropia somada das três cabeças, KL aproximada, fração de clipping e variância explicada calculada com valores do rollout. Métricas de jogo: gols, episódios completos, bola parada (deslocamento <0,01 por decisão), contato e pressão de chute dentro de 24,8 unidades. A frequência de bola parada inclui kickoffs normais e não mede sozinha travamento. A pontuação não classifica quem deu o último toque de cada gol.
+
+Dashboard: stream de eventos a cada segundo, histórico da execução selecionada, cenário selecionável e linhas por adversário. Detecta perda de conexão, interrupção de processo e heartbeat atrasado. O servidor local é somente leitura e não inicia POCs.

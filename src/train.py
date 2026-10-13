@@ -10,6 +10,9 @@ import argparse
 import json
 import math
 import time
+import os
+import hashlib
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -35,6 +38,8 @@ from haxballgym import (
 from haxballgym.mutator import MultiSetter, RandomStateMutator, StateSetterMutator
 from model import Policy
 from environment import STADIUM, motion_scale, MotionPlayerToBall, MotionBallToGoal, RepeatKickAction
+from telemetry import Telemetry, RewardMeter
+from live_evaluation import panel, balanced_score
 from replay import dump_replay
 
 # PPO / GAE hyperparameters
@@ -262,6 +267,9 @@ def main():
     ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
     ap.add_argument("--record-js", default=None)
     ap.add_argument("--warm-start", default=None, help="path to existing .pt checkpoint to continue training")
+    ap.add_argument("--eval-every", type=int, default=50)
+    ap.add_argument("--eval-envs", type=int, default=16)
+    ap.add_argument("--eval-steps", type=int, default=400)
     ap.add_argument("--keep-critic", action="store_true", help="keep old value head on warm-start")
     args = ap.parse_args()
 
@@ -323,113 +331,158 @@ def main():
     obs = env.reset().reshape(args.envs * P, obs_dim)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    best = -(10**9)
+    best = -1.0
     t0 = time.perf_counter()
+    config = dict(vars(args), obs_dim=obs_dim, n_acts=list(n_acts), hidden=256, depth=2,
+                  rollout_steps=T, epochs=EPOCHS, minibatches=N_MB, gamma=gamma,
+                  reward_weights={"goal":25,"approach":0.6,"progress":0.08},
+                  repeat_kick=True, samples_per_iteration=T*B,
+                  revision=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip())
+    config['warm_start_sha256'] = hashlib.sha256(Path(args.warm_start).read_bytes()).hexdigest() if args.warm_start else None
+    telemetry = Telemetry(out, config)
+    meter = RewardMeter(env.reward_fn)
+    env.reward_fn = meter
+    reference = Policy(obs_dim,n_acts).to(dev)
+    reference.load_state_dict(model.state_dict()); reference.eval()
+    torch.save(snapshot(), out/'initial_policy.pt')
+    train_seconds=0.
 
-    for it in range(1, args.iters + 1):
-        frac = (it - 1) / max(1, args.iters - 1)
-        for g in opt.param_groups:
-            g["lr"] = LR * (1 - frac) + (LR / 3) * frac
-        ent_coef = ENT0 * (1 - frac) + ENT1 * frac
+    def evaluate(iteration):
+        telemetry.update(phase='evaluating', evaluation_iteration=iteration, evaluation_completed=0)
+        rows=panel(model, reference, args.stadium, args.seed,
+          lambda row:telemetry.append('evaluation_cases.jsonl',dict(iteration=iteration,**row)),
+          lambda case,total,bot,scenario:telemetry.update(phase='evaluating',evaluation_completed=case,
+            evaluation_total=total,evaluation_opponent=bot,evaluation_scenario=scenario),
+          n=args.eval_envs,steps=args.eval_steps)
+        score=balanced_score(rows)
+        telemetry.append('evaluations.jsonl',dict(iteration=iteration,score=score,cases=rows))
+        return score
 
-        # pick frozen opponent: current copy or past snapshot
-        opp.load_state_dict(
-            pool[rng.integers(len(pool))] if (pool and rng.random() < POOL_PROB) else snapshot()
-        )
+    try:
+        baseline_score=evaluate(0)
+        best=baseline_score if baseline_score is not None else -1.
+        torch.save(snapshot(),out/'model.pt')
+        (out/'meta.json').write_text(json.dumps(dict(config, it=0, evaluation_score=baseline_score)))
 
-        # --- rollout ---
-        for t in range(T):
-            o = torch.as_tensor(obs, dtype=torch.float32, device=dev)
+        for it in range(1, args.iters + 1):
+            iteration_start=time.perf_counter()
+            meter.clear()
+            telemetry.update(phase="rollout",iteration=it,rollout_step=0)
+            frac = (it - 1) / max(1, args.iters - 1)
+            for g in opt.param_groups:
+                g["lr"] = LR * (1 - frac) + (LR / 3) * frac
+            ent_coef = ENT0 * (1 - frac) + ENT1 * frac
+
+            # pick frozen opponent: current copy or past snapshot
+            opp.load_state_dict(
+                pool[rng.integers(len(pool))] if (pool and rng.random() < POOL_PROB) else snapshot()
+            )
+
+            # --- rollout ---
+            for t in range(T):
+                o = torch.as_tensor(obs, dtype=torch.float32, device=dev)
+                with torch.no_grad():
+                    act, logp, val = model.act_train(o[learner_t])
+                    o_act = opp.act(o[opp_t])
+                S_obs[t], S_act[t], S_logp[t], S_val[t] = o[learner_t], act, logp, val
+                full = np.empty((args.envs * P, 3), dtype=np.int64)
+                full[learner_idx] = act.cpu().numpy()
+                full[opp_idx] = o_act.cpu().numpy()
+                nobs, rew, term, trunc = env.step(full.reshape(args.envs, P, 3))
+                obs = nobs.reshape(args.envs * P, obs_dim)
+                done = np.repeat((term | trunc).astype(np.float32), P)
+                S_rew[t] = torch.as_tensor(rew.reshape(-1)[learner_idx], dtype=torch.float32, device=dev)
+                S_done[t] = torch.as_tensor(done[learner_idx], device=dev)
+                if (t+1)%8==0:
+                    telemetry.update(phase='rollout',rollout_step=t+1)
+
+            rollout_seconds=time.perf_counter()-iteration_start
+            telemetry.update(phase="updating")
+            # --- GAE advantages ---
             with torch.no_grad():
-                act, logp, val = model.act_train(o[learner_t])
-                o_act = opp.act(o[opp_t])
-            S_obs[t], S_act[t], S_logp[t], S_val[t] = o[learner_t], act, logp, val
-            full = np.empty((args.envs * P, 3), dtype=np.int64)
-            full[learner_idx] = act.cpu().numpy()
-            full[opp_idx] = o_act.cpu().numpy()
-            nobs, rew, term, trunc = env.step(full.reshape(args.envs, P, 3))
-            obs = nobs.reshape(args.envs * P, obs_dim)
-            done = np.repeat((term | trunc).astype(np.float32), P)
-            S_rew[t] = torch.as_tensor(rew.reshape(-1)[learner_idx], dtype=torch.float32, device=dev)
-            S_done[t] = torch.as_tensor(done[learner_idx], device=dev)
+                last_val = model._logits(torch.as_tensor(obs, dtype=torch.float32, device=dev)[learner_t])[1]
+            adv = torch.zeros(T, B, device=dev)
+            gae = torch.zeros(B, device=dev)
+            for t in reversed(range(T)):
+                nonterm = 1.0 - S_done[t]
+                nextval = last_val if t == T - 1 else S_val[t + 1]
+                delta = S_rew[t] + gamma * nextval * nonterm - S_val[t]
+                gae = delta + gamma * LAM * nonterm * gae
+                adv[t] = gae
+            ret = adv + S_val
 
-        # --- GAE advantages ---
-        with torch.no_grad():
-            last_val = model._logits(torch.as_tensor(obs, dtype=torch.float32, device=dev)[learner_t])[1]
-        adv = torch.zeros(T, B, device=dev)
-        gae = torch.zeros(B, device=dev)
-        for t in reversed(range(T)):
-            nonterm = 1.0 - S_done[t]
-            nextval = last_val if t == T - 1 else S_val[t + 1]
-            delta = S_rew[t] + gamma * nextval * nonterm - S_val[t]
-            gae = delta + gamma * LAM * nonterm * gae
-            adv[t] = gae
-        ret = adv + S_val
+            # --- PPO update ---
+            bo, ba, bl = S_obs.reshape(-1, obs_dim), S_act.reshape(-1, 3), S_logp.reshape(-1)
+            badv, bret = adv.reshape(-1), ret.reshape(-1)
+            badv = (badv - badv.mean()) / (badv.std() + 1e-8)
+            idx = np.arange(T * B)
+            mb = len(idx) // N_MB
+            ppo_metrics=[]
+            for _ in range(EPOCHS):
+                np.random.shuffle(idx)
+                for s in range(0, len(idx), mb):
+                    mi = torch.as_tensor(idx[s : s + mb], device=dev)
+                    logp, ent, val = model.evaluate(bo[mi], ba[mi])
+                    ratio = (logp - bl[mi]).exp()
+                    a = badv[mi]
+                    pl = -torch.min(ratio * a, torch.clamp(ratio, 1 - CLIP, 1 + CLIP) * a).mean()
+                    vl = 0.5 * (val - bret[mi]).pow(2).mean()
+                    loss = pl + VF_COEF * vl - ent_coef * ent.mean()
+                    opt.zero_grad()
+                    loss.backward()
+                    nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)
+                    opt.step()
+                    with torch.no_grad():
+                        lr_delta=logp-bl[mi]
+                        kl=((lr_delta.exp()-1)-lr_delta).mean()
+                        clipped=((ratio-1).abs()>CLIP).float().mean()
+                        ppo_metrics.append([float(pl),float(vl),float(ent.mean()),float(kl),float(clipped)])
 
-        # --- PPO update ---
-        bo, ba, bl = S_obs.reshape(-1, obs_dim), S_act.reshape(-1, 3), S_logp.reshape(-1)
-        badv, bret = adv.reshape(-1), ret.reshape(-1)
-        badv = (badv - badv.mean()) / (badv.std() + 1e-8)
-        idx = np.arange(T * B)
-        mb = len(idx) // N_MB
-        for _ in range(EPOCHS):
-            np.random.shuffle(idx)
-            for s in range(0, len(idx), mb):
-                mi = torch.as_tensor(idx[s : s + mb], device=dev)
-                logp, ent, val = model.evaluate(bo[mi], ba[mi])
-                ratio = (logp - bl[mi]).exp()
-                a = badv[mi]
-                pl = -torch.min(ratio * a, torch.clamp(ratio, 1 - CLIP, 1 + CLIP) * a).mean()
-                vl = 0.5 * (val - bret[mi]).pow(2).mean()
-                loss = pl + VF_COEF * vl - ent_coef * ent.mean()
-                opt.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)
-                opt.step()
+            iteration_seconds=time.perf_counter()-iteration_start
+            train_seconds+=iteration_seconds
+            means=np.mean(ppo_metrics,axis=0)
+            yvar=float(bret.var(unbiased=False))
+            explained=1-float((bret-S_val.reshape(-1)).var(unbiased=False))/yvar if yvar>1e-9 else None
+            record=dict(iteration=it,samples=it*T*B,iteration_seconds=iteration_seconds,
+               rollout_seconds=rollout_seconds,update_seconds=iteration_seconds-rollout_seconds,
+               samples_per_second=T*B/iteration_seconds,training_samples_per_second=it*T*B/train_seconds,
+               wall_samples_per_second=it*T*B/(time.perf_counter()-t0),
+               reward_mean=float(S_rew.mean()),reward_terms_per_sample={k:v/(T*B) for k,v in meter.sums.items()},
+               goals_for=meter.gf,goals_against=meter.ga,completed_episodes=meter.finished,
+               stationary_fraction=meter.stationary/max(1,meter.transitions),
+               policy_loss=float(means[0]),value_loss=float(means[1]),entropy=float(means[2]),
+               approximate_kl=float(means[3]),clip_fraction=float(means[4]),explained_variance=explained,
+               learning_rate=opt.param_groups[0]['lr'],snapshot_pool=len(pool))
+            telemetry.append('training.jsonl',record)
+            telemetry.update(completed_iterations=it,samples=it*T*B,phase='checkpoint',last_training=record)
 
-        if it % SNAPSHOT_EVERY == 0:
-            pool.append(snapshot())
-            if len(pool) > POOL_SIZE:
-                pool.pop(0)
+            if it % SNAPSHOT_EVERY == 0:
+                pool.append(snapshot())
+                if len(pool) > POOL_SIZE:
+                    pool.pop(0)
 
-        if args.save_every and it % args.save_every == 0:
-            (out / "ckpts").mkdir(exist_ok=True)
-            torch.save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
+            if args.save_every and it % args.save_every == 0:
+                (out / "ckpts").mkdir(exist_ok=True)
+                torch.save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
 
-        if it % 50 == 0 or it == args.iters:
-            net = eval_vs_chase(eval_env, model, dev, args.red, args.blue)
-            sps = (it * T * B) / (time.perf_counter() - t0)
+            if it % args.eval_every == 0 or it == args.iters:
+                score=evaluate(it)
+                meta=dict(config,it=it,evaluation_score=score)
+                torch.save(snapshot(),out/'model_final.pt')
+                (out/'meta_final.json').write_text(json.dumps(meta))
+                tag=''
+                if score is not None and score>best:
+                    best=score
+                    torch.save(snapshot(),out/'model.pt')
+                    (out/'meta.json').write_text(json.dumps(meta));tag=' <- saved best'
+                score_label=f'{score:.3f}' if score is not None else 'n/a'
+                print(f'it {it:4d} | {record["samples_per_second"]/1000:.1f}k samples/s | balanced eval {score_label} (best {best:.3f}){tag}',flush=True)
 
-            def meta(n):
-                return json.dumps(
-                    {
-                        "obs_dim": obs_dim,
-                        "n_acts": list(n_acts),
-                        "hidden": 256,
-                        "depth": 2,
-                        "n_red": args.red,
-                        "n_blue": args.blue,
-                        "stadium": args.stadium or "classic",
-                        "reward_table": "corrected",
-                        "reward_weights": {"goal": 25, "approach": 0.6, "progress": 0.08},
-                        "repeat_kick": True,
-                        "seed": args.seed,
-                        "net_vs_chase": n,
-                        "it": it,
-                    }
-                )
-
-            torch.save(model.state_dict(), out / "model_final.pt")
-            (out / "meta_final.json").write_text(meta(net))
-            tag = ""
-            if net > best:
-                best = net
-                torch.save(model.state_dict(), out / "model.pt")
-                (out / "meta.json").write_text(meta(net))
-                tag = "  <- saved best"
-            print(f"it {it:4d} | {sps / 1e3:4.0f}k steps/s | net vs chase {net:+d} (best {best:+d}){tag}")
-
-    print(f"done. best-by-chase {best:+d} -> {out / 'model.pt'} ; final -> {out / 'model_final.pt'}")
+        telemetry.update(status="completed",phase="completed",completed_iterations=args.iters)
+        print(f"done. balanced score {best:.3f} -> {out / 'model.pt'}",flush=True)
+    except BaseException as error:
+        telemetry.update(status='failed',phase='failed',error=repr(error))
+        raise
 
 
 if __name__ == "__main__":

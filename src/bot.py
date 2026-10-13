@@ -80,3 +80,36 @@ class RandomBot:
         kick = self.rng.integers(0, 2, size=(*shape, 1))
         return np.concatenate([m_x, m_y, kick], axis=-1).astype(np.int64)
 
+
+
+class PositionBot:
+    """Position before kicking; avoid kicking toward the bot's own goal.
+
+    defender=True keeps a keeper near the own goal; otherwise approach from behind
+    the ball relative to the finite opponent goal mouth. Scripted evaluation only.
+    """
+    def __init__(self, defender=False):
+        self.defender = defender
+
+    def act(self, state, players, n_red=1):
+        players = np.asarray(players)
+        ball = state.ball_pos[:, None, :]
+        pos = state.player_pos[:, players]
+        goal = state.goal_center(attacked=True)[:, players]
+        toward = goal-ball
+        toward /= np.maximum(np.linalg.norm(toward, axis=-1, keepdims=True), 1e-9)
+        target = ball-toward*27.
+        if self.defender:
+            own = state.goal_center(attacked=False)[:, players]
+            target = own.copy()
+            target[..., 0] *= .88
+            target[..., 1] = np.clip(ball[..., 1], -55., 55.)
+        move = target-pos
+        delta = ball-pos
+        distance = np.linalg.norm(delta, axis=-1)
+        aligned = np.sum(delta*toward,axis=-1)>distance*.5
+        kick = ((distance<24.8)&aligned).astype(np.int64)
+        move[...,0] *= np.where(players>=n_red,-1,1)
+        bx=np.where(move[...,0]>3,2,np.where(move[...,0]<-3,0,1))
+        by=np.where(move[...,1]>3,2,np.where(move[...,1]<-3,0,1))
+        return np.stack([bx,by,kick],axis=-1).astype(np.int64)

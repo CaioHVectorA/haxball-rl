@@ -54,3 +54,14 @@ O exportador atual aceita observações de 16 dimensões e uma rede de duas cama
 - Scripts `inspect_*` e `test_*` na raiz: diagnósticos e experimentos, sem uma suíte unificada.
 
 `AGENTS.md` descreve a arquitetura implementada; `PROTOCOL.md`, os parâmetros e recompensas; `TODO.md`, as próximas etapas; `CONTEXT.md`, o histórico e as limitações dos resultados disponíveis.
+
+## Self-play monitorado
+
+```bash
+uv run src/train.py --envs 512 --iters 1000 --threads 2 --warm-start models/model.pt --keep-critic --out runs/minha_execucao --save-every 50 --eval-every 50
+uv run live_stats_server.py --port 8085
+```
+
+O dashboard em `http://127.0.0.1:8085` lê a execução apontada por `runs/active.json` (`{"path":"/caminho/absoluto/da/execucao"}`). O treinador grava estado atômico, registros por iteração e avaliações por adversário. Há uma avaliação inicial na iteração zero; durante avaliações o treino pausa e o painel mostra essa fase. A velocidade de treino exclui avaliações; a estimativa restante é só do treino.
+
+Os adversários são Chase com/sem ruído, atacante posicional, goleiro e a política inicial congelada. Cenários e seeds de avaliação permanecem fixos. O modelo principal é preservado: pesos finais e melhor checkpoint por pontuação equilibrada ficam na pasta da execução. A pontuação conta vitória como 1, empate como 0,5 e derrota como 0; não confundir com proporção dos gols. Kickoffs determinísticos continuam sendo trajetórias correlacionadas, e autoria de gols contra não é classificada.
