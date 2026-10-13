@@ -12,32 +12,24 @@ function group(evaluation){const scenario=$('scenario').value;const result=[];fo
 function svgNode(tag,attrs,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs||{}))e.setAttribute(k,v);if(text!==undefined)e.textContent=text;return e;}
 const scaleCharts=['performance-chart','stationary-chart','reward-chart','ppo-chart'];
 const chartDomains={};
-let scalePrefs={};try{scalePrefs=JSON.parse(localStorage.getItem('haxball-x-windows')||'{}');}catch{}
-const preference=id=>scalePrefs[id]||{window:'all'};
-function saveScale(id,value){scalePrefs[id]=value;try{localStorage.setItem('haxball-x-windows',JSON.stringify(scalePrefs));}catch{}render();}
+let scalePrefs={};try{scalePrefs=JSON.parse(localStorage.getItem('haxball-x-ticks')||'{}');}catch{}
+const preference=id=>scalePrefs[id]||{ticks:'4'};
+function saveScale(id,value){scalePrefs[id]=value;try{localStorage.setItem('haxball-x-ticks',JSON.stringify(scalePrefs));}catch{}render();}
 function control(id){
  const toolbar=document.createElement('div');toolbar.className='scale-controls';toolbar.dataset.chart=id;
- toolbar.innerHTML=`<label>Intervalo X <select data-field="window" aria-label="Intervalo X de ${id}"><option value="all">Toda a execução</option><option value="100">Últimas 100 iterações</option><option value="250">Últimas 250 iterações</option><option value="500">Últimas 500 iterações</option><option value="custom">Escolher início e fim</option></select></label><span class="custom-x" hidden><label>De <input data-field="from" type="number" min="0" step="1" aria-label="Iteração inicial de ${id}"></label><label>Até <input data-field="to" type="number" min="0" step="1" aria-label="Iteração final de ${id}"></label></span><span class="scale-error" role="status"></span>`;
+ toolbar.innerHTML=`<label>Marcas no eixo X <select data-field="ticks" aria-label="Quantidade de marcas do eixo X em ${id}"><option value="2">2 marcas</option><option value="3">3 marcas</option><option value="4">4 marcas</option><option value="6">6 marcas</option><option value="8">8 marcas</option><option value="12">12 marcas</option></select></label><span class="scale-note">Todas as iterações continuam desenhadas.</span>`;
  $(id).before(toolbar);
- const sync=()=>{const pref=preference(id);for(const field of toolbar.querySelectorAll('[data-field]')){if(document.activeElement!==field)field.value=pref[field.dataset.field]??'';}toolbar.querySelector('.custom-x').hidden=pref.window!=='custom';};
- const updateControl=event=>{const field=event.target.dataset.field;if(!field)return;const pref={...preference(id)};pref[field]=event.target.value;const domain=chartDomains[id];if(domain&&field==='window'&&pref.window==='custom'){pref.from??=String(domain.from);pref.to??=String(domain.to);}saveScale(id,pref);sync();};toolbar.addEventListener('change',updateControl);toolbar.addEventListener('input',event=>{if(event.target.tagName==='INPUT')updateControl(event);});sync();return sync;
+ const sync=()=>{const pref=preference(id);for(const field of toolbar.querySelectorAll('[data-field]'))if(document.activeElement!==field)field.value=pref[field.dataset.field]??'4';};
+ toolbar.addEventListener('change',event=>{const field=event.target.dataset.field;if(field)saveScale(id,{...preference(id),[field]:event.target.value});});sync();return sync;
 }
 const scaleSync={};
-function chartBounds(id,series,defaults){
- const pref=preference(id),all=series.flatMap(s=>s.points),latest=Math.max(0,...all.map(p=>p.x));
- let xMin=null,xMax=null,error='';
- if(pref.window!=='all'&&pref.window!=='custom')xMin=Math.max(0,latest-Number(pref.window));
- if(pref.window==='custom'){
-   if(pref.from!==''&&pref.from!==undefined)xMin=Number(pref.from);
-   if(pref.to!==''&&pref.to!==undefined)xMax=Number(pref.to);
-   if(xMin!==null&&xMax!==null&&xMin>=xMax){error='O fim deve ser maior que o início.';xMin=xMax=null;}
- }
- const filtered=series.map(s=>({...s,points:s.points.filter(p=>(xMin===null||p.x>=xMin)&&(xMax===null||p.x<=xMax))}));
- document.querySelector(`[data-chart="${id}"] .scale-error`).textContent=error;
- return {series:filtered,min:defaults.min,max:defaults.max,xMin,xMax};
+function chartBounds(series,defaults){
+ const all=series.flatMap(s=>s.points),xs=all.map(p=>p.x);
+ const xMin=xs.length?Math.min(...xs):0,xMax=xs.length?Math.max(...xs):1;
+ return {series,min:defaults.min,max:defaults.max,xMin,xMax:xMax===xMin?xMin+1:xMax};
 }
 function plot(id,series,{min=null,max=null,percentage=false}={}){
- const bounds=chartBounds(id,series,{min,max,percentage});series=bounds.series;min=bounds.min;max=bounds.max;
+ const bounds=chartBounds(series,{min,max,percentage});series=bounds.series;min=bounds.min;max=bounds.max;
  const root=$(id);root.replaceChildren();const points=series.flatMap(s=>s.points).filter(p=>Number.isFinite(p.y));
  if(!points.length){const div=document.createElement('div');div.className='empty';div.textContent=series.some(s=>s.points.length)?'Sem valores medidos neste intervalo':'Sem dados neste intervalo';root.append(div);return;}
  const w=Math.max(root.clientWidth,280),h=260,m={l:56,r:20,t:12,b:40},xs=points.map(p=>p.x),ys=points.map(p=>p.y);
@@ -49,7 +41,8 @@ function plot(id,series,{min=null,max=null,percentage=false}={}){
  const defs=svgNode('defs'),clip=svgNode('clipPath',{id:id+'-clip'});clip.append(svgNode('rect',{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b}));defs.append(clip);svg.append(defs);
  const marks=svgNode('g',{'clip-path':`url(#${id}-clip)`});svg.append(marks);
  for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4;svg.append(svgNode('line',{x1:m.l,x2:w-m.r,y1:y(v),y2:y(v),class:'grid'}),svgNode('text',{x:m.l-8,y:y(v)+4,'text-anchor':'end'},percentage?fmt(v*100,(y1-y0)<.05?1:0)+'%':fmt(v,(y1-y0)<.001?5:(y1-y0)<.01?4:(y1-y0)<.1?3:(y1-y0)<1?2:(y1-y0)<5?1:0)));}
- for(const v of [...new Set(Array.from({length:4},(_,i)=>Math.round(x0+(x1-x0)*i/3)))]){svg.append(svgNode('text',{x:x(v),y:h-20,'text-anchor':v===x0?'start':v===x1?'end':'middle'},fmt(v)));}
+ const tickCount=Number(preference(id).ticks)||4;
+ for(let i=0;i<tickCount;i++){const v=x0+(x1-x0)*i/(tickCount-1);svg.append(svgNode('text',{x:x(v),y:h-20,'text-anchor':i===0?'start':i===tickCount-1?'end':'middle'},fmt(v)));}
  svg.append(svgNode('text',{x:(w+m.l)/2,y:h-3,'text-anchor':'middle'},'Iteração'));
  for(const s of series){let d='',previous=false;for(const p of s.points){if(!Number.isFinite(p.y)){previous=false;continue;}d+=(previous?'L':'M')+x(p.x)+','+y(p.y);previous=true;}marks.append(svgNode('path',{d,stroke:s.color,class:'series'}));for(const p of s.points.filter(p=>Number.isFinite(p.y))){if(s.points.length<5)marks.append(svgNode('circle',{cx:x(p.x),cy:y(p.y),r:3,fill:s.color}));}}
  const tip=document.createElement('div');tip.className='tip';tip.hidden=true;root.append(tip);
