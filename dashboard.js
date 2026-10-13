@@ -10,18 +10,59 @@ function group(evaluation){const scenario=$('scenario').value;const result=[];fo
  const valid=rows.filter(r=>Number.isFinite(r.score));const sum=k=>rows.reduce((n,r)=>n+r[k],0);
  result.push({bot,score:valid.length?valid.reduce((n,r)=>n+r.score,0)/valid.length:null,gf:sum('gf'),ga:sum('ga'),wins:sum('wins'),draws:sum('draws'),losses:sum('losses'),stationary:rows.length?rows.reduce((n,r)=>n+r.stationary_fraction,0)/rows.length:null});}return result;}
 function svgNode(tag,attrs,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs||{}))e.setAttribute(k,v);if(text!==undefined)e.textContent=text;return e;}
+const scaleCharts=['performance-chart','stationary-chart','reward-chart','ppo-chart'];
+const chartDomains={};
+let scalePrefs={};try{scalePrefs=JSON.parse(localStorage.getItem('haxball-chart-scales')||'{}');}catch{}
+const scaleKey=id=>id==='ppo-chart'?id+':'+$('ppo-metric').value:id;
+const preference=id=>scalePrefs[scaleKey(id)]||{window:'all',y:'default'};
+function saveScale(id,value){scalePrefs[scaleKey(id)]=value;try{localStorage.setItem('haxball-chart-scales',JSON.stringify(scalePrefs));}catch{}render();}
+function control(id){
+ const toolbar=document.createElement('div');toolbar.className='scale-controls';toolbar.dataset.chart=id;
+ toolbar.innerHTML=`<label>Janela <select data-field="window" aria-label="Janela de ${id}"><option value="all">Toda a execução</option><option value="100">Últimas 100 iterações</option><option value="250">Últimas 250 iterações</option><option value="500">Últimas 500 iterações</option><option value="custom">Intervalo escolhido</option></select></label><span class="custom-x" hidden><label>De <input data-field="from" type="number" min="0" step="1" aria-label="Iteração inicial de ${id}"></label><label>Até <input data-field="to" type="number" min="0" step="1" aria-label="Iteração final de ${id}"></label></span><label>Escala Y <select data-field="y" aria-label="Escala Y de ${id}"><option value="default">Padrão</option><option value="auto">Ajustar aos dados</option><option value="custom">Personalizada</option></select></label><span class="custom-y" hidden><label>Mín. <input data-field="min" type="number" step="any" aria-label="Mínimo Y de ${id}"></label><label>Máx. <input data-field="max" type="number" step="any" aria-label="Máximo Y de ${id}"></label></span><button type="button">Restaurar</button><span class="scale-error" role="status"></span>`;
+ $(id).before(toolbar);
+ const sync=()=>{const pref=preference(id);for(const field of toolbar.querySelectorAll('[data-field]')){if(document.activeElement!==field)field.value=pref[field.dataset.field]??'';}toolbar.querySelector('.custom-x').hidden=pref.window!=='custom';toolbar.querySelector('.custom-y').hidden=pref.y!=='custom';};
+ const updateControl=event=>{const field=event.target.dataset.field;if(!field)return;const pref={...preference(id)};pref[field]=event.target.value;const domain=chartDomains[id];if(domain&&field==='y'&&pref.y==='custom'){const factor=domain.percentage?100:1;pref.min??=String(Number((domain.min*factor).toPrecision(6)));pref.max??=String(Number((domain.max*factor).toPrecision(6)));}if(domain&&field==='window'&&pref.window==='custom'){pref.from??=String(domain.from);pref.to??=String(domain.to);}saveScale(id,pref);sync();};toolbar.addEventListener('change',updateControl);toolbar.addEventListener('input',event=>{if(event.target.tagName==='INPUT')updateControl(event);});
+ toolbar.querySelector('button').addEventListener('click',()=>{delete scalePrefs[scaleKey(id)];try{localStorage.setItem('haxball-chart-scales',JSON.stringify(scalePrefs));}catch{}sync();render();});sync();return sync;
+}
+const scaleSync={};
+function chartBounds(id,series,defaults){
+ const pref=preference(id),all=series.flatMap(s=>s.points),latest=Math.max(0,...all.map(p=>p.x));
+ let xMin=null,xMax=null,error='';
+ if(pref.window!=='all'&&pref.window!=='custom')xMin=Math.max(0,latest-Number(pref.window));
+ if(pref.window==='custom'){
+   if(pref.from!==''&&pref.from!==undefined)xMin=Number(pref.from);
+   if(pref.to!==''&&pref.to!==undefined)xMax=Number(pref.to);
+   if(xMin!==null&&xMax!==null&&xMin>=xMax){error='O fim deve ser maior que o início.';xMin=xMax=null;}
+ }
+ const filtered=series.map(s=>({...s,points:s.points.filter(p=>(xMin===null||p.x>=xMin)&&(xMax===null||p.x<=xMax))}));
+ let min=defaults.min,max=defaults.max,fit=false;
+ if(pref.y==='auto'){min=max=null;fit=true;}
+ if(pref.y==='custom'){
+   const factor=defaults.percentage?100:1;
+   const lower=pref.min!==''&&pref.min!==undefined?Number(pref.min)/factor:null;
+   const upper=pref.max!==''&&pref.max!==undefined?Number(pref.max)/factor:null;
+   if(lower===null||upper===null||!Number.isFinite(lower)||!Number.isFinite(upper)||lower>=upper)error='Informe mínimo e máximo válidos'+(defaults.percentage?' em %.':'.');
+   else{min=lower;max=upper;}
+ }
+ document.querySelector(`[data-chart="${id}"] .scale-error`).textContent=error;
+ return {series:filtered,min,max,fit,xMin,xMax};
+}
 function plot(id,series,{min=null,max=null,percentage=false}={}){
+ const bounds=chartBounds(id,series,{min,max,percentage});series=bounds.series;min=bounds.min;max=bounds.max;
  const root=$(id);root.replaceChildren();const points=series.flatMap(s=>s.points).filter(p=>Number.isFinite(p.y));
  if(!points.length){const div=document.createElement('div');div.className='empty';div.textContent='Aguardando dados medidos';root.append(div);return;}
  const w=Math.max(root.clientWidth,280),h=260,m={l:56,r:20,t:12,b:40},xs=points.map(p=>p.x),ys=points.map(p=>p.y);
- const x0=Math.min(...xs),x1=Math.max(...xs,x0+1);let y0=min??Math.min(...ys,0),y1=max??Math.max(...ys);
+ const x0=bounds.xMin??Math.min(...xs),x1=bounds.xMax??Math.max(...xs,x0+1);let y0=min??(bounds.fit?Math.min(...ys):Math.min(...ys,0)),y1=max??Math.max(...ys);
  if(y0===y1)y1=y0+1;if(min===null&&max===null){const pad=(y1-y0)*.08;y0-=pad;y1+=pad;}
+ chartDomains[id]={min:y0,max:y1,from:x0,to:x1,percentage};
  const x=v=>m.l+(v-x0)/(x1-x0)*(w-m.l-m.r),y=v=>h-m.b-(v-y0)/(y1-y0)*(h-m.b-m.t);
  const svg=svgNode('svg',{viewBox:`0 0 ${w} ${h}`,role:'img','aria-label':root.getAttribute('aria-label')});root.append(svg);
- for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4;svg.append(svgNode('line',{x1:m.l,x2:w-m.r,y1:y(v),y2:y(v),class:'grid'}),svgNode('text',{x:m.l-8,y:y(v)+4,'text-anchor':'end'},percentage?fmt(v*100,0)+'%':fmt(v,(y1-y0)<.001?5:(y1-y0)<.01?4:(y1-y0)<.1?3:(y1-y0)<1?2:(y1-y0)<5?1:0)));}
+ const defs=svgNode('defs'),clip=svgNode('clipPath',{id:id+'-clip'});clip.append(svgNode('rect',{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b}));defs.append(clip);svg.append(defs);
+ const marks=svgNode('g',{'clip-path':`url(#${id}-clip)`});svg.append(marks);
+ for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4;svg.append(svgNode('line',{x1:m.l,x2:w-m.r,y1:y(v),y2:y(v),class:'grid'}),svgNode('text',{x:m.l-8,y:y(v)+4,'text-anchor':'end'},percentage?fmt(v*100,(y1-y0)<.05?1:0)+'%':fmt(v,(y1-y0)<.001?5:(y1-y0)<.01?4:(y1-y0)<.1?3:(y1-y0)<1?2:(y1-y0)<5?1:0)));}
  for(const v of [...new Set(Array.from({length:4},(_,i)=>Math.round(x0+(x1-x0)*i/3)))]){svg.append(svgNode('text',{x:x(v),y:h-20,'text-anchor':v===x0?'start':v===x1?'end':'middle'},fmt(v)));}
  svg.append(svgNode('text',{x:(w+m.l)/2,y:h-3,'text-anchor':'middle'},'Iteração'));
- for(const s of series){let d='',previous=false;for(const p of s.points){if(!Number.isFinite(p.y)){previous=false;continue;}d+=(previous?'L':'M')+x(p.x)+','+y(p.y);previous=true;}svg.append(svgNode('path',{d,stroke:s.color,class:'series'}));for(const p of s.points.filter(p=>Number.isFinite(p.y))){if(s.points.length<5)svg.append(svgNode('circle',{cx:x(p.x),cy:y(p.y),r:3,fill:s.color}));}}
+ for(const s of series){let d='',previous=false;for(const p of s.points){if(!Number.isFinite(p.y)){previous=false;continue;}d+=(previous?'L':'M')+x(p.x)+','+y(p.y);previous=true;}marks.append(svgNode('path',{d,stroke:s.color,class:'series'}));for(const p of s.points.filter(p=>Number.isFinite(p.y))){if(s.points.length<5)marks.append(svgNode('circle',{cx:x(p.x),cy:y(p.y),r:3,fill:s.color}));}}
  const tip=document.createElement('div');tip.className='tip';tip.hidden=true;root.append(tip);
  const hit=svgNode('rect',{x:m.l,y:m.t,width:w-m.l-m.r,height:h-m.t-m.b,fill:'transparent'});svg.append(hit);
  hit.addEventListener('pointermove',event=>{const rect=root.getBoundingClientRect(),px=event.clientX-rect.left;const target=x0+(px-m.l)/(w-m.l-m.r)*(x1-x0);const iteration=points.reduce((best,p)=>Math.abs(p.x-target)<Math.abs(best-target)?p.x:best,points[0].x);tip.replaceChildren();const title=document.createElement('strong');title.textContent='Iteração '+fmt(iteration);tip.append(title);for(const s of series){const p=s.points.find(p=>p.x===iteration);if(p&&Number.isFinite(p.y)){const row=document.createElement('div');row.textContent=s.label+': '+(percentage?percent(p.y):fmt(p.y,3));tip.append(row);}}tip.hidden=false;tip.style.left=Math.max(0,Math.min(px+12,w-220))+'px';tip.style.top='20px';});hit.addEventListener('pointerleave',()=>tip.hidden=true);
@@ -48,9 +89,14 @@ function render(){
  const key=$('ppo-metric').value;plot('ppo-chart',[{label:$('ppo-metric').selectedOptions[0].textContent,color:'#70d9dc',points:state.training.map(r=>({x:r.iteration,y:r[key]}))}],{percentage:key==='clip_fraction',min:['entropy','approximate_kl','clip_fraction','value_loss'].includes(key)?0:null});
  $('ppo-detail').textContent=last?`Entropia ${fmt(last.entropy,3)} · KL ${fmt(last.approximate_kl,4)} · clip ${percent(last.clip_fraction)} · critic ${fmt(last.value_loss,3)}`:'Aguardando atualização da rede.';
 }
-function renderGoals(rows){const root=$('goals-chart');root.replaceChildren();const w=Math.max(root.clientWidth,280),h=260,max=Math.max(1,...rows.flatMap(r=>[r.gf,r.ga]));const left=w<400?116:150,right=30,width=w-left-right;const svg=svgNode('svg',{viewBox:`0 0 ${w} ${h}`,role:'img','aria-label':'Gols pró e contra por adversário'});root.append(svg);rows.forEach((r,i)=>{const y=25+i*43;svg.append(svgNode('text',{x:left-8,y:y+12,'text-anchor':'end'},names[r.bot].replace(' congelada','')));for(const [value,color,dy]of [[r.gf,'#62d6a3',0],[r.ga,'#fa8991',16]]){svg.append(svgNode('rect',{x:left,y:y+dy,width:value/max*width,height:10,fill:color}),svgNode('text',{x:Math.min(w-5,left+value/max*width+5),y:y+dy+10},fmt(value)));}});svg.append(svgNode('text',{x:left,y:252},'Verde: pró · vermelho: contra'));}
+function renderGoals(rows){const root=$('goals-chart');root.replaceChildren();const w=Math.max(root.clientWidth,280),h=260,automatic=Math.max(1,...rows.flatMap(r=>[r.gf,r.ga])),pref=preference('goals-chart'),max=pref.y==='custom'&&Number(pref.max)>0?Number(pref.max):automatic;chartDomains['goals-chart']={max:automatic};const left=w<400?116:150,right=60,width=w-left-right;const svg=svgNode('svg',{viewBox:`0 0 ${w} ${h}`,role:'img','aria-label':'Gols pró e contra por adversário'});root.append(svg);rows.forEach((r,i)=>{const y=25+i*43;svg.append(svgNode('text',{x:left-8,y:y+12,'text-anchor':'end'},names[r.bot].replace(' congelada','')));for(const [value,color,dy]of [[r.gf,'#62d6a3',0],[r.ga,'#fa8991',16]]){svg.append(svgNode('rect',{x:left,y:y+dy,width:Math.min(value,max)/max*width,height:10,fill:color}),svgNode('text',{x:Math.min(w-5,left+Math.min(value,max)/max*width+5),y:y+dy+10},(value>max?'↑ ':'')+fmt(value)));}});svg.append(svgNode('text',{x:left,y:236},'0'),svgNode('text',{x:w-right,y:236,'text-anchor':'end'},fmt(max)),svgNode('text',{x:left,y:255},'Pró / contra · ↑ acima da escala'));}
 for(const bot of Object.keys(names)){const button=document.createElement('button');button.type='button';button.setAttribute('aria-pressed','true');const mark=document.createElement('span');mark.className='swatch';mark.style.background=colors[bot];button.append(mark,document.createTextNode(names[bot]));button.addEventListener('click',()=>{state.visible.has(bot)?state.visible.delete(bot):state.visible.add(bot);button.setAttribute('aria-pressed',String(state.visible.has(bot)));render();});$('legend').append(button);}
-$('scenario').addEventListener('change',render);$('ppo-metric').addEventListener('change',render);let resize;window.addEventListener('resize',()=>{clearTimeout(resize);resize=setTimeout(render,150);});
+for(const id of scaleCharts)scaleSync[id]=control(id);
+const goalControl=document.createElement('div');goalControl.className='scale-controls';goalControl.innerHTML='<label>Escala de gols <select aria-label="Escala de gols"><option value="default">Automática</option><option value="custom">Máximo escolhido</option></select></label><label class="goal-max" hidden>Máximo <input type="number" min="1" step="1" aria-label="Máximo de gols"></label><button type="button">Restaurar</button>';$('goals-chart').before(goalControl);
+const goalSync=()=>{const pref=preference('goals-chart');goalControl.querySelector('select').value=pref.y;goalControl.querySelector('input').value=pref.max??'';goalControl.querySelector('.goal-max').hidden=pref.y!=='custom';};
+const updateGoalControl=event=>{const pref={...preference('goals-chart')};if(event.target.tagName==='SELECT'){pref.y=event.target.value;if(pref.y==='custom')pref.max??=String(chartDomains['goals-chart']?.max||1);}else if(event.target.tagName==='INPUT'){if(!(Number(event.target.value)>0)){event.target.value=pref.max||1;return;}pref.max=event.target.value;}saveScale('goals-chart',pref);goalSync();};goalControl.addEventListener('change',updateGoalControl);goalControl.addEventListener('input',event=>{if(event.target.tagName==='INPUT')updateGoalControl(event);});goalControl.querySelector('button').addEventListener('click',()=>{delete scalePrefs['goals-chart'];try{localStorage.setItem('haxball-chart-scales',JSON.stringify(scalePrefs));}catch{}goalSync();render();});goalSync();
+
+$('scenario').addEventListener('change',render);$('ppo-metric').addEventListener('change',()=>{scaleSync['ppo-chart']();render();});let resize;window.addEventListener('resize',()=>{clearTimeout(resize);resize=setTimeout(render,150);});
 async function connect(){try{const [live,history]=await Promise.all([fetch('/api/state').then(r=>r.json()),fetch('/api/history').then(r=>r.json())]);state.live=live;state.training=history.training;state.evaluations=history.evaluations;render();}catch(error){$('connection').textContent='Servidor indisponível';}
  const events=new EventSource('/api/events');events.onmessage=event=>{const data=JSON.parse(event.data);if(state.live.run_path&&state.live.run_path!==data.live.run_path){state.training=[];state.evaluations=[];}state.live=data.live;state.connected=true;state.training=merge(state.training,data.training);state.evaluations=merge(state.evaluations,data.evaluations);render();};events.onerror=()=>{state.connected=false;render();};}
 render();connect();
