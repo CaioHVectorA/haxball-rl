@@ -62,6 +62,30 @@ def main():
     torch.set_num_threads(2)
     result=inspect(args.checkpoint);args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(result,indent=2))
+    lines=['# Inspeção de comportamento', '', result['limitation'], '',
+      '| Cenário | Adversário | Pró × contra | Chute em proximidade | Pressão desalinhada | Bola parada |',
+      '|---|---|---:|---:|---:|---:|']
+    for row in result['rows']:
+        lines.append(f'| {row["scenario"]} | {row["opponent"]} | {row["gf"]} × {row["ga"]} | {100*row["kick_contact_fraction"]:.1f}% | {100*row["misaligned_near_press_fraction"]:.1f}% | {100*row["stationary_fraction"]:.1f}% |')
+    args.out.with_suffix('.md').write_text('\n'.join(lines)+'\n')
+    if args.out.parent.name.startswith('approach_'):
+        root=args.out.parent.parent
+        summary=['# Comparação de recompensa — resultados disponíveis', '',
+          'Execuções completas até esta atualização. Mesma política inicial e orçamento por trial; não extrapolar para 20 mil iterações.', '',
+          '| Aproximação | Seed | Pontuação aleatória inicial | Pontuação aleatória final | Variação |',
+          '|---|---:|---:|---:|---:|']
+        for directory in sorted(root.glob('approach_*')):
+            live_path=directory/'live.json'
+            if not live_path.exists():continue
+            live=json.loads(live_path.read_text())
+            if live.get('status')!='completed':continue
+            evaluations=[json.loads(line) for line in (directory/'evaluations.jsonl').read_text().splitlines()]
+            scores=[]
+            for evaluation in [evaluations[0],evaluations[-1]]:
+                values=[case['score'] for case in evaluation['cases'] if case['scenario']=='random' and case['score'] is not None]
+                scores.append(sum(values)/len(values)*100)
+            summary.append(f'| {live["config"]["approach_weight"]} | {live["config"]["seed"]} | {scores[0]:.1f}% | {scores[1]:.1f}% | {scores[1]-scores[0]:+.1f} pp |')
+        (root/'comparison.md').write_text('\n'.join(summary)+'\n')
     for row in result['rows']:print(json.dumps(row),flush=True)
 
 if __name__=='__main__':main()
