@@ -45,3 +45,9 @@ Verificações: seis testes Python, smoke test de uma iteração de PPO self-pla
 ## Próximo passo
 
 Antes de aumentar para equipes, melhorar os cenários aleatórios e testar em sala real. Uma nova etapa pode misturar o adversário Chase sem ruído no treino e usar a pontuação balanceada entre cenários para selecionar checkpoints intermediários. Não continuar escolhendo exclusivamente por gols no kickoff.
+
+## Ressalva sobre os gols do kickoff
+
+Uma inspeção posterior do candidato greedy, um ambiente, Chase sem ruído, revelou uma trajetória repetida de 54 decisões: disputa no centro, desvio/rebote lateral, bola avançando ao gol azul e chute do próprio Chase completando o gol contra. Na decisão 53, a bola começa em (375,6; 4,5), Chase em (352,2; −6,6) pressiona chute, e a política vermelha está distante em (290,8; −116,4), sem pressionar chute. O evento final é gol vermelho. A mesma sequência repete após o reset.
+
+Portanto, os resultados de kickoff não medem qualidade geral de finalização: o baseline pode marcar contra por perseguir a bola sem posicionar-se entre bola e gol. Não foi feita uma classificação de todos os gols; este caso prova a limitação, não sua frequência. “Kickoff” descreve a condição inicial, não a localização ou mecanismo de cada gol. A melhora de pontuação está restrita a esses adversários/condições. Adicionar defensor/goalkeeper que não se limite a Chase e classificar gol contra versus finalização antes de chamar o ganho de consolidação.
