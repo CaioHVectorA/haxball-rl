@@ -1,0 +1,457 @@
+{
+  "cpu": "AMD Ryzen 7 5700U, 8 cores / 16 logical CPUs",
+  "method": "Full PPO iteration, 64 steps, 6 epochs, 4 minibatches, neural self-play, corrected map. Two warmups; checkpoints/evaluation excluded. Desktop applications remained running.",
+  "runs": [
+    {
+      "envs": 128,
+      "torch_threads": 2,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 8192,
+      "samples_per_second": 9055.5662561699,
+      "median_iteration_s": 0.8944891750034003,
+      "mean_rollout_s": 0.23458767433597436,
+      "mean_update_s": 0.6669073881663886,
+      "max_rss_mib": 332.01171875,
+      "iterations": [
+        {
+          "rollout_s": 0.24727014700329164,
+          "gae_s": 0.003215757998987101,
+          "update_s": 0.7296291199963889,
+          "total_s": 0.9801150249986676
+        },
+        {
+          "rollout_s": 0.2411762199990335,
+          "gae_s": 0.0035256979972473346,
+          "update_s": 0.6851931929995771,
+          "total_s": 0.929895110995858
+        },
+        {
+          "rollout_s": 0.22718556900508702,
+          "gae_s": 0.0029856779947294854,
+          "update_s": 0.6215794140007347,
+          "total_s": 0.8517506610005512
+        },
+        {
+          "rollout_s": 0.21884495500125922,
+          "gae_s": 0.0028250280010979623,
+          "update_s": 0.6554126769988216,
+          "total_s": 0.8770826600011787
+        },
+        {
+          "rollout_s": 0.2263049030007096,
+          "gae_s": 0.003069746002438478,
+          "update_s": 0.6564655820038752,
+          "total_s": 0.8858402310070232
+        },
+        {
+          "rollout_s": 0.2467442520064651,
+          "gae_s": 0.0032295239943778142,
+          "update_s": 0.6531643429989344,
+          "total_s": 0.9031381189997774
+        }
+      ]
+    },
+    {
+      "envs": 256,
+      "torch_threads": 2,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 16384,
+      "samples_per_second": 12465.589838287951,
+      "median_iteration_s": 1.3032351750007365,
+      "mean_rollout_s": 0.30729212933268474,
+      "mean_update_s": 1.0036959920010606,
+      "max_rss_mib": 365.78515625,
+      "iterations": [
+        {
+          "rollout_s": 0.3006472299966845,
+          "gae_s": 0.0032653410016791895,
+          "update_s": 0.9736920649957028,
+          "total_s": 1.2776046359940665
+        },
+        {
+          "rollout_s": 0.3017119180003647,
+          "gae_s": 0.0032725139972171746,
+          "update_s": 0.9731718809998711,
+          "total_s": 1.278156312997453
+        },
+        {
+          "rollout_s": 0.31197715700545814,
+          "gae_s": 0.003442110995820258,
+          "update_s": 1.0845597540028393,
+          "total_s": 1.3999790220041177
+        },
+        {
+          "rollout_s": 0.31461890100035816,
+          "gae_s": 0.00330028600001242,
+          "update_s": 0.9938111470037256,
+          "total_s": 1.3117303340040962
+        },
+        {
+          "rollout_s": 0.2986769049966824,
+          "gae_s": 0.003331585001433268,
+          "update_s": 0.9927315259992611,
+          "total_s": 1.2947400159973768
+        },
+        {
+          "rollout_s": 0.31612066499656066,
+          "gae_s": 0.003488196998659987,
+          "update_s": 1.0042095790049643,
+          "total_s": 1.323818441000185
+        }
+      ]
+    },
+    {
+      "envs": 512,
+      "torch_threads": 2,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 32768,
+      "samples_per_second": 12863.426628106827,
+      "median_iteration_s": 2.541581475001294,
+      "mean_rollout_s": 0.4558686450024349,
+      "mean_update_s": 2.087110657497154,
+      "max_rss_mib": 407.890625,
+      "iterations": [
+        {
+          "rollout_s": 0.4633338650019141,
+          "gae_s": 0.004391625996504445,
+          "update_s": 2.1660885129967937,
+          "total_s": 2.6338140039952123
+        },
+        {
+          "rollout_s": 0.46966478200192796,
+          "gae_s": 0.004103186001884751,
+          "update_s": 1.9976326049945783,
+          "total_s": 2.471400572998391
+        },
+        {
+          "rollout_s": 0.447707455001364,
+          "gae_s": 0.0038843579968670383,
+          "update_s": 2.006078703998355,
+          "total_s": 2.4576705169965862
+        },
+        {
+          "rollout_s": 0.4482356990047265,
+          "gae_s": 0.0038831950005260296,
+          "update_s": 2.1226224869969883,
+          "total_s": 2.574741381002241
+        },
+        {
+          "rollout_s": 0.4521225190037512,
+          "gae_s": 0.0050312199964537285,
+          "update_s": 2.0512678300001426,
+          "total_s": 2.5084215690003475
+        },
+        {
+          "rollout_s": 0.45414755000092555,
+          "gae_s": 0.005093936997582205,
+          "update_s": 2.1789738059960655,
+          "total_s": 2.6382152929945732
+        }
+      ]
+    },
+    {
+      "envs": 512,
+      "torch_threads": 4,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 32768,
+      "samples_per_second": 12908.224392890783,
+      "median_iteration_s": 2.4961888090037974,
+      "mean_rollout_s": 0.42829094866707845,
+      "mean_update_s": 2.1059844220023174,
+      "max_rss_mib": 455.21484375,
+      "iterations": [
+        {
+          "rollout_s": 0.4240046330014593,
+          "gae_s": 0.004205557001114357,
+          "update_s": 2.296566213997721,
+          "total_s": 2.724776404000295
+        },
+        {
+          "rollout_s": 0.4197526569987531,
+          "gae_s": 0.004172665998339653,
+          "update_s": 2.1650894030026393,
+          "total_s": 2.589014725999732
+        },
+        {
+          "rollout_s": 0.4312755319988355,
+          "gae_s": 0.004449662999832071,
+          "update_s": 2.043942344003881,
+          "total_s": 2.4796675390025484
+        },
+        {
+          "rollout_s": 0.43299991200183285,
+          "gae_s": 0.0037166939946473576,
+          "update_s": 2.0086666780043743,
+          "total_s": 2.4453832840008545
+        },
+        {
+          "rollout_s": 0.4368891859994619,
+          "gae_s": 0.005293269001413137,
+          "update_s": 2.0505859250042704,
+          "total_s": 2.4927683800051454
+        },
+        {
+          "rollout_s": 0.42482377200212795,
+          "gae_s": 0.0037294979993021116,
+          "update_s": 2.071055968001019,
+          "total_s": 2.4996092380024493
+        }
+      ]
+    },
+    {
+      "envs": 512,
+      "torch_threads": 8,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 32768,
+      "samples_per_second": 14067.3957763975,
+      "median_iteration_s": 2.329978427500464,
+      "mean_rollout_s": 0.4119750458339695,
+      "mean_update_s": 1.9131067220017333,
+      "max_rss_mib": 409.3203125,
+      "iterations": [
+        {
+          "rollout_s": 0.38249904999975115,
+          "gae_s": 0.003769162001844961,
+          "update_s": 1.9166008940010215,
+          "total_s": 2.3028691060026176
+        },
+        {
+          "rollout_s": 0.40244071400229586,
+          "gae_s": 0.0044044089954695664,
+          "update_s": 1.8177084589988226,
+          "total_s": 2.224553581996588
+        },
+        {
+          "rollout_s": 0.4467612650041701,
+          "gae_s": 0.0042394499978399836,
+          "update_s": 1.9702933990047313,
+          "total_s": 2.4212941140067414
+        },
+        {
+          "rollout_s": 0.37414102000184357,
+          "gae_s": 0.004805907999980263,
+          "update_s": 1.8871309829992242,
+          "total_s": 2.266077911001048
+        },
+        {
+          "rollout_s": 0.43036689199652756,
+          "gae_s": 0.0041530489979777485,
+          "update_s": 1.9225678080038051,
+          "total_s": 2.3570877489983104
+        },
+        {
+          "rollout_s": 0.43564133399922866,
+          "gae_s": 0.004285035000066273,
+          "update_s": 1.9643387890027952,
+          "total_s": 2.40426515800209
+        }
+      ]
+    },
+    {
+      "envs": 512,
+      "torch_threads": 2,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 32768,
+      "samples_per_second": 13681.04410861892,
+      "median_iteration_s": 2.376996456001507,
+      "mean_rollout_s": 0.4447680640005274,
+      "mean_update_s": 1.9462055244985095,
+      "max_rss_mib": 416.0234375,
+      "iterations": [
+        {
+          "rollout_s": 0.4380795120014227,
+          "gae_s": 0.004241923998051789,
+          "update_s": 2.2003680679990794,
+          "total_s": 2.642689503998554
+        },
+        {
+          "rollout_s": 0.4395769159964402,
+          "gae_s": 0.004035459001897834,
+          "update_s": 1.8073188369962736,
+          "total_s": 2.2509312119946117
+        },
+        {
+          "rollout_s": 0.44208496100327466,
+          "gae_s": 0.0037786689936183393,
+          "update_s": 1.8402926820053835,
+          "total_s": 2.2861563120022765
+        },
+        {
+          "rollout_s": 0.44362984499457525,
+          "gae_s": 0.003970287005358841,
+          "update_s": 1.7602871579947532,
+          "total_s": 2.2078872899946873
+        },
+        {
+          "rollout_s": 0.45552445400244324,
+          "gae_s": 0.004830263998883311,
+          "update_s": 2.0549773530001403,
+          "total_s": 2.515332071001467
+        },
+        {
+          "rollout_s": 0.4497126960050082,
+          "gae_s": 0.0041348550003021955,
+          "update_s": 2.013989048995427,
+          "total_s": 2.4678366000007372
+        }
+      ]
+    },
+    {
+      "envs": 256,
+      "torch_threads": 2,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 16384,
+      "samples_per_second": 13724.403874055917,
+      "median_iteration_s": 1.2031630244964617,
+      "mean_rollout_s": 0.29875252883478726,
+      "mean_update_s": 0.8913351794981281,
+      "max_rss_mib": 359.9609375,
+      "iterations": [
+        {
+          "rollout_s": 0.2953458629999659,
+          "gae_s": 0.0031767649998073466,
+          "update_s": 0.8661912199968356,
+          "total_s": 1.1647138479966088
+        },
+        {
+          "rollout_s": 0.2940620340013993,
+          "gae_s": 0.00350860499747796,
+          "update_s": 0.9097946379988571,
+          "total_s": 1.2073652769977343
+        },
+        {
+          "rollout_s": 0.30260326000279747,
+          "gae_s": 0.003967532000388019,
+          "update_s": 0.8651423970004544,
+          "total_s": 1.1717131890036399
+        },
+        {
+          "rollout_s": 0.3032491360063432,
+          "gae_s": 0.004298990999814123,
+          "update_s": 0.8997671509932843,
+          "total_s": 1.2073152779994416
+        },
+        {
+          "rollout_s": 0.29389072099729674,
+          "gae_s": 0.0041767229995457456,
+          "update_s": 0.9009433269966394,
+          "total_s": 1.1990107709934819
+        },
+        {
+          "rollout_s": 0.30336415900092106,
+          "gae_s": 0.003060607996303588,
+          "update_s": 0.9061723440026981,
+          "total_s": 1.2125971109999227
+        }
+      ]
+    },
+    {
+      "envs": 128,
+      "torch_threads": 2,
+      "rayon_threads": "default",
+      "measured_iterations": 6,
+      "warmup_iterations": 2,
+      "samples_per_iteration": 8192,
+      "samples_per_second": 11234.086165102352,
+      "median_iteration_s": 0.7314269449998392,
+      "mean_rollout_s": 0.2203959238322568,
+      "mean_update_s": 0.5057569533334269,
+      "max_rss_mib": 336.828125,
+      "iterations": [
+        {
+          "rollout_s": 0.22041635599453002,
+          "gae_s": 0.003457338003499899,
+          "update_s": 0.5343100440004491,
+          "total_s": 0.758183737998479
+        },
+        {
+          "rollout_s": 0.22279856599925552,
+          "gae_s": 0.002870573000109289,
+          "update_s": 0.4991795829992043,
+          "total_s": 0.7248487219985691
+        },
+        {
+          "rollout_s": 0.22068461700109765,
+          "gae_s": 0.003057893001823686,
+          "update_s": 0.47656219900090946,
+          "total_s": 0.7003047090038308
+        },
+        {
+          "rollout_s": 0.2178610109986039,
+          "gae_s": 0.0030614990027970634,
+          "update_s": 0.49296903999493225,
+          "total_s": 0.7138915499963332
+        },
+        {
+          "rollout_s": 0.22156969999923604,
+          "gae_s": 0.002916327997809276,
+          "update_s": 0.513519140004064,
+          "total_s": 0.7380051680011093
+        },
+        {
+          "rollout_s": 0.21904529300081776,
+          "gae_s": 0.002974848001031205,
+          "update_s": 0.5180017140010023,
+          "total_s": 0.7400218550028512
+        }
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "envs": 128,
+      "threads": 2,
+      "samples_per_second": 10027.871299455901,
+      "seconds_per_iteration": 0.8169231290836857,
+      "peak_rss_mib": 336.828125,
+      "repetitions": 2
+    },
+    {
+      "envs": 256,
+      "threads": 2,
+      "samples_per_second": 13064.744600404887,
+      "seconds_per_iteration": 1.254062019665677,
+      "peak_rss_mib": 365.78515625,
+      "repetitions": 2
+    },
+    {
+      "envs": 512,
+      "threads": 2,
+      "samples_per_second": 13259.643323279939,
+      "seconds_per_iteration": 2.4712580271649736,
+      "peak_rss_mib": 416.0234375,
+      "repetitions": 2
+    },
+    {
+      "envs": 512,
+      "threads": 4,
+      "samples_per_second": 12908.224392890783,
+      "seconds_per_iteration": 2.538536595168504,
+      "peak_rss_mib": 455.21484375,
+      "repetitions": 1
+    },
+    {
+      "envs": 512,
+      "threads": 8,
+      "samples_per_second": 14067.3957763975,
+      "seconds_per_iteration": 2.329357936667899,
+      "peak_rss_mib": 409.3203125,
+      "repetitions": 1
+    }
+  ],
+  "recommendation": "512 is feasible. At two Torch threads, throughput is close to 256, both exceed 128. Eight threads gave the highest single measurement, but repeats showed variability; no exhaustive thread tuning."
+}
