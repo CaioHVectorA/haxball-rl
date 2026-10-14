@@ -131,3 +131,15 @@ foram iniciados; schedules originais preservados. Dois novos testes passaram
 mais smoke com partidas completas dos quatro bots nos dois lados. Rearmamento
 headless e sintaxe JS passaram após opção POLICY_PATH. Protocolo pré-especificado
 em BENCHMARK_PROTOCOL.md; benchmark ainda pendente do endpoint.
+
+## Parada confirmada às 12:54–12:55
+
+Supervisor sinalizou ao observar exatamente it3000; o treinador concluiu a
+avaliação em curso e salvou antes de sair. Processo real não está mais vivo,
+live status completed, completed_iterations=3000, stop_reason=signal.
+98.304.000 amostras na continuação. Checkpoint retomável e pesos/metas/mapa
+foram verificados; original preservado. Melhor pré-benchmark it2550
+(score 0.86825065); endpoint painel 0.86171749.
+Nenhum treino novo foi iniciado. Benchmark pré-especificado está em execução,
+sem dados finais ainda; modelos congelados em models/sprint1_3000.
+Preparação de gráficos/publicador publicada em c3e5b86.

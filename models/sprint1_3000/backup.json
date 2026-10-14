@@ -1,0 +1,1 @@
+{"iteration": 3000, "best_iteration": 2550, "best_score": 0.8682506499554528, "source": "/home/usuario/develop/haxball-rl/runs/sprint1_structural_main_20261014/train", "resume_sha256": "a05d0f98e6dd20f5daa61e97be9213a60f11224394427361dc2681a49c2a55e4", "resume_semantics": "model/Adam/schedule/pool/RNG preserved; native matches reset"}
