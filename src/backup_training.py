@@ -17,7 +17,13 @@ def main():
     checkpoint=torch.load(args.run/'resume.pt',map_location='cpu',weights_only=True)
     if checkpoint.get('schema_version')!=1:raise ValueError('Unknown checkpoint schema')
     destination=args.dest;destination.mkdir(parents=True,exist_ok=True)
-    meta=dict(checkpoint['config'],stadium=str(destination/'stadium.hbs'),
+    stadium_path=(destination/'stadium.hbs').resolve()
+    try:
+        # Bundles in the repository remain usable after cloning elsewhere.
+        stadium_path=stadium_path.relative_to(Path(__file__).resolve().parents[1])
+    except ValueError:
+        pass
+    meta=dict(checkpoint['config'],stadium=str(stadium_path),
               it=checkpoint['best_iteration'],evaluation_score=checkpoint['best'])
     atomic_torch_save(checkpoint['best_model'],destination/'model.pt')
     atomic_json(destination/'meta.json',meta,durable=True)

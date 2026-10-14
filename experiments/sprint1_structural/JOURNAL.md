@@ -143,3 +143,14 @@ foram verificados; original preservado. Melhor pré-benchmark it2550
 Nenhum treino novo foi iniciado. Benchmark pré-especificado está em execução,
 sem dados finais ainda; modelos congelados em models/sprint1_3000.
 Preparação de gráficos/publicador publicada em c3e5b86.
+
+## Portabilidade do bundle, durante o benchmark
+
+A auditoria parcial confirmou casos únicos, outcomes completos e pareamento
+por hash dos estados iniciais. Nenhum resultado final foi declarado.
+A chamada do backup com destino absoluto havia gravado caminho absoluto do
+mapa nos metadados de deployment. Corrigido backup_training.py para usar
+caminho relativo ao repositório quando o bundle está nele; pesos e receita
+não mudaram, fonte de treinamento arquivada preservada. Os dois bundles
+foram regenerados e uma exportação real do modelo final passou usando o
+mapa relativo. Publicação da parada/endpoint: 3e44251.
