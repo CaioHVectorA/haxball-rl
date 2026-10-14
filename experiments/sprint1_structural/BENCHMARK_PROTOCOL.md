@@ -85,3 +85,14 @@ POLICY_PATH="$PWD/models/sprint1_3000/policy.json" \
 
 Senha padrão `bot`. `!start`, `!restart` e `!swap` controlam a partida.
 O acesso depende do computador e do processo da sala permanecerem ligados.
+
+## Auditoria e gráficos finais
+
+Após status completed do benchmark, executar
+`.venv/bin/python experiments/sprint1_structural/benchmark_report.py`.
+O publicador confere contagem, unicidade, todos os primeiros episódios completos,
+estados iniciais pareados, hashes e pesos finitos; copia apenas sumários e figuras
+para experiments/sprint1_structural/benchmark_3000. Os gráficos incluem desempenho
+por modo/cenário, empates/duração no self-play e seis trajetórias de exemplos
+pré-fixados (seed9101, ambiente0, greedy/random). A auditoria não substitui
+interpretação crítica de efeitos, empates, incerteza e falhas por adversário.
