@@ -109,3 +109,15 @@ it2050, score 0.86322404. Hash, metadados, pesos
 e mapa conferidos; modelo original preservado. Esse melhor score é
 do painel de seleção, não de validação independente do novo checkpoint.
 Publicação anterior confirmada: 745ca46 (backup it1750).
+
+## Revisão das 12:15
+
+PID confirmado, aproximadamente 2500 iterações; auditoria das curvas finita.
+Mínimos it2200–2450 entre 0,84931 e 0,86083. Não há regressão
+sustentada do critério; as referências continuam oscilando. anchor_1 marcou
+0,76718 na 2350, recuperou 0,89558 na 2400 e marcou 0,79188 na 2450
+(baseline 0,79257). Não confundir um mínimo agregado saudável com melhora
+uniforme por adversário. Fonte/receita mantidas e modelo selecionado preservado.
+Backup verificado it2495/melhor it2050, score
+0.86322404; hashes, pesos/metas, crítico e mapa coerentes.
+Publicação anterior: 2dcd86c (backup it2125). Modelo original preservado.

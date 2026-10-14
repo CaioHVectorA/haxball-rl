@@ -1,7 +1,7 @@
 # Sprint 1 estrutural — relatório
 
-Estado: running; atualização UTC: 2026-10-14T14:45:16.602327+00:00.
-Última avaliação: iteração 2100; treino já completou pelo menos 2125 iterações.
+Estado: running; atualização UTC: 2026-10-14T15:15:34.573760+00:00.
+Última avaliação: iteração 2450; treino já completou pelo menos 2500 iterações.
 
 **Recompensa PBRS, crítico separado e currículo estacionário estão efetivamente ativos.**
 Isso foi conferido em config.json, tipos dos termos de reward e gradientes na telemetria.
@@ -10,17 +10,17 @@ Isso foi conferido em config.json, tipos dos termos de reward e gradientes na te
 
 | Grupo | Início | Última avaliação |
 |---|---:|---:|
-| greedy_random | 0.71734 | 0.85836 |
-| greedy_kickoff | 0.83606 | 0.99106 |
-| sampled_random | 0.72166 | 0.85302 |
-| sampled_kickoff | 0.76868 | 0.93192 |
-| Mínimo (critério de seleção) | 0.71734 | 0.85302 |
+| greedy_random | 0.71734 | 0.86787 |
+| greedy_kickoff | 0.83606 | 0.84931 |
+| sampled_random | 0.72166 | 0.86976 |
+| sampled_kickoff | 0.76868 | 0.93426 |
+| Mínimo (critério de seleção) | 0.71734 | 0.84931 |
 
 | Adversário neural | Início | Última avaliação |
 |---|---:|---:|
-| initial_policy | 0.50616 | 0.75483 |
-| anchor_0 | 0.67774 | 0.95204 |
-| anchor_1 | 0.79257 | 0.90320 |
+| initial_policy | 0.50616 | 0.63655 |
+| anchor_0 | 0.67774 | 0.95606 |
+| anchor_1 | 0.79257 | 0.79188 |
 
 ![Progresso estrutural](progress.png)
 
@@ -52,5 +52,5 @@ foi implementada e está sendo treinada nesta execução.
 Validação inédita do candidato: [HELDOUT.md](HELDOUT.md).
 Ablação curta controlada: [ABLATION.md](ABLATION.md).
 Publicações anteriores: `a6ba071` (implementação), `8d05fc6` (validação independente).
-Backup publicado/preparado: it2125 / melhor it2050; verificação em JOURNAL.md.
+Backup publicado/preparado: it2495 / melhor it2050; verificação em JOURNAL.md.
 Decisões, publicações e limitações persistentes: [JOURNAL.md](JOURNAL.md).
