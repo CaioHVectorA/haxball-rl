@@ -112,6 +112,11 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--envs',type=int,default=32);p.add_argument('--seeds',type=int,default=16);args=p.parse_args()
     out=args.out;out.mkdir(parents=True,exist_ok=True);torch.set_num_threads(2)
     run=ROOT/'runs/sprint1_structural_main_20261014'
+    launch=json.loads((run/'launch.json').read_text())
+    source_hashes={}
+    for name in ['model.py','train.py','environment.py','bot.py','ppo_returns.py']:
+        source_hashes[name]=hashlib.sha256((ROOT/'src'/name).read_bytes()).hexdigest()
+        if source_hashes[name]!=launch['source_sha256'][name]:raise RuntimeError(f'Evaluation source differs from frozen training: {name}')
     checkpoint=torch.load(run/'train/resume.pt',map_location='cpu',weights_only=True)
     if checkpoint['iteration']!=3000:raise RuntimeError('Expected completed 3000-iteration endpoint')
     states={'origin':torch.load(run/'sources/start.pt',map_location='cpu',weights_only=True),'best':checkpoint['best_model'],'endpoint':checkpoint['model']}
@@ -128,10 +133,11 @@ def main():
                 map_sha256=hashlib.sha256(stadium.read_bytes()).hexdigest(),checkpoint_sha256={name:hashlib.sha256((out/f'{name}.pt').read_bytes()).hexdigest() for name in models},
                 fixed_first_episode=True,max_ticks=2000,selection='best checkpoint selected before unseen evaluation; endpoint evaluated separately; no automatic promotion')
     config['expected_cases']=3*(10*(6*args.seeds+2)+8*args.seeds)
+    config['evaluation_source_sha256']=source_hashes
     config['benchmark_source_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ['benchmark_3000.py','benchmark_bots.py']}
     if (out/'config.json').exists():
         prior=json.loads((out/'config.json').read_text())
-        for k in ['seeds','envs','checkpoint_sha256','map_sha256','benchmark_source_sha256']:
+        for k in ['seeds','envs','checkpoint_sha256','map_sha256','benchmark_source_sha256','evaluation_source_sha256']:
             if prior[k]!=config[k]:raise RuntimeError(f'Benchmark recipe changed: {k}')
     (out/'config.json').write_text(json.dumps(config,indent=2));rows=[]
     if (out/'cases.jsonl').exists():
