@@ -1,0 +1,13 @@
+{
+  "iterations": 3000,
+  "smoothing_window": 50,
+  "unit": "weighted reward per learner transition",
+  "first_50_mean": 0.09895353853702545,
+  "last_50_mean": 0.2708129978179932,
+  "max_component_sum_error": 4.773846740135923e-08,
+  "last_50_components": {
+    "GoalReward": 0.245025634765625,
+    "DiscountedPocketPotential": 0.026893953168400913,
+    "DiscountedBallGoalPotential": -0.0011065894017883693
+  }
+}

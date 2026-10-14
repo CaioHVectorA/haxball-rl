@@ -172,3 +172,12 @@ Publicação final confirmada na branch gpt: 82bc590 — benchmark auditado,
 gráficos de desempenho/self-play/trajectórias e política exportada do candidato
 humano. Sala permanece bloqueada pelo token/captcha; nenhuma execução
 de treinamento continua ativa.
+
+## Curva de recompensa solicitada pelo usuário
+
+reward_curve.py gerou PNG/SVG e auditoria a partir das3000 linhas reais de
+training.jsonl. Métrica: recompensa média ponderada por transição do learner,
+32768transições poriteração; média móvel de50. Soma dos componentes confere
+com reward_mean, erro máximo4,77e-8. Média dasprimeiras50:0,09895;
+últimas50:0,27081. Termo de gols domina a elevação; não interpretar média
+de recompensa por transição como retorno descontado episódico ou win-rate.

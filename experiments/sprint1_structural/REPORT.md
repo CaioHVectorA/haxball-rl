@@ -67,3 +67,11 @@ Publicação final confirmada na branch gpt: 82bc590 — benchmark auditado,
 gráficos de desempenho/self-play/trajectórias e política exportada do candidato
 humano. Sala permanece bloqueada pelo token/captcha; nenhuma execução
 de treinamento continua ativa.
+
+## Recompensa ao longo das iterações
+
+![Recompensa média por transição e seus componentes](reward_curve.png)
+
+Média das primeiras50 iterações:0,09895; últimas50:0,27081. Curva suavizada
+com janela de50, componentes já ponderados. Dados e verificação em reward_curve.json.
+Esse eixo mede recompensa por transição do learner, não retorno episódico.
