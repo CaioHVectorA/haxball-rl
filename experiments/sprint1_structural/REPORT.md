@@ -1,7 +1,7 @@
 # Sprint 1 estrutural — relatório
 
-Estado: running; atualização UTC: 2026-10-14T12:12:01.770990+00:00.
-Última avaliação: iteração 250; treino já completou pelo menos 283 iterações.
+Estado: running; atualização UTC: 2026-10-14T12:46:56.197684+00:00.
+Última avaliação: iteração 650; treino já completou pelo menos 650 iterações.
 
 **Recompensa PBRS, crítico separado e currículo estacionário estão efetivamente ativos.**
 Isso foi conferido em config.json, tipos dos termos de reward e gradientes na telemetria.
@@ -10,17 +10,17 @@ Isso foi conferido em config.json, tipos dos termos de reward e gradientes na te
 
 | Grupo | Início | Última avaliação |
 |---|---:|---:|
-| greedy_random | 0.71734 | 0.80810 |
-| greedy_kickoff | 0.83606 | 0.91589 |
-| sampled_random | 0.72166 | 0.79734 |
-| sampled_kickoff | 0.76868 | 0.86592 |
-| Mínimo (critério de seleção) | 0.71734 | 0.79734 |
+| greedy_random | 0.71734 | 0.84495 |
+| greedy_kickoff | 0.83606 | 0.70588 |
+| sampled_random | 0.72166 | 0.82922 |
+| sampled_kickoff | 0.76868 | 0.88831 |
+| Mínimo (critério de seleção) | 0.71734 | 0.70588 |
 
 | Adversário neural | Início | Última avaliação |
 |---|---:|---:|
-| initial_policy | 0.50616 | 0.50498 |
-| anchor_0 | 0.67774 | 0.92407 |
-| anchor_1 | 0.79257 | 0.84184 |
+| initial_policy | 0.50616 | 0.42422 |
+| anchor_0 | 0.67774 | 0.93982 |
+| anchor_1 | 0.79257 | 0.62916 |
 
 ![Progresso estrutural](progress.png)
 
@@ -48,3 +48,16 @@ Contratos, fundamento, decisões sobre a geometria e limites estão em README.md
 Não se anuncia PFSP ou observação enriquecida como implementados: são etapa posterior.
 A etapa central que antes estava pendente — tabela PBRS, crítico separado e currículo —
 foi implementada e está sendo treinada nesta execução.
+
+## Verificação independente e progresso
+
+[HELDOUT.md](HELDOUT.md) registra comparação em três seeds inéditas.
+O checkpoint exato da iteração 450 fica separado em `models/sprint1_validated`.
+Não confundir esse arquivo com o bundle de retomada e modelo mais recente.
+
+A trajetória posterior ainda apresentou oscilação de kickoff greedy: na iteração
+650 o mínimo caiu a 0,70588, com sampled/kickoff 0,88831; na 700 o mínimo voltou
+a 0,83540, com greedy/kickoff 0,99097. Portanto não se declara estabilidade
+monotônica de cada checkpoint. O critério mínimo preservou o melhor modelo,
+e o candidato validado permanece imutável; isso evita promover automaticamente
+o endpoint que perdeu desempenho, sem ocultar a oscilação na análise.

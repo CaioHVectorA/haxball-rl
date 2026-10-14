@@ -25,8 +25,10 @@ do documento deixaria muitos estados sem gradiente de aproximação longe da fai
 de chute. Phi da bola usa `(distância ao gol próprio - distância ao gol atacado)/2`,
 dividida pela mesma escala física (21,12 por decisão no mapa atual).
 
-A escolha do potencial dá uma orientação de posicionamento; o objetivo global
-continuado continua sendo o retorno descontado de gols, sob as condições abaixo.
+A escolha do potencial dá uma orientação de posicionamento; o objetivo de referência
+é o retorno descontado esparso de gols, sob as condições abaixo. A invariância é em
+relação a esse objetivo esparso, não à tabela `corrected` antiga, que tinha sinais
+densos diferentes e não era PBRS descontado.
 Não há penalidade adicional de pressão de chute: ela alteraria esse objetivo,
 enquanto a física já reduz aceleração durante o chute. Não foi copiada uma função
 `KickDisciplineReward` que, no texto anexado, era anunciada sem implementação ou
@@ -180,3 +182,16 @@ Testes integrados: smoke estrutural com dois anchors; parada SIGTERM e retomada
 até a iteração 30; calibração do crítico com ator invariável e avaliação idêntica.
 Resultados curtos só verificam integração. Não demonstram superioridade estatística.
 O treino longo e as verificações de exportação têm seus resultados em `REPORT.md`.
+
+## Evidência e publicações
+
+A implementação e um bundle retomável foram publicados em `gpt`, commit `a6ba071`.
+A verificação em seeds inéditas e o checkpoint exato avaliado estão em
+`HELDOUT.md` e `models/sprint1_validated`. É um avanço observado nessa continuação,
+não demonstra causalidade de cada intervenção nem robustez entre seeds de treino.
+
+Uma ablação curta controlada está em `ablation.py`: duas seeds, 40 iterações,
+64 ambientes, mesma origem/currículo/avaliação, sem warmup em todos os braços,
+comparando corrected/shared, PBRS/shared e PBRS/separate (com clipping separado).
+Esse POC serve para estudar direção/integridade; não deve determinar um vencedor
+definitivo ou invalidar o preset principal por pouca amostragem.

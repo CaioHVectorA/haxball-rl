@@ -1,0 +1,101 @@
+{
+  "comparison": {
+    "config": {
+      "iteration": 450,
+      "seeds": [
+        5701,
+        5702,
+        5703
+      ],
+      "envs": 8,
+      "steps": 500,
+      "criterion": "Descriptive unseen-seed comparison; no automatic promotion and no single-intervention causal claim"
+    },
+    "results": [
+      {
+        "candidate": "origin",
+        "mode": "greedy",
+        "score": 0.7643031489666509,
+        "random": 0.6900526580865584,
+        "kickoff": 0.8385536398467434
+      },
+      {
+        "candidate": "origin",
+        "mode": "sampled",
+        "score": 0.7374732331748787,
+        "random": 0.7019264470338155,
+        "kickoff": 0.7730200193159417
+      },
+      {
+        "candidate": "structural",
+        "mode": "greedy",
+        "score": 0.856560895702051,
+        "random": 0.8293760354072904,
+        "kickoff": 0.8837457559968116
+      },
+      {
+        "candidate": "structural",
+        "mode": "sampled",
+        "score": 0.8549199217209817,
+        "random": 0.8345567864433857,
+        "kickoff": 0.8752830569985781
+      }
+    ],
+    "deltas": [
+      {
+        "mode": "greedy",
+        "random": 0.13932337732073208,
+        "kickoff": 0.04519211615006824
+      },
+      {
+        "mode": "sampled",
+        "random": 0.13263033940957025,
+        "kickoff": 0.10226303768263645
+      }
+    ]
+  },
+  "per_opponent": [
+    {
+      "opponent": "initial_policy",
+      "origin": 0.5151621957262437,
+      "structural": 0.5455212095941073,
+      "delta": 0.03035901386786366
+    },
+    {
+      "opponent": "anchor_0",
+      "origin": 0.6669446821315701,
+      "structural": 0.949332518132964,
+      "delta": 0.28238783600139394
+    },
+    {
+      "opponent": "anchor_1",
+      "origin": 0.7616034612054994,
+      "structural": 0.7897465386291614,
+      "delta": 0.028143077423662066
+    },
+    {
+      "opponent": "chase",
+      "origin": 0.8236333664543359,
+      "structural": 0.8997005807716469,
+      "delta": 0.076067214317311
+    },
+    {
+      "opponent": "chase_no_noise",
+      "origin": 0.8256567005366643,
+      "structural": 0.90267935858762,
+      "delta": 0.07702265805095576
+    },
+    {
+      "opponent": "striker",
+      "origin": 0.847002495768652,
+      "structural": 0.9400504875366665,
+      "delta": 0.09304799176801448
+    },
+    {
+      "opponent": "keeper",
+      "origin": 0.8162144356723876,
+      "structural": 0.963152167728449,
+      "delta": 0.14693773205606142
+    }
+  ]
+}
