@@ -1,0 +1,722 @@
+[
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.825067606646554,
+    "delta_vs_origin": 0.06295338692797858
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.7561840004819133,
+    "delta_vs_origin": -0.005705859302683414
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 0.8052944052071959,
+    "delta_vs_origin": 0.05915652874673871
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.7832452412089509,
+    "delta_vs_origin": 0.05427124892226509
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 0,
+    "score": 0.8800151063406877,
+    "delta_vs_origin": 0.10212845258662706
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 1,
+    "score": 0.8004517753047165,
+    "delta_vs_origin": 0.01572260115903379
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.7776593462318614,
+    "delta_vs_origin": 0.11700061607313128
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.656958229942101,
+    "delta_vs_origin": 0.030990697474568507
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.697079772079772,
+    "delta_vs_origin": -0.12854334643758403
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.6612739112739112,
+    "delta_vs_origin": -0.1472808619867444
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.8592314990512334,
+    "delta_vs_origin": 0.12362815377046876
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.8346850621969218,
+    "delta_vs_origin": 0.06899352142195503
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 1.0,
+    "delta_vs_origin": 0.5
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 1.0,
+    "delta_vs_origin": 0.5
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 0,
+    "score": 1.0,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 1,
+    "score": 1.0,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 1.0,
+    "delta_vs_origin": 0.5
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 1.0,
+    "delta_vs_origin": 0.5
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.5,
+    "delta_vs_origin": -0.5
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.5,
+    "delta_vs_origin": -0.5
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.7786650286650286,
+    "delta_vs_origin": 0.006068915271512765
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.7428254820115285,
+    "delta_vs_origin": 0.028874792468075117
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 0.7765768603379709,
+    "delta_vs_origin": 0.08422675430365434
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.7387127371273713,
+    "delta_vs_origin": 0.05326662686508454
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 0,
+    "score": 0.8662411095305832,
+    "delta_vs_origin": 0.07186898971491495
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 1,
+    "score": 0.7949646659146017,
+    "delta_vs_origin": 0.04189274978673141
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.7762972567770169,
+    "delta_vs_origin": 0.053016833496593585
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.7481385281385281,
+    "delta_vs_origin": 0.08846303011041601
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.7166471372116533,
+    "delta_vs_origin": -0.035731666780053906
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.6842743182743183,
+    "delta_vs_origin": -0.08944897232397231
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.7743748223927253,
+    "delta_vs_origin": 0.09702955736363672
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.760702380952381,
+    "delta_vs_origin": 0.08040681444991793
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 0.7931270912294882,
+    "delta_vs_origin": 0.0883949483723453
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.7869961388485358,
+    "delta_vs_origin": 0.07531955154694847
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 0,
+    "score": 0.8470121381886088,
+    "delta_vs_origin": 0.07923436041083098
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 1,
+    "score": 0.8642231842231842,
+    "delta_vs_origin": 0.09640195827854636
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.8448005698005698,
+    "delta_vs_origin": 0.15442272300967952
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.8324989824989825,
+    "delta_vs_origin": 0.14212113570809215
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.810595343353964,
+    "delta_vs_origin": -0.017325641417115678
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.82327187100894,
+    "delta_vs_origin": 0.0017716642264751226
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.7578977079214271,
+    "delta_vs_origin": -0.004216511797148326
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.7673239809548126,
+    "delta_vs_origin": 0.005434121170215911
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 0.7926411504672374,
+    "delta_vs_origin": 0.046503274006780226
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.7619774833010127,
+    "delta_vs_origin": 0.03300349101432687
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 0,
+    "score": 0.8029999415075971,
+    "delta_vs_origin": 0.025113287753536495
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 1,
+    "score": 0.7834466074831186,
+    "delta_vs_origin": -0.0012825666625640997
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.6893054861804861,
+    "delta_vs_origin": 0.028646756021756037
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.6556526806526807,
+    "delta_vs_origin": 0.029685148185148225
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.70570779539924,
+    "delta_vs_origin": -0.11991532311811604
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.626708534621578,
+    "delta_vs_origin": -0.18184623863907756
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.8470498340401992,
+    "delta_vs_origin": 0.11144648875943453
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.8046906856584276,
+    "delta_vs_origin": 0.03899914488346079
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 1.0,
+    "delta_vs_origin": 0.5
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.5,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 0,
+    "score": 1.0,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 1,
+    "score": 1.0,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.5,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.5,
+    "delta_vs_origin": 0.0
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.5,
+    "delta_vs_origin": -0.5
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.5,
+    "delta_vs_origin": -0.5
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.7992981179437623,
+    "delta_vs_origin": 0.026702004550246405
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.7256265131191519,
+    "delta_vs_origin": 0.011675823575698518
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 0.7934028755042687,
+    "delta_vs_origin": 0.10105276946995212
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.7161941353117823,
+    "delta_vs_origin": 0.030748025049495586
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 0,
+    "score": 0.8133810280869104,
+    "delta_vs_origin": 0.01900890827124213
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "striker",
+    "side": 1,
+    "score": 0.7658011376761377,
+    "delta_vs_origin": 0.012729221548267389
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.7468269443241634,
+    "delta_vs_origin": 0.02354652104374011
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.7126373626373627,
+    "delta_vs_origin": 0.052961864609250564
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.7531659765355417,
+    "delta_vs_origin": 0.0007871725438345356
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "random",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.7885791401580875,
+    "delta_vs_origin": 0.014855849559796908
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 0,
+    "score": 0.7348021978021978,
+    "delta_vs_origin": 0.05745693277310926
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase",
+    "side": 1,
+    "score": 0.784419195931988,
+    "delta_vs_origin": 0.10412362942952491
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 0,
+    "score": 0.8230667303247948,
+    "delta_vs_origin": 0.11833458746765191
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "chase_no_noise",
+    "side": 1,
+    "score": 0.8271124018106777,
+    "delta_vs_origin": 0.11543581450909035
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 0,
+    "score": 0.8621882624017349,
+    "delta_vs_origin": 0.09441048462395707
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "striker",
+    "side": 1,
+    "score": 0.850946065428824,
+    "delta_vs_origin": 0.08312483948418614
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 0,
+    "score": 0.8380195891065456,
+    "delta_vs_origin": 0.1476417423156553
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "keeper",
+    "side": 1,
+    "score": 0.8364385614385614,
+    "delta_vs_origin": 0.14606071464767112
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 0,
+    "score": 0.7979029500964985,
+    "delta_vs_origin": -0.030018034674581195
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "opponent": "initial_policy",
+    "side": 1,
+    "score": 0.794203222065291,
+    "delta_vs_origin": -0.02729698471717379
+  }
+]

@@ -7,21 +7,21 @@ from bot import ChaseBot, PositionBot
 
 
 @torch.no_grad()
-def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400):
+def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400, tick_skip=8, eval_seeds=(1701, 1702), greedy=True):
     from train import create_eval_env
     device = next(model.parameters()).device
     rows=[]
     opponent_names=['chase','chase_no_noise','striker','keeper','initial_policy']
-    total=len(opponent_names)*2*2*2
+    total=len(opponent_names)*2*len(eval_seeds)*2
     case=0
     for scenario in ['random','kickoff']:
         for opponent in opponent_names:
-            for eval_seed in [1701,1702]:
+            for eval_seed in eval_seeds:
                 for side in [0,1]:
                     # Isolate evaluation RNG from the training sampling sequence.
                     with torch.random.fork_rng(devices=[]):
                         torch.manual_seed(eval_seed)
-                        env=create_eval_env(n,1,1,stadium,8)
+                        env=create_eval_env(n,1,1,stadium,tick_skip)
                         if scenario=='random':
                             env.state_mutator=RandomStateMutator(ball_speed=3.,rng=eval_seed)
                         obs=env.reset()
@@ -39,10 +39,10 @@ def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400):
                         for step in range(steps):
                             pre=env.prev_state
                             actions=np.empty((n,2,3),dtype=np.int64)
-                            actions[:,side]=model.act(torch.as_tensor(obs[:,side],device=device,dtype=torch.float32),greedy=True).cpu().numpy()
+                            actions[:,side]=model.act(torch.as_tensor(obs[:,side],device=device,dtype=torch.float32),greedy=greedy).cpu().numpy()
                             other=1-side
                             if opponent=='initial_policy':
-                                actions[:,other]=reference.act(torch.as_tensor(obs[:,other],device=device,dtype=torch.float32),greedy=True).cpu().numpy()
+                                actions[:,other]=reference.act(torch.as_tensor(obs[:,other],device=device,dtype=torch.float32),greedy=greedy).cpu().numpy()
                             else:actions[:,other]=bot.act(pre,[other]).reshape(n,3)
                             contact=np.linalg.norm(pre.ball_pos-pre.player_pos[:,side],axis=-1)<24.8
                             contacts+=int(contact.sum());kick_contacts+=int((contact&(actions[:,side,2]==1)).sum())
@@ -59,6 +59,7 @@ def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400):
                             if step%100==0:progress(case,total,opponent,scenario)
                         completed=wins+draws+losses
                         row=dict(opponent=opponent,scenario=scenario,seed=eval_seed,side=side,
+                          policy_mode="greedy" if greedy else "sampled",
                           decisions=steps,envs=n,gf=gf,ga=ga,wins=wins,draws=draws,losses=losses,
                           completed_episodes=completed,score=(wins+.5*draws)/completed if completed else None,
                           stationary_fraction=stationary/(n*steps),contacts=contacts,

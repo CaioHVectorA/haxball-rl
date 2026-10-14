@@ -34,7 +34,7 @@ As tabelas `simple`, `simple_progress1` e `previous` permanecem para reproduzir 
 | Limite de episódio | 2.000 ticks = 250 decisões com tick skip 8 |
 | Resets de treino | 40% kickoff, 60% estado aleatório (`ball_speed=3`) |
 
-A perda de valor já inclui fator 0,5 antes de receber `VF_COEF`. O GAE trata tanto término quanto truncamento como fim sem bootstrap; revisar essa escolha para timeouts. `--warm-start` reinicia otimizador, schedules e contador. Por padrão, carrega a política e zera a cabeça de valor para adaptar a escala corrigida de recompensa. `--keep-critic` preserva a cabeça de valor quando apropriado. Essa reinicialização não altera os logits iniciais de ação.
+A perda de valor já inclui fator 0,5 antes de receber `VF_COEF`. O GAE mantém o controle legado sem bootstrap com `--timeout-bootstrap zero` (padrão). A variante `--timeout-bootstrap final` usa V da observação anterior ao autoreset em timeouts artificiais; gols zeram o bootstrap e ambas as fronteiras interrompem o traço. O protocolo B0/E1 e a instrumentação estão em `experiments/sprint1_timeout/README.md`. `--warm-start` reinicia otimizador, schedules e contador. Por padrão, carrega a política e zera a cabeça de valor para adaptar a escala corrigida de recompensa. `--keep-critic` preserva a cabeça de valor quando apropriado. Essa reinicialização não altera os logits iniciais de ação.
 
 ## Tabela atual de recompensas
 

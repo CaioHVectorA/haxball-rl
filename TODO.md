@@ -37,3 +37,18 @@ A duração de uma execução ou o número de iterações, isoladamente, não é
 - [x] Validar candidato em seeds separadas no simulador e exportar.
 - [ ] Melhorar consistência entre seeds e desempenho em posições aleatórias.
 - [ ] Validar transferência para sala real.
+
+## Sprint 1 — ablação controlada (2026-10-14)
+
+- [x] Implementar B0/E1 selecionáveis: bootstrap zero ou estado final anterior ao autoreset.
+- [x] Instrumentar gradientes por objetivo e avaliação random/kickoff.
+- [x] Criar testes de máscaras GAE e captura no ambiente real.
+- [x] Disponibilizar runner pareado com checkpoint congelado e pastas novas.
+- [x] Executar comparação principal B0/E1 em três seeds e 9.830.400 amostras por braço/seed.
+- [x] Auditar execução e avaliar candidatos em cinco seeds novas, greedy/amostrado.
+- [x] Concluir continuação B0 até 07h: parada normal às 06:58, 5.236 iterações; conferir endpoint e melhor checkpoint.
+- [ ] Implementar e avaliar E2 (PBRS descontado) e E3 (crítico separado) após validar a base.
+- [ ] Avaliar currículo estacionário como intervenção adicional.
+
+Contrato e comandos: `experiments/sprint1_timeout/README.md`. Começar esta etapa
+não significa concluir a sprint nem comprovar convergência.

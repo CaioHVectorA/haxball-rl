@@ -1,0 +1,102 @@
+{
+  "status": "passed",
+  "runs": 6,
+  "samples": 58982400,
+  "source_checkpoint_hash_verified": true,
+  "recursive_finite_metrics": true,
+  "tests_passed": 17,
+  "randomized_gae_starts_per_mode": 133,
+  "graceful_deadline_test": "28 iterations; final model/meta match live count",
+  "hard_deadline_test": "SIGTERM-resistant leader and descendant killed before deadline",
+  "decision": {
+    "selected": "B0_seed2_best",
+    "checkpoint": "/home/usuario/develop/haxball-rl/runs/sprint1_timeout_full_20261014/B0_seed2/model.pt",
+    "eligible": [
+      [
+        0.7371585057986754,
+        0.748550875377799,
+        "B0_seed2_best"
+      ],
+      [
+        0.6950609845497425,
+        0.7650258231720787,
+        "E1_seed0_best"
+      ]
+    ],
+    "gate": "Both scenarios in both modes must exceed source by >=0.02; select largest minimum scenario/mode score, then mean."
+  },
+  "continuation": {
+    "status": "completed",
+    "iterations": 5236,
+    "samples": 171573248,
+    "stop_reason": "deadline",
+    "finished_local": "2026-10-14T06:58:14-03:00",
+    "best_iteration": 3650,
+    "best_score": 0.8714721985509364,
+    "endpoint_score": 0.7090678578974212,
+    "checkpoints_finite": true,
+    "processes_stopped": true
+  },
+  "final_validation": {
+    "cases": 600,
+    "seeds": [
+      3701,
+      3702,
+      3703,
+      3704,
+      3705
+    ],
+    "modes": [
+      "greedy",
+      "sampled"
+    ],
+    "unique_cases": true,
+    "no_empty_scores": true,
+    "results": [
+      {
+        "candidate": "origin",
+        "mode": "greedy",
+        "score": 0.7491915408305032,
+        "random": 0.7482535930554333,
+        "kickoff": 0.7501294886055732
+      },
+      {
+        "candidate": "origin",
+        "mode": "sampled",
+        "score": 0.7330335260811834,
+        "random": 0.7320845071075643,
+        "kickoff": 0.7339825450548022
+      },
+      {
+        "candidate": "best_it3650",
+        "mode": "greedy",
+        "score": 0.8168572977982911,
+        "random": 0.7643229394717664,
+        "kickoff": 0.8693916561248156
+      },
+      {
+        "candidate": "best_it3650",
+        "mode": "sampled",
+        "score": 0.788047282324299,
+        "random": 0.7623343123988602,
+        "kickoff": 0.813760252249738
+      },
+      {
+        "candidate": "final_it5236",
+        "mode": "greedy",
+        "score": 0.7247700944093907,
+        "random": 0.7343661368489189,
+        "kickoff": 0.7151740519698626
+      },
+      {
+        "candidate": "final_it5236",
+        "mode": "sampled",
+        "score": 0.788200620385214,
+        "random": 0.7614913231297169,
+        "kickoff": 0.8149099176407114
+      }
+    ]
+  },
+  "automation_status": "PAUSED",
+  "models_main_unchanged": true
+}

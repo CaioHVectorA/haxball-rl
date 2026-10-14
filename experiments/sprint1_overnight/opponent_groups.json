@@ -1,0 +1,38 @@
+[
+  {
+    "candidate": "origin",
+    "mode": "greedy",
+    "heuristics": 0.7093533078020032,
+    "neural_reference": 0.9085444729445029
+  },
+  {
+    "candidate": "origin",
+    "mode": "sampled",
+    "heuristics": 0.7178217022175077,
+    "neural_reference": 0.7938808215358856
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "greedy",
+    "heuristics": 0.8736745170382585,
+    "neural_reference": 0.5895884208384208
+  },
+  {
+    "candidate": "best_it3650",
+    "mode": "sampled",
+    "heuristics": 0.7953848110398191,
+    "neural_reference": 0.7586971674622189
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "greedy",
+    "heuristics": 0.7601865973854375,
+    "neural_reference": 0.5831040825052045
+  },
+  {
+    "candidate": "final_it5236",
+    "mode": "sampled",
+    "heuristics": 0.789385069928054,
+    "neural_reference": 0.7834628222138547
+  }
+]

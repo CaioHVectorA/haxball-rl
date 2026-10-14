@@ -38,6 +38,7 @@ class Telemetry:
 class RewardMeter:
     def __init__(self, reward):
         self.reward = reward
+        self.last_state = None
         self.clear()
 
     def clear(self):
@@ -46,10 +47,13 @@ class RewardMeter:
         self.gf = self.ga = self.finished = self.stationary = self.transitions = 0
 
     def reset(self, state):
+        self.last_state = None
         self.reward.reset(state)
 
     def get_rewards(self, state, prev, terminated, truncated):
         from haxballgym import BLUE, RED
+        # Env invokes this before autoreset; engine snapshots own their arrays.
+        self.last_state = state
         result = np.zeros(state.player_pos.shape[:2], dtype=np.float32)
         for fn, weight in self.reward.terms:
             part = fn.get_rewards(state, prev, terminated, truncated)*weight

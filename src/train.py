@@ -13,6 +13,7 @@ import time
 import os
 import hashlib
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +41,8 @@ from model import Policy
 from environment import STADIUM, motion_scale, MotionPlayerToBall, MotionBallToGoal, RepeatKickAction
 from telemetry import Telemetry, RewardMeter
 from live_evaluation import panel, balanced_score
+from ppo_returns import gae_returns
+from gradient_metrics import objective_gradient_metrics
 from replay import dump_replay
 
 # PPO / GAE hyperparameters
@@ -272,7 +275,27 @@ def main():
     ap.add_argument("--eval-envs", type=int, default=16)
     ap.add_argument("--eval-steps", type=int, default=400)
     ap.add_argument("--keep-critic", action="store_true", help="keep old value head on warm-start")
+    ap.add_argument("--timeout-bootstrap", choices=("zero", "final"), default="zero",
+                    help="B0: zero; E1: bootstrap artificial timeout from pre-reset observation")
+    ap.add_argument("--stop-at", help="Timezone-aware ISO deadline; finish and save before this time")
+    ap.add_argument("--deadline-reserve-seconds", type=float, default=120.,
+                    help="reserve for final evaluation and checkpoint (default 120 s)")
     args = ap.parse_args()
+    deadline = None
+    if args.stop_at:
+        try:
+            deadline_dt = datetime.fromisoformat(args.stop_at)
+            if deadline_dt.tzinfo is None:
+                raise ValueError("timezone required")
+            deadline = deadline_dt.timestamp()
+        except ValueError as error:
+            ap.error(f"invalid stop-at: {error}")
+        if args.deadline_reserve_seconds < 1:
+            ap.error("deadline reserve must be at least one second")
+        if deadline <= time.time() + args.deadline_reserve_seconds + 1:
+            ap.error("stop-at must leave more time than deadline reserve")
+    if args.envs < 1 or args.iters < 1 or args.eval_every < 1:
+        ap.error("envs, iters and eval-every must be positive")
 
     dev = torch.device(args.device)
     if dev.type == "cpu":
@@ -327,7 +350,9 @@ def main():
     S_logp = torch.zeros(T, B, device=dev)
     S_val = torch.zeros(T, B, device=dev)
     S_rew = torch.zeros(T, B, device=dev)
-    S_done = torch.zeros(T, B, device=dev)
+    S_done = torch.zeros(T, B, dtype=torch.bool, device=dev)
+    S_term = torch.zeros_like(S_done)
+    S_final_val = torch.zeros(T, B, device=dev)
 
     obs = env.reset().reshape(args.envs * P, obs_dim)
     out = Path(args.out)
@@ -338,6 +363,9 @@ def main():
                   rollout_steps=T, epochs=EPOCHS, minibatches=N_MB, gamma=gamma,
                   reward_weights={"goal":25,"approach":args.approach_weight,"progress":0.08},
                   repeat_kick=True, samples_per_iteration=T*B,
+                  gradient_metric_sampling='first_minibatch_each_epoch',
+                  actor_gradient_objective='ppo_surrogate_minus_entropy',
+                  critic_gradient_objective='VF_COEF_times_value_loss',
                   revision=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip())
     config['warm_start_sha256'] = hashlib.sha256(Path(args.warm_start).read_bytes()).hexdigest() if args.warm_start else None
     telemetry = Telemetry(out, config)
@@ -354,9 +382,11 @@ def main():
           lambda row:telemetry.append('evaluation_cases.jsonl',dict(iteration=iteration,**row)),
           lambda case,total,bot,scenario:telemetry.update(phase='evaluating',evaluation_completed=case,
             evaluation_total=total,evaluation_opponent=bot,evaluation_scenario=scenario),
-          n=args.eval_envs,steps=args.eval_steps)
+          n=args.eval_envs,steps=args.eval_steps,tick_skip=args.tick_skip)
         score=balanced_score(rows)
-        telemetry.append('evaluations.jsonl',dict(iteration=iteration,score=score,cases=rows))
+        scenario_scores={f'eval_{scenario}_score':balanced_score([r for r in rows if r['scenario']==scenario])
+                         for scenario in ('random','kickoff')}
+        telemetry.append('evaluations.jsonl',dict(iteration=iteration,score=score,**scenario_scores,cases=rows))
         return score
 
     try:
@@ -365,7 +395,10 @@ def main():
         torch.save(snapshot(),out/'model.pt')
         (out/'meta.json').write_text(json.dumps(dict(config, it=0, evaluation_score=baseline_score)))
 
+        completed = 0
         for it in range(1, args.iters + 1):
+            if deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds:
+                break
             iteration_start=time.perf_counter()
             meter.clear()
             telemetry.update(phase="rollout",iteration=it,rollout_step=0)
@@ -391,7 +424,18 @@ def main():
                 full[opp_idx] = o_act.cpu().numpy()
                 nobs, rew, term, trunc = env.step(full.reshape(args.envs, P, 3))
                 obs = nobs.reshape(args.envs * P, obs_dim)
-                done = np.repeat((term | trunc).astype(np.float32), P)
+                done = np.repeat(term | trunc, P)
+                S_term[t] = torch.as_tensor(np.repeat(term, P)[learner_idx], device=dev)
+                S_final_val[t].zero_()
+                timeout = trunc & ~term
+                if timeout.any():
+                    # Evaluate final observations in BOTH arms for comparable diagnostics.
+                    final_obs = env.obs_builder.build_obs(meter.last_state)
+                    final_red = final_obs[timeout, :args.red].reshape(-1, obs_dim)
+                    timeout_slots = torch.as_tensor(np.repeat(timeout, args.red), device=dev)
+                    with torch.no_grad():
+                        S_final_val[t, timeout_slots] = model._logits(
+                            torch.as_tensor(final_red, dtype=torch.float32, device=dev))[1]
                 S_rew[t] = torch.as_tensor(rew.reshape(-1)[learner_idx], dtype=torch.float32, device=dev)
                 S_done[t] = torch.as_tensor(done[learner_idx], device=dev)
                 if (t+1)%8==0:
@@ -402,15 +446,9 @@ def main():
             # --- GAE advantages ---
             with torch.no_grad():
                 last_val = model._logits(torch.as_tensor(obs, dtype=torch.float32, device=dev)[learner_t])[1]
-            adv = torch.zeros(T, B, device=dev)
-            gae = torch.zeros(B, device=dev)
-            for t in reversed(range(T)):
-                nonterm = 1.0 - S_done[t]
-                nextval = last_val if t == T - 1 else S_val[t + 1]
-                delta = S_rew[t] + gamma * nextval * nonterm - S_val[t]
-                gae = delta + gamma * LAM * nonterm * gae
-                adv[t] = gae
-            ret = adv + S_val
+            adv, ret = gae_returns(S_rew, S_val, S_term, S_done, S_final_val,
+                                   last_val, gamma, LAM, args.timeout_bootstrap == 'final')
+            timeout_values = S_final_val[S_done & ~S_term]
 
             # --- PPO update ---
             bo, ba, bl = S_obs.reshape(-1, obs_dim), S_act.reshape(-1, 3), S_logp.reshape(-1)
@@ -419,6 +457,8 @@ def main():
             idx = np.arange(T * B)
             mb = len(idx) // N_MB
             ppo_metrics=[]
+            gradient_metrics=[]
+            combined_norms=[]
             for _ in range(EPOCHS):
                 np.random.shuffle(idx)
                 for s in range(0, len(idx), mb):
@@ -428,10 +468,14 @@ def main():
                     a = badv[mi]
                     pl = -torch.min(ratio * a, torch.clamp(ratio, 1 - CLIP, 1 + CLIP) * a).mean()
                     vl = 0.5 * (val - bret[mi]).pow(2).mean()
-                    loss = pl + VF_COEF * vl - ent_coef * ent.mean()
+                    actor_loss = pl - ent_coef * ent.mean()
+                    critic_loss = VF_COEF * vl
+                    loss = actor_loss + critic_loss
+                    if s == 0:
+                        gradient_metrics.append(objective_gradient_metrics(model, actor_loss, critic_loss))
                     opt.zero_grad()
                     loss.backward()
-                    nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)
+                    combined_norms.append(float(nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)))
                     opt.step()
                     with torch.no_grad():
                         lr_delta=logp-bl[mi]
@@ -444,7 +488,16 @@ def main():
             means=np.mean(ppo_metrics,axis=0)
             yvar=float(bret.var(unbiased=False))
             explained=1-float((bret-S_val.reshape(-1)).var(unbiased=False))/yvar if yvar>1e-9 else None
-            record=dict(iteration=it,samples=it*T*B,iteration_seconds=iteration_seconds,
+            grad_summary = {}
+            for key in gradient_metrics[0]:
+                measured = [row[key] for row in gradient_metrics if row[key] is not None]
+                grad_summary[key] = float(np.mean(measured)) if measured else None
+            record=dict(**grad_summary,
+               gradient_metric_minibatches=len(gradient_metrics),
+               combined_grad_norm_pre_clip=float(np.mean(combined_norms)),
+               timeout_count=int(timeout_values.numel()),
+               timeout_bootstrap_mean=float(timeout_values.mean()) if timeout_values.numel() else None,
+               timeout_bootstrap_applied=args.timeout_bootstrap == 'final',iteration=it,samples=it*T*B,iteration_seconds=iteration_seconds,
                rollout_seconds=rollout_seconds,update_seconds=iteration_seconds-rollout_seconds,
                samples_per_second=T*B/iteration_seconds,training_samples_per_second=it*T*B/train_seconds,
                wall_samples_per_second=it*T*B/(time.perf_counter()-t0),
@@ -467,7 +520,8 @@ def main():
                 (out / "ckpts").mkdir(exist_ok=True)
                 torch.save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
 
-            if it % args.eval_every == 0 or it == args.iters:
+            completed = it
+            if it % args.eval_every == 0 or it == args.iters or (deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds):
                 score=evaluate(it)
                 meta=dict(config,it=it,evaluation_score=score)
                 torch.save(snapshot(),out/'model_final.pt')
@@ -480,7 +534,15 @@ def main():
                 score_label=f'{score:.3f}' if score is not None else 'n/a'
                 print(f'it {it:4d} | {record["samples_per_second"]/1000:.1f}k samples/s | balanced eval {score_label} (best {best:.3f}){tag}',flush=True)
 
-        telemetry.update(status="completed",phase="completed",completed_iterations=args.iters)
+        # If the deadline was reached between iterations, preserve the exact endpoint.
+        final_meta = out/'meta_final.json'
+        final_it = json.loads(final_meta.read_text())['it'] if final_meta.exists() else -1
+        if final_it != completed:
+            score = evaluate(completed) if time.time() < (deadline or float('inf')) - 30 else None
+            torch.save(snapshot(), out/'model_final.pt')
+            final_meta.write_text(json.dumps(dict(config,it=completed,evaluation_score=score)))
+        telemetry.update(status="completed",phase="completed",completed_iterations=completed,
+                         stop_reason='deadline' if completed < args.iters else 'iteration_budget')
         print(f"done. balanced score {best:.3f} -> {out / 'model.pt'}",flush=True)
     except BaseException as error:
         telemetry.update(status='failed',phase='failed',error=repr(error))
