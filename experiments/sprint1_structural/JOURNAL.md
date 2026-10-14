@@ -98,3 +98,14 @@ greedy it1600 (mínimo 0,77626) recuperou nas avaliações 1650/1700/1750
 Receita e fonte congelada mantidas. Backup it1750/best1750 verificado:
 meta, pesos finitos, igualdade tensor a tensor, hashes e mapa; original preservado.
 A seleção usa esse painel; não é validação independente do novo checkpoint.
+
+## Revisão das 11:45
+
+Processo principal confirmado vivo, >2120 iterações; métricas finitas.
+Mínimo it1900: 0,81484; it1950: 0,85327; it2050: 0,86322;
+it2100: 0,85302. Oscilações persistem, sem regressão sustentada nesses pontos.
+Fonte e receita mantidas. Backup verificado it2125, melhor
+it2050, score 0.86322404. Hash, metadados, pesos
+e mapa conferidos; modelo original preservado. Esse melhor score é
+do painel de seleção, não de validação independente do novo checkpoint.
+Publicação anterior confirmada: 745ca46 (backup it1750).
