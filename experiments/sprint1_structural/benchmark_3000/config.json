@@ -1,0 +1,47 @@
+{
+  "status": "completed",
+  "endpoint_iteration": 3000,
+  "best_iteration": 2550,
+  "seeds": [
+    9101,
+    9102,
+    9103,
+    9104,
+    9105,
+    9106,
+    9107,
+    9108,
+    9109,
+    9110,
+    9111,
+    9112,
+    9113,
+    9114,
+    9115,
+    9116
+  ],
+  "envs": 32,
+  "map_sha256": "cfe662aab4556a310e5cab00ced83226a7216f2b877cb28554830bcca745588b",
+  "checkpoint_sha256": {
+    "origin": "256a8f9ccb616116fe2516eb1d3226cfe7fe05b6058a11d9cb7f9d83e1397ffb",
+    "best": "974f5b1dec8ad98d0ba7ce08de0a802178026ede83e3f60b0f99a83d1261860e",
+    "endpoint": "1294c1233a6e1998bb2683448b1afc8353944942112e5e44c395019f8fcc0ad7"
+  },
+  "fixed_first_episode": true,
+  "max_ticks": 2000,
+  "selection": "best checkpoint selected before unseen evaluation; endpoint evaluated separately; no automatic promotion",
+  "expected_cases": 3324,
+  "evaluation_source_sha256": {
+    "model.py": "98c2d6d372b6f00225cdedd2b40777a687046daf9538345f2cf62af0e080edbd",
+    "train.py": "d1566d383d4c006a15eb1cb3c6b3f43953a245ef96d886c4d2a1f6f019ae04bf",
+    "environment.py": "a05130774049c0c3c4eac2ee0e7d111135d2e1d576ce0ba9b5414a87f28009a1",
+    "bot.py": "244431795d1781c8e6f8393008beba7e2ca3e3bf39d8b5a4530579f3628a0c61",
+    "ppo_returns.py": "801bcd63edb5709a9b877a273ea8eb04c4ea65687565d0b35b5e4c500972bc5a"
+  },
+  "benchmark_source_sha256": {
+    "benchmark_3000.py": "1609be7367df01c25e9ed011154fc06072988770ed02ec9da1d14dfb2ff5d5dc",
+    "benchmark_bots.py": "6b7667c709b9e997388e936bf8c417f644e4ca8fe78df11711ca2c6e00c06ba7"
+  },
+  "cases": 3324,
+  "finished_at": 1791994268.5876758
+}

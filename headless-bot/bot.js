@@ -9,7 +9,7 @@
 // core follows the same physics, transfer still requires validation in a real room.
 const fs = require("fs");
 const path = require("path");
-const { Room, Utils, OperationType } = require("node-haxball")();
+const { Room, Utils, OperationType, Errors } = require("node-haxball")();
 
 // Load a local .env (gitignored) so `node bot.js` finds HEADLESS_TOKEN without exporting it.
 // Existing env vars win, so `HEADLESS_TOKEN=… node bot.js` still overrides the file.
@@ -273,7 +273,12 @@ Room.create(
       room.onGameTick = () => controlBot(room);
     },
     onClose: (msg) => {
-      console.error("Room closed:", msg?.code ?? msg ?? "(unknown)");
+      const code = msg?.code ?? msg;
+      const name = Object.keys(Errors.ErrorCodes).find((key) => Errors.ErrorCodes[key] === code);
+      console.error("Room closed:", name || "Unknown", code ?? "(unknown)");
+      if (code === Errors.ErrorCodes.MissingRecaptchaCallbackError) {
+        console.error("Headless token was not accepted or a CAPTCHA is required. Obtain a fresh token at https://www.haxball.com/headlesstoken and update HEADLESS_TOKEN in headless-bot/.env.");
+      }
       process.exit(1);
     },
   }

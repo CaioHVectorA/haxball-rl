@@ -1,0 +1,2948 @@
+[
+  {
+    "candidate": "best",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 4.8,
+    "stationary_fraction": 0.3055555555555556,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.9169921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8974609375,
+      0.9350708007812498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.476953125,
+    "stationary_fraction": 0.03248049489405856,
+    "wins": 932,
+    "draws": 14,
+    "losses": 78,
+    "side_scores": {
+      "0": 0.919921875,
+      "1": 0.9140625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.98193359375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.97119140625,
+      0.9921875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.54921875,
+    "stationary_fraction": 0.29850407442848,
+    "wins": 993,
+    "draws": 25,
+    "losses": 6,
+    "side_scores": {
+      "0": 0.9814453125,
+      "1": 0.982421875
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.9052734375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.88427734375,
+      0.92529296875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.386588541666667,
+    "stationary_fraction": 0.033445057506621204,
+    "wins": 917,
+    "draws": 20,
+    "losses": 87,
+    "side_scores": {
+      "0": 0.91015625,
+      "1": 0.900390625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.104,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.5
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.209895833333334,
+    "stationary_fraction": 0.09857581615420045,
+    "wins": 338,
+    "draws": 348,
+    "losses": 338,
+    "side_scores": {
+      "0": 0.494140625,
+      "1": 0.505859375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.49169921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.46337890625,
+      0.5200317382812498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 25.11536458333333,
+    "stationary_fraction": 0.19886575021302666,
+    "wins": 234,
+    "draws": 539,
+    "losses": 251,
+    "side_scores": {
+      "0": 0.4951171875,
+      "1": 0.48828125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.50390625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.48486328125,
+      0.52392578125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.458333333333336,
+    "stationary_fraction": 0.0883796905166237,
+    "wins": 347,
+    "draws": 338,
+    "losses": 339,
+    "side_scores": {
+      "0": 0.513671875,
+      "1": 0.494140625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.912109375,
+      0.93310546875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 10.416276041666666,
+    "stationary_fraction": 0.42011450913290516,
+    "wins": 886,
+    "draws": 116,
+    "losses": 22,
+    "side_scores": {
+      "0": 0.9326171875,
+      "1": 0.9111328125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.88037109375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.865234375,
+      0.89599609375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.245052083333334,
+    "stationary_fraction": 0.2533985364865993,
+    "wins": 859,
+    "draws": 85,
+    "losses": 80,
+    "side_scores": {
+      "0": 0.87890625,
+      "1": 0.8818359375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.89794921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.884765625,
+      0.9111328125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 11.675911458333333,
+    "stationary_fraction": 0.39083975237473517,
+    "wins": 855,
+    "draws": 129,
+    "losses": 40,
+    "side_scores": {
+      "0": 0.8935546875,
+      "1": 0.90234375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.8662109375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.853515625,
+      0.88037109375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 9.632291666666667,
+    "stationary_fraction": 0.29479966653425055,
+    "wins": 829,
+    "draws": 116,
+    "losses": 79,
+    "side_scores": {
+      "0": 0.865234375,
+      "1": 0.8671875
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 4.133333333333334,
+    "stationary_fraction": 0.3870967741935484,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.92822265625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.91015625,
+      0.94482421875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.216666666666667,
+    "stationary_fraction": 0.0025330543531182125,
+    "wins": 948,
+    "draws": 5,
+    "losses": 71,
+    "side_scores": {
+      "0": 0.9306640625,
+      "1": 0.92578125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.99560546875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.99072265625,
+      0.9990234375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.245052083333333,
+    "stationary_fraction": 0.31025146872629455,
+    "wins": 1015,
+    "draws": 9,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.9951171875,
+      "1": 0.99609375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.91943359375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.89697265625,
+      0.94189453125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.347265625,
+    "stationary_fraction": 0.023043004913128995,
+    "wins": 936,
+    "draws": 11,
+    "losses": 77,
+    "side_scores": {
+      "0": 0.9228515625,
+      "1": 0.916015625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 3.7333333333333334,
+    "stationary_fraction": 0.5,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.9228515625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.91015625,
+      0.935546875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.733072916666666,
+    "stationary_fraction": 0.036388631955824244,
+    "wins": 936,
+    "draws": 18,
+    "losses": 70,
+    "side_scores": {
+      "0": 0.919921875,
+      "1": 0.92578125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.97412109375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.96484375,
+      0.9829223632812498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 11.185286458333334,
+    "stationary_fraction": 0.23123789420473465,
+    "wins": 977,
+    "draws": 41,
+    "losses": 6,
+    "side_scores": {
+      "0": 0.974609375,
+      "1": 0.9736328125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.91064453125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.89306640625,
+      0.9287109375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 9.160677083333333,
+    "stationary_fraction": 0.05152884455944616,
+    "wins": 918,
+    "draws": 29,
+    "losses": 77,
+    "side_scores": {
+      "0": 0.900390625,
+      "1": 0.9208984375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.496,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.4794921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.45947265625,
+      0.49609375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.949609374999998,
+    "stationary_fraction": 0.1216322274702464,
+    "wins": 329,
+    "draws": 324,
+    "losses": 371,
+    "side_scores": {
+      "0": 0.46484375,
+      "1": 0.494140625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.48974609375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.4677734375,
+      0.51123046875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 26.925130208333332,
+    "stationary_fraction": 0.2053410657828112,
+    "wins": 191,
+    "draws": 621,
+    "losses": 212,
+    "side_scores": {
+      "0": 0.4912109375,
+      "1": 0.48828125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.5029296875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.486328125,
+      0.51904296875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.967447916666664,
+    "stationary_fraction": 0.10232573306650275,
+    "wins": 334,
+    "draws": 362,
+    "losses": 328,
+    "side_scores": {
+      "0": 0.505859375,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 4.8,
+    "stationary_fraction": 0.3055555555555556,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.89453125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8818359375,
+      0.9087036132812498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.658854166666668,
+    "stationary_fraction": 0.1966808177282126,
+    "wins": 878,
+    "draws": 76,
+    "losses": 70,
+    "side_scores": {
+      "0": 0.890625,
+      "1": 0.8984375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.96728515625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.953125,
+      0.98046875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.107552083333333,
+    "stationary_fraction": 0.3689777751569231,
+    "wins": 957,
+    "draws": 67,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.9677734375,
+      "1": 0.966796875
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.88671875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.87109375,
+      0.9013793945312498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 9.421223958333334,
+    "stationary_fraction": 0.20985373487674125,
+    "wins": 866,
+    "draws": 84,
+    "losses": 74,
+    "side_scores": {
+      "0": 0.8935546875,
+      "1": 0.8798828125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 4.133333333333334,
+    "stationary_fraction": 0.3870967741935484,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.9404296875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.927734375,
+      0.95361328125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.802734375,
+    "stationary_fraction": 0.041761632659649106,
+    "wins": 955,
+    "draws": 16,
+    "losses": 53,
+    "side_scores": {
+      "0": 0.9375,
+      "1": 0.943359375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.9990234375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9970703125,
+      1.0
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 4.618489583333334,
+    "stationary_fraction": 0.39355656644892667,
+    "wins": 1022,
+    "draws": 2,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.9990234375,
+      "1": 0.9990234375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.9453125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9326171875,
+      0.95703125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.546614583333334,
+    "stationary_fraction": 0.020510126648709874,
+    "wins": 963,
+    "draws": 10,
+    "losses": 51,
+    "side_scores": {
+      "0": 0.9384765625,
+      "1": 0.9521484375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 14.266666666666667,
+    "stationary_fraction": 0.12149532710280374,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.65380859375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.6328125,
+      0.67529296875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.1765625,
+    "stationary_fraction": 0.11612970533100224,
+    "wins": 488,
+    "draws": 363,
+    "losses": 173,
+    "side_scores": {
+      "0": 0.6572265625,
+      "1": 0.650390625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.7060546875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.68408203125,
+      0.73046875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 23.4375,
+    "stationary_fraction": 0.1806281562254815,
+    "wins": 497,
+    "draws": 452,
+    "losses": 75,
+    "side_scores": {
+      "0": 0.7060546875,
+      "1": 0.7060546875
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.6689453125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.6494140625,
+      0.68798828125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.501432291666667,
+    "stationary_fraction": 0.08562894135153602,
+    "wins": 510,
+    "draws": 350,
+    "losses": 164,
+    "side_scores": {
+      "0": 0.67578125,
+      "1": 0.662109375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "self",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.104,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "self",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.5
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.209895833333334,
+    "stationary_fraction": 0.09857581615420045,
+    "wins": 338,
+    "draws": 348,
+    "losses": 338,
+    "side_scores": {
+      "0": 0.494140625,
+      "1": 0.505859375
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "self",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.49169921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.4638671875,
+      0.52001953125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 25.11536458333333,
+    "stationary_fraction": 0.19886575021302666,
+    "wins": 234,
+    "draws": 539,
+    "losses": 251,
+    "side_scores": {
+      "0": 0.4951171875,
+      "1": 0.48828125
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "self",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.50390625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.48486328125,
+      0.5224609375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.458333333333336,
+    "stationary_fraction": 0.0883796905166237,
+    "wins": 347,
+    "draws": 338,
+    "losses": 339,
+    "side_scores": {
+      "0": 0.513671875,
+      "1": 0.494140625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 4.8,
+    "stationary_fraction": 0.3055555555555556,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.90771484375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8955078125,
+      0.92041015625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.64609375,
+    "stationary_fraction": 0.05599327654591806,
+    "wins": 919,
+    "draws": 21,
+    "losses": 84,
+    "side_scores": {
+      "0": 0.90625,
+      "1": 0.9091796875
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.9853515625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9755859375,
+      0.9931640625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.659114583333333,
+    "stationary_fraction": 0.294578126336271,
+    "wins": 998,
+    "draws": 22,
+    "losses": 4,
+    "side_scores": {
+      "0": 0.9853515625,
+      "1": 0.9853515625
+    }
+  },
+  {
+    "candidate": "best",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.8974609375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8837890625,
+      0.912109375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.419661458333334,
+    "stationary_fraction": 0.050545931392825885,
+    "wins": 908,
+    "draws": 22,
+    "losses": 94,
+    "side_scores": {
+      "0": 0.89453125,
+      "1": 0.900390625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 5.066666666666666,
+    "stationary_fraction": 0.2894736842105263,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.9130859375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.892578125,
+      0.931640625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.414192708333333,
+    "stationary_fraction": 0.057003158526696435,
+    "wins": 925,
+    "draws": 20,
+    "losses": 79,
+    "side_scores": {
+      "0": 0.9140625,
+      "1": 0.912109375
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.9892578125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9833984375,
+      0.99462890625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.434895833333333,
+    "stationary_fraction": 0.2946149521775304,
+    "wins": 1002,
+    "draws": 22,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.9892578125,
+      "1": 0.9892578125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.90673828125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.888671875,
+      0.92236328125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.315364583333334,
+    "stationary_fraction": 0.05046620875477042,
+    "wins": 916,
+    "draws": 25,
+    "losses": 83,
+    "side_scores": {
+      "0": 0.9072265625,
+      "1": 0.90625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.496,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5205078125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.50341796875,
+      0.54052734375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.949609374999998,
+    "stationary_fraction": 0.1216322274702464,
+    "wins": 371,
+    "draws": 324,
+    "losses": 329,
+    "side_scores": {
+      "0": 0.505859375,
+      "1": 0.53515625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.52978515625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.50048828125,
+      0.5625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 26.683203125,
+    "stationary_fraction": 0.19734081514968152,
+    "wins": 239,
+    "draws": 607,
+    "losses": 178,
+    "side_scores": {
+      "0": 0.5302734375,
+      "1": 0.529296875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.505859375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.48291015625,
+      0.52783203125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.204036458333334,
+    "stationary_fraction": 0.0982404403358601,
+    "wins": 339,
+    "draws": 358,
+    "losses": 327,
+    "side_scores": {
+      "0": 0.494140625,
+      "1": 0.517578125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.9033203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.89013671875,
+      0.916015625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 11.556770833333335,
+    "stationary_fraction": 0.46179550312737305,
+    "wins": 849,
+    "draws": 152,
+    "losses": 23,
+    "side_scores": {
+      "0": 0.892578125,
+      "1": 0.9140625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.8798828125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.865234375,
+      0.8935546875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.893489583333334,
+    "stationary_fraction": 0.2876856656445998,
+    "wins": 849,
+    "draws": 104,
+    "losses": 71,
+    "side_scores": {
+      "0": 0.8740234375,
+      "1": 0.8857421875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.8994140625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8857421875,
+      0.9140625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 11.540364583333332,
+    "stationary_fraction": 0.3959868325802625,
+    "wins": 857,
+    "draws": 128,
+    "losses": 39,
+    "side_scores": {
+      "0": 0.884765625,
+      "1": 0.9140625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.86279296875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.84765625,
+      0.87646484375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 9.563671875,
+    "stationary_fraction": 0.2844018595690918,
+    "wins": 826,
+    "draws": 115,
+    "losses": 83,
+    "side_scores": {
+      "0": 0.86328125,
+      "1": 0.8623046875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 23.6,
+    "stationary_fraction": 0.06779661016949153,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.9248046875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9033203125,
+      0.94482421875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.114973958333334,
+    "stationary_fraction": 0.03795946750122849,
+    "wins": 940,
+    "draws": 14,
+    "losses": 70,
+    "side_scores": {
+      "0": 0.9287109375,
+      "1": 0.9208984375
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.99951171875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.99853515625,
+      1.0
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.121354166666666,
+    "stationary_fraction": 0.2916240832666651,
+    "wins": 1023,
+    "draws": 1,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 0.9990234375
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.9189453125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.89990234375,
+      0.93603515625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.085026041666667,
+    "stationary_fraction": 0.035772347712961006,
+    "wins": 932,
+    "draws": 18,
+    "losses": 74,
+    "side_scores": {
+      "0": 0.91796875,
+      "1": 0.919921875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 6.0,
+    "stationary_fraction": 0.3111111111111111,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.92822265625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9140625,
+      0.94189453125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.724479166666667,
+    "stationary_fraction": 0.05981239263578288,
+    "wins": 939,
+    "draws": 23,
+    "losses": 62,
+    "side_scores": {
+      "0": 0.9208984375,
+      "1": 0.935546875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.97900390625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.96728515625,
+      0.98974609375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 9.339713541666667,
+    "stationary_fraction": 0.24276129935772392,
+    "wins": 989,
+    "draws": 27,
+    "losses": 8,
+    "side_scores": {
+      "0": 0.9794921875,
+      "1": 0.978515625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.923828125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9072265625,
+      0.9384765625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.501432291666667,
+    "stationary_fraction": 0.04522149611823301,
+    "wins": 934,
+    "draws": 24,
+    "losses": 66,
+    "side_scores": {
+      "0": 0.9140625,
+      "1": 0.93359375
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 1.0,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.5
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.116406249999997,
+    "stationary_fraction": 0.10555018462367141,
+    "wins": 341,
+    "draws": 342,
+    "losses": 341,
+    "side_scores": {
+      "0": 0.4970703125,
+      "1": 0.5029296875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.49658203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.4716796875,
+      0.5224609375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 27.2203125,
+    "stationary_fraction": 0.17492423621668451,
+    "wins": 202,
+    "draws": 613,
+    "losses": 209,
+    "side_scores": {
+      "0": 0.49609375,
+      "1": 0.4970703125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.5126953125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.49951171875,
+      0.52490234375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.748697916666668,
+    "stationary_fraction": 0.0903661561716492,
+    "wins": 359,
+    "draws": 332,
+    "losses": 333,
+    "side_scores": {
+      "0": 0.5146484375,
+      "1": 0.5107421875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 5.066666666666666,
+    "stationary_fraction": 0.2894736842105263,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.9033203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.888671875,
+      0.916015625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 8.564973958333333,
+    "stationary_fraction": 0.18855486862000198,
+    "wins": 888,
+    "draws": 74,
+    "losses": 62,
+    "side_scores": {
+      "0": 0.8974609375,
+      "1": 0.9091796875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.96240234375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.95067138671875,
+      0.97314453125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.9520833333333325,
+    "stationary_fraction": 0.3841884141830819,
+    "wins": 951,
+    "draws": 69,
+    "losses": 4,
+    "side_scores": {
+      "0": 0.9619140625,
+      "1": 0.962890625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.8876953125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.869140625,
+      0.9072265625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 9.278125,
+    "stationary_fraction": 0.21180899867284955,
+    "wins": 866,
+    "draws": 86,
+    "losses": 72,
+    "side_scores": {
+      "0": 0.8837890625,
+      "1": 0.8916015625
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 3.8666666666666667,
+    "stationary_fraction": 0.41379310344827586,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.94970703125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.93701171875,
+      0.96142578125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.412890624999999,
+    "stationary_fraction": 0.00965984794353121,
+    "wins": 971,
+    "draws": 3,
+    "losses": 50,
+    "side_scores": {
+      "0": 0.943359375,
+      "1": 0.9560546875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.9990234375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.9970703125,
+      1.0
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 4.51796875,
+    "stationary_fraction": 0.3928212135916629,
+    "wins": 1022,
+    "draws": 2,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.9990234375,
+      "1": 0.9990234375
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.94970703125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.93798828125,
+      0.96044921875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.061328125,
+    "stationary_fraction": 0.014234888251076001,
+    "wins": 970,
+    "draws": 5,
+    "losses": 49,
+    "side_scores": {
+      "0": 0.943359375,
+      "1": 0.9560546875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.052,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.65576171875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.642578125,
+      0.6689453125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.350260416666664,
+    "stationary_fraction": 0.12141915632900895,
+    "wins": 485,
+    "draws": 373,
+    "losses": 166,
+    "side_scores": {
+      "0": 0.666015625,
+      "1": 0.6455078125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.6875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.65576171875,
+      0.716796875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 23.84973958333333,
+    "stationary_fraction": 0.1800367187080527,
+    "wins": 471,
+    "draws": 466,
+    "losses": 87,
+    "side_scores": {
+      "0": 0.6875,
+      "1": 0.6875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.6865234375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.6669921875,
+      0.70751953125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.618359375,
+    "stationary_fraction": 0.0956754190793192,
+    "wins": 540,
+    "draws": 326,
+    "losses": 158,
+    "side_scores": {
+      "0": 0.69921875,
+      "1": 0.673828125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "self",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 1.0,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "self",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.5
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.116406249999997,
+    "stationary_fraction": 0.10555018462367141,
+    "wins": 341,
+    "draws": 342,
+    "losses": 341,
+    "side_scores": {
+      "0": 0.4970703125,
+      "1": 0.5029296875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "self",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.49658203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.47265625,
+      0.5224609375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 27.2203125,
+    "stationary_fraction": 0.17492423621668451,
+    "wins": 202,
+    "draws": 613,
+    "losses": 209,
+    "side_scores": {
+      "0": 0.49609375,
+      "1": 0.4970703125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "self",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.5126953125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.52490234375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.748697916666668,
+    "stationary_fraction": 0.0903661561716492,
+    "wins": 359,
+    "draws": 332,
+    "losses": 333,
+    "side_scores": {
+      "0": 0.5146484375,
+      "1": 0.5107421875
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 5.066666666666666,
+    "stationary_fraction": 0.2894736842105263,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.90869140625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.89501953125,
+      0.92236328125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.269270833333334,
+    "stationary_fraction": 0.03619732989722887,
+    "wins": 924,
+    "draws": 13,
+    "losses": 87,
+    "side_scores": {
+      "0": 0.90625,
+      "1": 0.9111328125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.98974609375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.984375,
+      0.99462890625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 6.505989583333333,
+    "stationary_fraction": 0.2824598838875909,
+    "wins": 1005,
+    "draws": 17,
+    "losses": 2,
+    "side_scores": {
+      "0": 0.990234375,
+      "1": 0.9892578125
+    }
+  },
+  {
+    "candidate": "endpoint",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.9033203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8896484375,
+      0.91748046875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 7.964453125,
+    "stationary_fraction": 0.054850282342583864,
+    "wins": 912,
+    "draws": 26,
+    "losses": 86,
+    "side_scores": {
+      "0": 0.8974609375,
+      "1": 0.9091796875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.044,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.8076171875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.79443359375,
+      0.8208129882812498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.948177083333333,
+    "stationary_fraction": 0.11404831703740301,
+    "wins": 726,
+    "draws": 202,
+    "losses": 96,
+    "side_scores": {
+      "0": 0.8076171875,
+      "1": 0.8076171875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.86181640625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.83935546875,
+      0.88427734375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.520052083333333,
+    "stationary_fraction": 0.17007873614437122,
+    "wins": 781,
+    "draws": 203,
+    "losses": 40,
+    "side_scores": {
+      "0": 0.8583984375,
+      "1": 0.865234375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.81591796875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.79345703125,
+      0.83837890625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.73515625,
+    "stationary_fraction": 0.07056634460800702,
+    "wins": 745,
+    "draws": 181,
+    "losses": 98,
+    "side_scores": {
+      "0": 0.8134765625,
+      "1": 0.818359375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 14.266666666666667,
+    "stationary_fraction": 0.12149532710280374,
+    "wins": 0,
+    "draws": 0,
+    "losses": 64,
+    "side_scores": {
+      "0": 0.0,
+      "1": 0.0
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.34619140625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.32470703125,
+      0.36669921875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.1765625,
+    "stationary_fraction": 0.11612970533100224,
+    "wins": 173,
+    "draws": 363,
+    "losses": 488,
+    "side_scores": {
+      "0": 0.349609375,
+      "1": 0.3427734375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.3046875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.2792724609375,
+      0.3310546875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 23.955338541666666,
+    "stationary_fraction": 0.16970923215273864,
+    "wins": 70,
+    "draws": 484,
+    "losses": 470,
+    "side_scores": {
+      "0": 0.3056640625,
+      "1": 0.3037109375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.33740234375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.32421875,
+      0.3515625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.441015625,
+    "stationary_fraction": 0.0942159315531857,
+    "wins": 167,
+    "draws": 357,
+    "losses": 500,
+    "side_scores": {
+      "0": 0.3310546875,
+      "1": 0.34375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.80322265625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.78515625,
+      0.81982421875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.689192708333334,
+    "stationary_fraction": 0.42882719653378576,
+    "wins": 647,
+    "draws": 351,
+    "losses": 26,
+    "side_scores": {
+      "0": 0.8173828125,
+      "1": 0.7890625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.7646484375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.74658203125,
+      0.78369140625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.08997395833333,
+    "stationary_fraction": 0.34671311208581934,
+    "wins": 634,
+    "draws": 298,
+    "losses": 92,
+    "side_scores": {
+      "0": 0.7548828125,
+      "1": 0.7744140625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.7607421875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.74365234375,
+      0.77783203125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 20.901302083333334,
+    "stationary_fraction": 0.39671817116157054,
+    "wins": 582,
+    "draws": 394,
+    "losses": 48,
+    "side_scores": {
+      "0": 0.7646484375,
+      "1": 0.7568359375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.734375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.7177734375,
+      0.75146484375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.002864583333334,
+    "stationary_fraction": 0.35185833863134247,
+    "wins": 583,
+    "draws": 338,
+    "losses": 103,
+    "side_scores": {
+      "0": 0.7216796875,
+      "1": 0.7470703125
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 28.133333333333333,
+    "stationary_fraction": 0.06635071090047394,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.80810546875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.79736328125,
+      0.81884765625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.837239583333332,
+    "stationary_fraction": 0.15093567369693947,
+    "wins": 711,
+    "draws": 233,
+    "losses": 80,
+    "side_scores": {
+      "0": 0.794921875,
+      "1": 0.8212890625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.8837890625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.86279296875,
+      0.90087890625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.421484375,
+    "stationary_fraction": 0.16377598495310672,
+    "wins": 807,
+    "draws": 196,
+    "losses": 21,
+    "side_scores": {
+      "0": 0.884765625,
+      "1": 0.8828125
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.83203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.81640625,
+      0.84765625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.617968750000001,
+    "stationary_fraction": 0.07267383025904514,
+    "wins": 762,
+    "draws": 180,
+    "losses": 82,
+    "side_scores": {
+      "0": 0.8212890625,
+      "1": 0.8427734375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 14.4,
+    "stationary_fraction": 0.12962962962962962,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.79638671875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.7802734375,
+      0.81298828125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.21484375,
+    "stationary_fraction": 0.11575041603445155,
+    "wins": 684,
+    "draws": 263,
+    "losses": 77,
+    "side_scores": {
+      "0": 0.80078125,
+      "1": 0.7919921875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.87353515625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8486328125,
+      0.89892578125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.300130208333332,
+    "stationary_fraction": 0.19008827551605362,
+    "wins": 783,
+    "draws": 223,
+    "losses": 18,
+    "side_scores": {
+      "0": 0.8759765625,
+      "1": 0.87109375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.7783203125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.76220703125,
+      0.794921875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.012500000000003,
+    "stationary_fraction": 0.10382741384875299,
+    "wins": 662,
+    "draws": 270,
+    "losses": 92,
+    "side_scores": {
+      "0": 0.7880859375,
+      "1": 0.7685546875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.052,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.34423828125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.3310546875,
+      0.35693359375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.350260416666664,
+    "stationary_fraction": 0.12141915632900895,
+    "wins": 166,
+    "draws": 373,
+    "losses": 485,
+    "side_scores": {
+      "0": 0.3544921875,
+      "1": 0.333984375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.29541015625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.27001953125,
+      0.31982421875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 23.02942708333333,
+    "stationary_fraction": 0.1871056143724255,
+    "wins": 78,
+    "draws": 449,
+    "losses": 497,
+    "side_scores": {
+      "0": 0.2958984375,
+      "1": 0.294921875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.30712890625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.29296875,
+      0.32177734375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 17.786197916666666,
+    "stationary_fraction": 0.09033343852477446,
+    "wins": 144,
+    "draws": 341,
+    "losses": 539,
+    "side_scores": {
+      "0": 0.3037109375,
+      "1": 0.310546875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 17.333333333333332,
+    "stationary_fraction": 0.08461538461538462,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.82275390625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8046875,
+      0.83984375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 14.599609375,
+    "stationary_fraction": 0.2521927586764116,
+    "wins": 736,
+    "draws": 213,
+    "losses": 75,
+    "side_scores": {
+      "0": 0.8173828125,
+      "1": 0.828125
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.7900390625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.77392578125,
+      0.80517578125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.77526041666667,
+    "stationary_fraction": 0.36759378534803117,
+    "wins": 645,
+    "draws": 328,
+    "losses": 51,
+    "side_scores": {
+      "0": 0.7880859375,
+      "1": 0.7919921875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.78369140625,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.7705078125,
+      0.7959106445312498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 15.796744791666665,
+    "stationary_fraction": 0.2788934325995494,
+    "wins": 672,
+    "draws": 261,
+    "losses": 91,
+    "side_scores": {
+      "0": 0.7861328125,
+      "1": 0.78125
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 13.2,
+    "stationary_fraction": 0.15151515151515152,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.67236328125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.65721435546875,
+      0.6889770507812498
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 21.625781250000003,
+    "stationary_fraction": 0.38310098857101826,
+    "wins": 416,
+    "draws": 545,
+    "losses": 63,
+    "side_scores": {
+      "0": 0.6572265625,
+      "1": 0.6875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.830078125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.806640625,
+      0.85302734375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 20.901041666666668,
+    "stationary_fraction": 0.2004688423932525,
+    "wins": 688,
+    "draws": 324,
+    "losses": 12,
+    "side_scores": {
+      "0": 0.8310546875,
+      "1": 0.8291015625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.73046875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.71337890625,
+      0.74658203125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 20.238541666666666,
+    "stationary_fraction": 0.23367566284738478,
+    "wins": 540,
+    "draws": 416,
+    "losses": 68,
+    "side_scores": {
+      "0": 0.7255859375,
+      "1": 0.7353515625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.336,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.5
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 22.5484375,
+    "stationary_fraction": 0.07442983919517077,
+    "wins": 239,
+    "draws": 546,
+    "losses": 239,
+    "side_scores": {
+      "0": 0.5087890625,
+      "1": 0.4912109375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.4921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.4638671875,
+      0.5185546875
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 26.97447916666667,
+    "stationary_fraction": 0.15524077666698693,
+    "wins": 176,
+    "draws": 656,
+    "losses": 192,
+    "side_scores": {
+      "0": 0.490234375,
+      "1": 0.494140625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.51953125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5078125,
+      0.53271484375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 24.033072916666665,
+    "stationary_fraction": 0.0821364067935247,
+    "wins": 228,
+    "draws": 608,
+    "losses": 188,
+    "side_scores": {
+      "0": 0.5283203125,
+      "1": 0.5107421875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "self",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 0.5,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 33.333333333333336,
+    "stationary_fraction": 0.336,
+    "wins": 0,
+    "draws": 64,
+    "losses": 0,
+    "side_scores": {
+      "0": 0.5,
+      "1": 0.5
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "self",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.5,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.5,
+      0.5
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 22.5484375,
+    "stationary_fraction": 0.07442983919517077,
+    "wins": 239,
+    "draws": 546,
+    "losses": 239,
+    "side_scores": {
+      "0": 0.5087890625,
+      "1": 0.4912109375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "self",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.4921875,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.46484375,
+      0.51806640625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 26.97447916666667,
+    "stationary_fraction": 0.15524077666698693,
+    "wins": 176,
+    "draws": 656,
+    "losses": 192,
+    "side_scores": {
+      "0": 0.490234375,
+      "1": 0.494140625
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "self",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.51953125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.50830078125,
+      0.53271484375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 24.033072916666665,
+    "stationary_fraction": 0.0821364067935247,
+    "wins": 228,
+    "draws": 608,
+    "losses": 188,
+    "side_scores": {
+      "0": 0.5283203125,
+      "1": 0.5107421875
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "score": 1.0,
+    "seed_blocks": 1,
+    "episodes": 64,
+    "seed_block_bootstrap_ci95": null,
+    "deterministic_repetitions": true,
+    "mean_seconds": 8.266666666666667,
+    "stationary_fraction": 0.1774193548387097,
+    "wins": 64,
+    "draws": 0,
+    "losses": 0,
+    "side_scores": {
+      "0": 1.0,
+      "1": 1.0
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "score": 0.79833984375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.78076171875,
+      0.81494140625
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.037369791666666,
+    "stationary_fraction": 0.12752495296904687,
+    "wins": 704,
+    "draws": 227,
+    "losses": 93,
+    "side_scores": {
+      "0": 0.80078125,
+      "1": 0.7958984375
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "score": 0.84814453125,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.8310546875,
+      0.8642578125
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 18.331640625,
+    "stationary_fraction": 0.15884583383118384,
+    "wins": 757,
+    "draws": 223,
+    "losses": 44,
+    "side_scores": {
+      "0": 0.8505859375,
+      "1": 0.845703125
+    }
+  },
+  {
+    "candidate": "origin",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "score": 0.7958984375,
+    "seed_blocks": 16,
+    "episodes": 1024,
+    "seed_block_bootstrap_ci95": [
+      0.77490234375,
+      0.818359375
+    ],
+    "deterministic_repetitions": false,
+    "mean_seconds": 16.027864583333333,
+    "stationary_fraction": 0.0862932325261147,
+    "wins": 711,
+    "draws": 208,
+    "losses": 105,
+    "side_scores": {
+      "0": 0.7890625,
+      "1": 0.802734375
+    }
+  }
+]

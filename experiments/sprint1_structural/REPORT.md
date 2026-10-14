@@ -54,3 +54,11 @@ Ablação curta controlada: [ABLATION.md](ABLATION.md).
 Publicações anteriores: `a6ba071` (implementação), `8d05fc6` (validação independente).
 Backup publicado/preparado: it3000 / melhor it2550; verificação em JOURNAL.md.
 Decisões, publicações e limitações persistentes: [JOURNAL.md](JOURNAL.md).
+
+## Benchmark final e jogo humano
+
+Concluído e auditado: 3324 casos, 106368 primeiras partidas completas.
+[Interpretação, resultados e gráficos](benchmark_3000/ANALYSIS.md).
+Best it2550 foi preservado como candidato humano; exportação JS validada.
+Sala bloqueada por token/captcha (erro38), sem link de conexão confirmado.
+Treino encerrado em3000, publicado em3e44251; mapa portátil corrigido emd391eb0.

@@ -1,0 +1,17 @@
+{
+  "complete": true,
+  "cases": 3324,
+  "first_episodes": 106368,
+  "unique_cases": 3324,
+  "paired_initial_states_verified": true,
+  "finite_weights": true,
+  "hashes_verified": true,
+  "single_training_seed": true,
+  "best_iteration": 2550,
+  "endpoint_iteration": 3000,
+  "export_parity_states": 256,
+  "max_logit_error": 6.2966931351216004,
+  "greedy_actions_match": true,
+  "room_connection_confirmed": false,
+  "room_error_code": 38
+}

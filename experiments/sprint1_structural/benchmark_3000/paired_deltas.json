@@ -1,0 +1,1361 @@
+[
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.5,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.109375,
+    "paired_seed_bootstrap_ci95": [
+      0.091796875,
+      0.12646484375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1201171875,
+    "paired_seed_bootstrap_ci95": [
+      0.09814453125,
+      0.14307861328124982
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.08935546875,
+    "paired_seed_bootstrap_ci95": [
+      0.07080078125,
+      0.10693359375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.5,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.15380859375,
+    "paired_seed_bootstrap_ci95": [
+      0.13330078125,
+      0.17529296875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.18701171875,
+    "paired_seed_bootstrap_ci95": [
+      0.15234375,
+      0.2216796875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.16650390625,
+    "paired_seed_bootstrap_ci95": [
+      0.138671875,
+      0.193359375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.11865234375,
+    "paired_seed_bootstrap_ci95": [
+      0.10107421875,
+      0.13623046875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.11572265625,
+    "paired_seed_bootstrap_ci95": [
+      0.09716796875,
+      0.1328125
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.13720703125,
+    "paired_seed_bootstrap_ci95": [
+      0.11474609375,
+      0.16162109375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.1318359375,
+    "paired_seed_bootstrap_ci95": [
+      0.1123046875,
+      0.1513671875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.1201171875,
+    "paired_seed_bootstrap_ci95": [
+      0.10888671875,
+      0.13134765625
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.11181640625,
+    "paired_seed_bootstrap_ci95": [
+      0.09326171875,
+      0.13330078125
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.08740234375,
+    "paired_seed_bootstrap_ci95": [
+      0.06689453125,
+      0.10693359375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.12646484375,
+    "paired_seed_bootstrap_ci95": [
+      0.10986328125,
+      0.14208984375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1005859375,
+    "paired_seed_bootstrap_ci95": [
+      0.07470703125,
+      0.12646484375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.13232421875,
+    "paired_seed_bootstrap_ci95": [
+      0.1162109375,
+      0.14892578125
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.13525390625,
+    "paired_seed_bootstrap_ci95": [
+      0.11083984375,
+      0.158203125
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1943359375,
+    "paired_seed_bootstrap_ci95": [
+      0.16845703125,
+      0.2216796875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.19580078125,
+    "paired_seed_bootstrap_ci95": [
+      0.173828125,
+      0.2197265625
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.07177734375,
+    "paired_seed_bootstrap_ci95": [
+      0.0546875,
+      0.08740234375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.17724609375,
+    "paired_seed_bootstrap_ci95": [
+      0.15380859375,
+      0.201171875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.10302734375,
+    "paired_seed_bootstrap_ci95": [
+      0.08837890625,
+      0.11669921875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.26806640625,
+    "paired_seed_bootstrap_ci95": [
+      0.25390625,
+      0.2822265625
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1689453125,
+    "paired_seed_bootstrap_ci95": [
+      0.14599609375,
+      0.19189453125
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.21484375,
+    "paired_seed_bootstrap_ci95": [
+      0.2001953125,
+      0.2294921875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.5,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.15380859375,
+    "paired_seed_bootstrap_ci95": [
+      0.1337890625,
+      0.17529296875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.2138671875,
+    "paired_seed_bootstrap_ci95": [
+      0.18017578125,
+      0.2451171875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.1494140625,
+    "paired_seed_bootstrap_ci95": [
+      0.12938232421875,
+      0.16943359375
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.109375,
+    "paired_seed_bootstrap_ci95": [
+      0.09423828125,
+      0.126953125
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.13720703125,
+    "paired_seed_bootstrap_ci95": [
+      0.119140625,
+      0.15576171875
+    ]
+  },
+  {
+    "candidate": "best",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.1015625,
+    "paired_seed_bootstrap_ci95": [
+      0.08251953125,
+      0.12012939453124982
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.5,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.10546875,
+    "paired_seed_bootstrap_ci95": [
+      0.0869140625,
+      0.123046875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.12744140625,
+    "paired_seed_bootstrap_ci95": [
+      0.10595703125,
+      0.14794921875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.0908203125,
+    "paired_seed_bootstrap_ci95": [
+      0.07275390625,
+      0.109375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.5,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.17431640625,
+    "paired_seed_bootstrap_ci95": [
+      0.1455078125,
+      0.20556640625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.22509765625,
+    "paired_seed_bootstrap_ci95": [
+      0.203125,
+      0.251953125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.16845703125,
+    "paired_seed_bootstrap_ci95": [
+      0.13623046875,
+      0.19677734375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.10009765625,
+    "paired_seed_bootstrap_ci95": [
+      0.0830078125,
+      0.1162109375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.115234375,
+    "paired_seed_bootstrap_ci95": [
+      0.09814453125,
+      0.13232421875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.138671875,
+    "paired_seed_bootstrap_ci95": [
+      0.11669921875,
+      0.16064453125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.12841796875,
+    "paired_seed_bootstrap_ci95": [
+      0.11474609375,
+      0.1435546875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.11669921875,
+    "paired_seed_bootstrap_ci95": [
+      0.09862060546875001,
+      0.13427734375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.11572265625,
+    "paired_seed_bootstrap_ci95": [
+      0.09814453125,
+      0.13671875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.0869140625,
+    "paired_seed_bootstrap_ci95": [
+      0.0712890625,
+      0.1025390625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.1318359375,
+    "paired_seed_bootstrap_ci95": [
+      0.11962890625,
+      0.14453125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.10546875,
+    "paired_seed_bootstrap_ci95": [
+      0.08056640625,
+      0.1328125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.1455078125,
+    "paired_seed_bootstrap_ci95": [
+      0.13427734375,
+      0.15625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.15576171875,
+    "paired_seed_bootstrap_ci95": [
+      0.14306640625,
+      0.1689453125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.201171875,
+    "paired_seed_bootstrap_ci95": [
+      0.17333984375,
+      0.2333984375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.20556640625,
+    "paired_seed_bootstrap_ci95": [
+      0.185546875,
+      0.22607421875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.08056640625,
+    "paired_seed_bootstrap_ci95": [
+      0.06640625,
+      0.09521484375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.17236328125,
+    "paired_seed_bootstrap_ci95": [
+      0.1494140625,
+      0.19482421875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.10400390625,
+    "paired_seed_bootstrap_ci95": [
+      0.0908203125,
+      0.11962890625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.27734375,
+    "paired_seed_bootstrap_ci95": [
+      0.263671875,
+      0.2919921875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1689453125,
+    "paired_seed_bootstrap_ci95": [
+      0.1455078125,
+      0.1923828125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.21923828125,
+    "paired_seed_bootstrap_ci95": [
+      0.20701904296875,
+      0.23193359375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.15576171875,
+    "paired_seed_bootstrap_ci95": [
+      0.14306640625,
+      0.1689453125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1953125,
+    "paired_seed_bootstrap_ci95": [
+      0.1474609375,
+      0.24219970703124982
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.1669921875,
+    "paired_seed_bootstrap_ci95": [
+      0.14697265625,
+      0.1875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.1103515625,
+    "paired_seed_bootstrap_ci95": [
+      0.09033203125,
+      0.13037109375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.1416015625,
+    "paired_seed_bootstrap_ci95": [
+      0.12548828125,
+      0.158203125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "origin",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.107421875,
+    "paired_seed_bootstrap_ci95": [
+      0.0869140625,
+      0.1279296875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "aimed_striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": -0.00390625,
+    "paired_seed_bootstrap_ci95": [
+      -0.015625,
+      0.00732421875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.00732421875,
+    "paired_seed_bootstrap_ci95": [
+      -0.005859375,
+      0.0205078125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "aimed_striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.00146484375,
+    "paired_seed_bootstrap_ci95": [
+      -0.009765625,
+      0.01123046875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "best",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.0205078125,
+    "paired_seed_bootstrap_ci95": [
+      0.00341796875,
+      0.04052734375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.0380859375,
+    "paired_seed_bootstrap_ci95": [
+      -0.00634765625,
+      0.0791015625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "best",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.001953125,
+    "paired_seed_bootstrap_ci95": [
+      -0.0205078125,
+      0.0224609375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": -0.0185546875,
+    "paired_seed_bootstrap_ci95": [
+      -0.03466796875,
+      -0.00146484375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "chase",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": -0.00048828125,
+    "paired_seed_bootstrap_ci95": [
+      -0.01220703125,
+      0.01025390625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.00146484375,
+    "paired_seed_bootstrap_ci95": [
+      -0.02001953125,
+      0.0224609375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "chase",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": -0.00341796875,
+    "paired_seed_bootstrap_ci95": [
+      -0.0166015625,
+      0.00927734375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "counter_defender",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": -0.00341796875,
+    "paired_seed_bootstrap_ci95": [
+      -0.01611328125,
+      0.009765625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.00390625,
+    "paired_seed_bootstrap_ci95": [
+      0.00048828125,
+      0.00830078125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "counter_defender",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": -0.00048828125,
+    "paired_seed_bootstrap_ci95": [
+      -0.01123046875,
+      0.009765625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "dribbler",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.00537109375,
+    "paired_seed_bootstrap_ci95": [
+      -0.00341796875,
+      0.013671875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.0048828125,
+    "paired_seed_bootstrap_ci95": [
+      -0.01025390625,
+      0.02001953125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "dribbler",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.01318359375,
+    "paired_seed_bootstrap_ci95": [
+      0.0029296875,
+      0.02197265625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "endpoint",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.0205078125,
+    "paired_seed_bootstrap_ci95": [
+      0.00390625,
+      0.04052734375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.0068359375,
+    "paired_seed_bootstrap_ci95": [
+      -0.0224609375,
+      0.041015625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "endpoint",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.009765625,
+    "paired_seed_bootstrap_ci95": [
+      -0.01171875,
+      0.03223876953124982
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "interceptor",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.0087890625,
+    "paired_seed_bootstrap_ci95": [
+      -0.00537109375,
+      0.0234375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": -0.0048828125,
+    "paired_seed_bootstrap_ci95": [
+      -0.021484375,
+      0.01123046875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "interceptor",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.0009765625,
+    "paired_seed_bootstrap_ci95": [
+      -0.01220703125,
+      0.01416015625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "keeper",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.00927734375,
+    "paired_seed_bootstrap_ci95": [
+      0.001953125,
+      0.017578125
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "keeper",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.00439453125,
+    "paired_seed_bootstrap_ci95": [
+      0.0,
+      0.00927734375
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": -0.5,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "origin",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.001953125,
+    "paired_seed_bootstrap_ci95": [
+      -0.02197265625,
+      0.025390625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": -0.0185546875,
+    "paired_seed_bootstrap_ci95": [
+      -0.060546875,
+      0.021984863281249822
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "origin",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.017578125,
+    "paired_seed_bootstrap_ci95": [
+      -0.0029296875,
+      0.03759765625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "kickoff",
+    "delta": 0.0,
+    "paired_seed_bootstrap_ci95": null
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "striker",
+    "mode": "greedy",
+    "scenario": "random",
+    "delta": 0.0009765625,
+    "paired_seed_bootstrap_ci95": [
+      -0.0087890625,
+      0.009765625
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "kickoff",
+    "delta": 0.00439453125,
+    "paired_seed_bootstrap_ci95": [
+      -0.005383300781249996,
+      0.01513671875
+    ]
+  },
+  {
+    "candidate": "endpoint",
+    "reference": "best",
+    "opponent": "striker",
+    "mode": "sampled",
+    "scenario": "random",
+    "delta": 0.005859375,
+    "paired_seed_bootstrap_ci95": [
+      -0.0068359375,
+      0.01904296875
+    ]
+  }
+]

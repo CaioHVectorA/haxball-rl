@@ -154,3 +154,16 @@ caminho relativo ao repositório quando o bundle está nele; pesos e receita
 não mudaram, fonte de treinamento arquivada preservada. Os dois bundles
 foram regenerados e uma exportação real do modelo final passou usando o
 mapa relativo. Publicação da parada/endpoint: 3e44251.
+
+## Benchmark final auditado e limite de acesso humano
+
+3324 casos /106368 primeiros episódios completos, hashes e pareamento conferidos.
+Gráficos inspecionados; detalhes e interpretação em benchmark_3000/ANALYSIS.md.
+Best it2550 melhora contra origem e sete heurísticas; endpoint não domina best.
+Self greedy kickoff empata100%: best com bola em movimento, endpoint com bola
+parada100%. Não afirmar convergência/estabilidade universal. Paridade final
+JS em256obs passou, erro máximo6,2967e-6. Sala real carregou mapa e saiu com
+erro38 MissingRecaptchaCallbackError, sem link. Token/captcha bloqueia acesso;
+nenhuma credencial ou log privado foi publicado. Token novo deve ser colocado
+localmente em .env; arquivo da política avaliada já está pronto.
+Publicações: 3e44251 endpoint; d391eb0 portabilidade. Nenhum novo treino.
