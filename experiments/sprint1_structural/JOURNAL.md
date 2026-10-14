@@ -167,3 +167,8 @@ erro38 MissingRecaptchaCallbackError, sem link. Token/captcha bloqueia acesso;
 nenhuma credencial ou log privado foi publicado. Token novo deve ser colocado
 localmente em .env; arquivo da política avaliada já está pronto.
 Publicações: 3e44251 endpoint; d391eb0 portabilidade. Nenhum novo treino.
+
+Publicação final confirmada na branch gpt: 82bc590 — benchmark auditado,
+gráficos de desempenho/self-play/trajectórias e política exportada do candidato
+humano. Sala permanece bloqueada pelo token/captcha; nenhuma execução
+de treinamento continua ativa.

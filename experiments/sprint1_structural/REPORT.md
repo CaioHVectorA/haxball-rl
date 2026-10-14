@@ -62,3 +62,8 @@ Concluído e auditado: 3324 casos, 106368 primeiras partidas completas.
 Best it2550 foi preservado como candidato humano; exportação JS validada.
 Sala bloqueada por token/captcha (erro38), sem link de conexão confirmado.
 Treino encerrado em3000, publicado em3e44251; mapa portátil corrigido emd391eb0.
+
+Publicação final confirmada na branch gpt: 82bc590 — benchmark auditado,
+gráficos de desempenho/self-play/trajectórias e política exportada do candidato
+humano. Sala permanece bloqueada pelo token/captcha; nenhuma execução
+de treinamento continua ativa.
