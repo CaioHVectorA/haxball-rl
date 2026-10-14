@@ -1,7 +1,7 @@
 # Sprint 1 estrutural — relatório
 
-Estado: running; atualização UTC: 2026-10-14T13:49:03.021174+00:00.
-Última avaliação: iteração 1400; treino já completou pelo menos 1421 iterações.
+Estado: running; atualização UTC: 2026-10-14T14:15:42.985004+00:00.
+Última avaliação: iteração 1750; treino já completou pelo menos 1761 iterações.
 
 **Recompensa PBRS, crítico separado e currículo estacionário estão efetivamente ativos.**
 Isso foi conferido em config.json, tipos dos termos de reward e gradientes na telemetria.
@@ -10,17 +10,17 @@ Isso foi conferido em config.json, tipos dos termos de reward e gradientes na te
 
 | Grupo | Início | Última avaliação |
 |---|---:|---:|
-| greedy_random | 0.71734 | 0.86049 |
-| greedy_kickoff | 0.83606 | 0.95562 |
-| sampled_random | 0.72166 | 0.85105 |
-| sampled_kickoff | 0.76868 | 0.91359 |
-| Mínimo (critério de seleção) | 0.71734 | 0.85105 |
+| greedy_random | 0.71734 | 0.86111 |
+| greedy_kickoff | 0.83606 | 0.91971 |
+| sampled_random | 0.72166 | 0.85614 |
+| sampled_kickoff | 0.76868 | 0.90574 |
+| Mínimo (critério de seleção) | 0.71734 | 0.85614 |
 
 | Adversário neural | Início | Última avaliação |
 |---|---:|---:|
-| initial_policy | 0.50616 | 0.65670 |
-| anchor_0 | 0.67774 | 0.95546 |
-| anchor_1 | 0.79257 | 0.90196 |
+| initial_policy | 0.50616 | 0.59528 |
+| anchor_0 | 0.67774 | 0.95532 |
+| anchor_1 | 0.79257 | 0.89788 |
 
 ![Progresso estrutural](progress.png)
 
@@ -52,8 +52,5 @@ foi implementada e está sendo treinada nesta execução.
 Validação inédita do candidato: [HELDOUT.md](HELDOUT.md).
 Ablação curta controlada: [ABLATION.md](ABLATION.md).
 Publicações anteriores: `a6ba071` (implementação), `8d05fc6` (validação independente).
-Backup desta revisão: it1405 / melhor it1350; resultados e verificação em JOURNAL.md.
+Backup publicado/preparado: it1750 / melhor it1750; verificação em JOURNAL.md.
 Decisões, publicações e limitações persistentes: [JOURNAL.md](JOURNAL.md).
-
-Publicação confirmada no GitHub: `337dd69`, branch `gpt`: ablação completa,
-curvas auditadas e bundle retomável it1405 / melhor it1350.

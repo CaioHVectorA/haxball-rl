@@ -89,3 +89,12 @@ comparação independente de melhor versus endpoint será feita ao finalizar.
 
 Publicação confirmada no GitHub: `337dd69`, branch `gpt`: ablação completa,
 curvas auditadas e bundle retomável it1405 / melhor it1350.
+
+## Revisão das 11:15
+
+Processo 305794 vivo, 1750 iterações e métricas finitas. A queda no kickoff
+greedy it1600 (mínimo 0,77626) recuperou nas avaliações 1650/1700/1750
+(0,84695/0,85367/0,85614). Sem regressão sustentada nesse intervalo.
+Receita e fonte congelada mantidas. Backup it1750/best1750 verificado:
+meta, pesos finitos, igualdade tensor a tensor, hashes e mapa; original preservado.
+A seleção usa esse painel; não é validação independente do novo checkpoint.

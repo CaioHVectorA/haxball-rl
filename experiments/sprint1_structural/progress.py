@@ -52,6 +52,9 @@ def main():
     axes[2].set(title='Diagnósticos em blocos de 10',xlabel='Iteração');axes[2].legend(fontsize=8)
     for ax in axes:ax.grid(alpha=.2)
     fig.savefig(OUT/'progress.png',dpi=160);fig.savefig(OUT/'progress.svg');plt.close(fig)
+    svg=OUT/'progress.svg'
+    svg.write_text('\n'.join(line.rstrip() for line in svg.read_text().splitlines())+'\n')
+    backup=json.loads((ROOT/'models/sprint1_latest/backup.json').read_text())
     before,after=evals[0],evals[-1]
     lines=['# Sprint 1 estrutural — relatório', '',
         f"Estado: {live['status']}; atualização UTC: {live['updated_at']}.",
@@ -90,7 +93,7 @@ def main():
         'Validação inédita do candidato: [HELDOUT.md](HELDOUT.md).',
         'Ablação curta controlada: [ABLATION.md](ABLATION.md).',
         'Publicações anteriores: `a6ba071` (implementação), `8d05fc6` (validação independente).',
-        'Backup desta revisão: it1405 / melhor it1350; resultados e verificação em JOURNAL.md.',
+        f"Backup publicado/preparado: it{backup['iteration']} / melhor it{backup['best_iteration']}; verificação em JOURNAL.md.",
         'Decisões, publicações e limitações persistentes: [JOURNAL.md](JOURNAL.md).']
     (OUT/'REPORT.md').write_text('\n'.join(lines)+'\n')
     (OUT/'audit.json').write_text(json.dumps(dict(status=live['status'],iteration=train[-1]['iteration'],

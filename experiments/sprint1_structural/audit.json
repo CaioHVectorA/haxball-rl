@@ -1,11 +1,11 @@
 {
   "status": "running",
-  "iteration": 1421,
-  "last_evaluation": 1400,
+  "iteration": 1761,
+  "last_evaluation": 1750,
   "finite": true,
   "contract_verified": true,
   "baseline_score": 0.7173371249755929,
-  "latest_score": 0.8510538566244464,
+  "latest_score": 0.8561430560458329,
   "tests": 31,
   "export_states": 256,
   "max_logit_error": 4.541080740327885e-06
