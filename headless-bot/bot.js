@@ -6,7 +6,7 @@
 //
 // node-haxball is used only as a thin loader for the official Haxball engine. All the
 // bot logic (obs + policy) is ours and mirrors the training code; because the Rust
-// core is a bit-faithful port, the sim-trained policy transfers to a real room.
+// core follows the same physics, transfer still requires validation in a real room.
 const fs = require("fs");
 const path = require("path");
 const { Room, Utils, OperationType } = require("node-haxball")();
@@ -48,7 +48,7 @@ const VS = 1 / 10;
 // obs matches what the bot trained on (futsal's bigger field needs a different scale than
 // classic). Absent fields fall back to the classic defaults. `let` so a reload updates them.
 let PX, PY, GOAL_X;
-const POLICY_PATH = path.join(__dirname, "policy.json");
+const POLICY_PATH = process.env.POLICY_PATH ? path.resolve(process.env.POLICY_PATH) : path.join(__dirname, "policy.json");
 // `let` so we can HOT-RELOAD new weights live (the `!reload` command / file-watch) without
 // restarting the room — re-export policy.json, the running bot picks it up, same link.
 let P = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));

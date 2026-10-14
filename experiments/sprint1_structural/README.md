@@ -197,3 +197,10 @@ Esse POC serve para estudar direção/integridade; não deve determinar um vence
 definitivo ou invalidar o preset principal por pouca amostragem.
 
 Decisões e histórico de evidências: [JOURNAL.md](JOURNAL.md).
+
+## Atualização do orçamento pelo usuário
+
+O orçamento foi reduzido a **3000 iterações**. O horizonte dos schedules
+originais é preservado; o supervisor envia SIGTERM no endpoint e não reinicia
+treinamento depois. O benchmark pós-treino e preparação de jogo humano estão
+especificados em [BENCHMARK_PROTOCOL.md](BENCHMARK_PROTOCOL.md).

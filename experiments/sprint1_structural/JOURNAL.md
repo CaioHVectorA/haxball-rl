@@ -121,3 +121,13 @@ uniforme por adversário. Fonte/receita mantidas e modelo selecionado preservado
 Backup verificado it2495/melhor it2050, score
 0.86322404; hashes, pesos/metas, crítico e mapa coerentes.
 Publicação anterior: 2dcd86c (backup it2125). Modelo original preservado.
+
+## Novo orçamento autorizado: 3000
+
+O usuário pediu encerrar em 3000, benchmarks de self-play e bots táticos,
+e jogar contra o modelo. Supervisor identificado de parada e worker pós-treino
+foram iniciados; schedules originais preservados. Dois novos testes passaram
+(parada em endpoint com salvamento e simetria de referencial dos quatro estilos),
+mais smoke com partidas completas dos quatro bots nos dois lados. Rearmamento
+headless e sintaxe JS passaram após opção POLICY_PATH. Protocolo pré-especificado
+em BENCHMARK_PROTOCOL.md; benchmark ainda pendente do endpoint.

@@ -20,3 +20,8 @@ O exportador exige observações de 16 dimensões e duas camadas na política. N
 O bot imprime o link da sala. Comandos de chat: `!start`, `!stop`, `!restart`, `!swap`, `!reload`, `!who`, `!help`. Consulte `bot.js` para comportamento e variáveis disponíveis, incluindo `ROOM_NAME`, `ROOM_PASS`, `TICK_SKIP` e `FLIP_Y`.
 
 O desempenho depende do checkpoint. A existência de `policy.json` não comprova que o agente esteja consolidado nem que o arquivo corresponda aos pesos mais recentes.
+
+Para carregar uma política específica sem trocar policy.json padrão, use
+`POLICY_PATH=/caminho/absoluto/policy.json node headless-bot/bot.js` na raiz.
+O bundle de 3000 será preparado e avaliado antes da sala humana; veja
+`experiments/sprint1_structural/BENCHMARK_PROTOCOL.md`.
