@@ -15,8 +15,7 @@ from poc_reward import train, seed_all
 @torch.no_grad()
 def evaluate_checkpoint(checkpoint, *, envs=16, steps=750, stadium=STADIUM, repeat_kick=True,
                         greedy_modes=(True,False), opponents=("chase","chase_no_noise","random"), eval_seeds=(100,101)):
-    model=Policy(16)
-    model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
+    model=Policy.from_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
     rows=[]
     for greedy in greedy_modes:
         for scenario in ['kickoff','random']:

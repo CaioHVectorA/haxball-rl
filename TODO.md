@@ -52,3 +52,18 @@ A duração de uma execução ou o número de iterações, isoladamente, não é
 
 Contrato e comandos: `experiments/sprint1_timeout/README.md`. Começar esta etapa
 não significa concluir a sprint nem comprovar convergência.
+
+## Sprint 1 estrutural — 2026-10-14
+
+- [x] Trocar sinais legados por PBRS descontado com condição absorvente e gamma do GAE.
+- [x] Separar crítico/ator, parâmetros e clipping, com migração estrita de checkpoints.
+- [x] Calibrar crítico inicialmente sem mover o ator.
+- [x] Implementar adversários fixos por episódio e âncoras neurais históricas.
+- [x] Avaliar ambos os modos e selecionar pelo mínimo modo×cenário.
+- [x] Implementar save durável, SIGTERM/SIGINT e retomada de pesos/Adam/schedules/pool/RNG.
+- [x] Iniciar treino principal com o preset estrutural e fontes congeladas.
+- [ ] Verificar ganho em orçamento comparável, múltiplas seeds e avaliação independente.
+- [ ] Após validar esta base, estudar PFSP e observações enriquecidas (Sprint 2).
+
+Contrato: `experiments/sprint1_structural/README.md`. A implementação pode estar
+correta sem garantir melhora empírica; as duas conclusões devem ser documentadas separadamente.

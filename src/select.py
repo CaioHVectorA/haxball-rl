@@ -31,8 +31,7 @@ def load(path: Path):
     hidden = sd["trunk.0.weight"].shape[0]
     depth = sum(1 for k in sd if k.startswith("trunk.") and k.endswith(".weight"))
     nk = sd["head_k.weight"].shape[0]
-    m = Policy(obs_dim, (3, 3, nk), hidden, depth)
-    m.load_state_dict(sd)
+    m = Policy.from_state_dict(sd)
     m.eval()
     return m
 

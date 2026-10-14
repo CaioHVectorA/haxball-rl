@@ -13,6 +13,8 @@ import time
 import os
 import hashlib
 import subprocess
+import signal
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,7 +40,10 @@ from haxballgym import (
 )
 from haxballgym.mutator import MultiSetter, RandomStateMutator, StateSetterMutator
 from model import Policy
-from environment import STADIUM, motion_scale, MotionPlayerToBall, MotionBallToGoal, RepeatKickAction
+from environment import (STADIUM, motion_scale, MotionPlayerToBall, MotionBallToGoal,
+                         RepeatKickAction, DiscountedPocketPotential, DiscountedBallGoalPotential, discount_gamma)
+from opponents import OpponentCurriculum
+from training_checkpoint import atomic_torch_save, random_state, restore_random_state
 from telemetry import Telemetry, RewardMeter
 from live_evaluation import panel, balanced_score
 from ppo_returns import gae_returns
@@ -164,14 +169,23 @@ class PenaltyTackleLostReward(RewardFunction):
         return (tackle * self.penalty).astype(np.float32)
 
 
-def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.15):
+def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.15,
+                 gamma=None, progress_weight=.08, goal_weight=25., pocket_offset=22., pocket_radius=2.):
     """Signed shaping; retain the previous table for controlled POC comparisons."""
+    if table == "pbrs":
+        scale = motion_scale(stadium, tick_skip)
+        gamma = discount_gamma(tick_skip) if gamma is None else gamma
+        return CombinedReward(
+            (DiscountedPocketPotential(scale,gamma,pocket_offset,pocket_radius),approach_weight),
+            (DiscountedBallGoalPotential(scale,gamma),progress_weight),
+            (GoalReward(),goal_weight),
+        )
     if table == "corrected":
         scale = motion_scale(stadium, tick_skip)
         return CombinedReward(
             (MotionPlayerToBall(scale), approach_weight),
-            (MotionBallToGoal(scale), 0.08),
-            (GoalReward(), 25.0),
+            (MotionBallToGoal(scale), progress_weight),
+            (GoalReward(), goal_weight),
         )
     if table in ("simple", "simple_progress1"):
         return CombinedReward(
@@ -194,6 +208,7 @@ def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weigh
 def create_training_env(
     n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
     seed: int | None = None, table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.15,
+    gamma=None, progress_weight=.08, goal_weight=25., pocket_offset=22., pocket_radius=2.,
 ):
     """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
@@ -207,7 +222,7 @@ def create_training_env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
-        reward_fn=build_reward(table, stadium, tick_skip, approach_weight),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight, gamma, progress_weight, goal_weight, pocket_offset, pocket_radius),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -217,6 +232,7 @@ def create_training_env(
 def create_eval_env(
     n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
     table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.15,
+    gamma=None, progress_weight=.08, goal_weight=25., pocket_offset=22., pocket_radius=2.,
 ):
     """Creates evaluation environment with standard kickoff resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
@@ -226,7 +242,7 @@ def create_eval_env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
-        reward_fn=build_reward(table, stadium, tick_skip, approach_weight),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight, gamma, progress_weight, goal_weight, pocket_offset, pocket_radius),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -275,12 +291,71 @@ def main():
     ap.add_argument("--eval-envs", type=int, default=16)
     ap.add_argument("--eval-steps", type=int, default=400)
     ap.add_argument("--keep-critic", action="store_true", help="keep old value head on warm-start")
-    ap.add_argument("--timeout-bootstrap", choices=("zero", "final"), default="zero",
+    ap.add_argument("--timeout-bootstrap", choices=("zero", "final"), default=None,
                     help="B0: zero; E1: bootstrap artificial timeout from pre-reset observation")
     ap.add_argument("--stop-at", help="Timezone-aware ISO deadline; finish and save before this time")
     ap.add_argument("--deadline-reserve-seconds", type=float, default=120.,
                     help="reserve for final evaluation and checkpoint (default 120 s)")
+    ap.add_argument("--sprint1", action="store_true", help="PBRS + separate critic + fixed curriculum + dual-mode validation")
+    ap.add_argument("--reward-table", choices=("corrected","pbrs","simple","simple_progress1","previous"))
+    group=ap.add_mutually_exclusive_group()
+    group.add_argument("--separate-critic",dest="separate_critic",action="store_true")
+    group.add_argument("--shared-critic",dest="separate_critic",action="store_false")
+    ap.set_defaults(separate_critic=None)
+    ap.add_argument("--curriculum-frac",type=float)
+    ap.add_argument("--anchor-checkpoint",action="append",default=[])
+    ap.add_argument("--progress-weight",type=float,default=.08)
+    ap.add_argument("--goal-weight",type=float,default=25.)
+    ap.add_argument("--pocket-offset",type=float,default=22.)
+    ap.add_argument("--pocket-radius",type=float,default=2.)
+    ap.add_argument("--actor-lr",type=float,default=LR)
+    ap.add_argument("--critic-lr",type=float,default=LR)
+    ap.add_argument("--target-kl",type=float,help="stop remaining minibatches when measured KL exceeds this threshold")
+    ap.add_argument("--eval-modes",nargs='+',choices=("greedy","sampled"))
+    ap.add_argument("--selection-metric",choices=("mean","minimum"))
+    ap.add_argument("--checkpoint-every",type=int,default=10)
+    ap.add_argument("--critic-warmup-iters",type=int,help="calibrate only the separate critic before actor updates")
+    ap.add_argument("--resume",help="resume.pt: restore model, Adam, pool and RNG; matches reset")
     args = ap.parse_args()
+    resume = torch.load(args.resume,map_location='cpu',weights_only=True) if args.resume else None
+    if resume is not None:
+        if resume.get('schema_version') != 1:
+            ap.error('unsupported resume schema')
+        protected=('envs','red','blue','tick_skip','seed','reward_table','separate_critic',
+                   'curriculum_frac','approach_weight','progress_weight','goal_weight',
+                   'pocket_offset','pocket_radius','actor_lr','critic_lr','target_kl',
+                   'eval_modes','selection_metric','timeout_bootstrap','iters','eval_envs','eval_steps','eval_every','critic_warmup_iters')
+        resume['config'].setdefault('critic_warmup_iters',0)
+        for key in protected:
+            flag='--'+key.replace('_','-')
+            if flag in sys.argv and getattr(args,key)!=resume['config'][key]:
+                ap.error(f'resume cannot change {flag}')
+            setattr(args,key,resume['config'][key])
+        args.warm_start=None
+        args.stadium=resume['config']['stadium']
+        if not Path(args.stadium).is_file():
+            restored_map=Path(args.out)/'resume_stadium.hbs'
+            restored_map.parent.mkdir(parents=True,exist_ok=True)
+            restored_map.write_text(resume['stadium_text'])
+            args.stadium=str(restored_map.resolve())
+    args.reward_table = args.reward_table or ('pbrs' if args.sprint1 else 'corrected')
+    args.separate_critic = args.sprint1 if args.separate_critic is None else args.separate_critic
+    args.curriculum_frac = (1. if args.sprint1 else 0.) if args.curriculum_frac is None else args.curriculum_frac
+    args.timeout_bootstrap = args.timeout_bootstrap or ('final' if args.sprint1 else 'zero')
+    args.eval_modes = args.eval_modes or (['greedy','sampled'] if args.sprint1 else ['greedy'])
+    args.selection_metric = args.selection_metric or ('minimum' if args.sprint1 else 'mean')
+    args.target_kl = (.03 if args.sprint1 else 0.) if args.target_kl is None else args.target_kl
+    args.critic_warmup_iters = (20 if args.sprint1 and args.separate_critic else 0) if args.critic_warmup_iters is None else args.critic_warmup_iters
+    if args.critic_warmup_iters<0 or (args.critic_warmup_iters>0 and not args.separate_critic):
+        ap.error('critic warmup requires a separate critic and nonnegative iteration count')
+    if args.reward_table=='pbrs' and args.timeout_bootstrap!='final':
+        ap.error('PBRS assumes artificial timeouts: use --timeout-bootstrap final')
+    if not 0<=args.curriculum_frac<=1 or min(args.actor_lr,args.critic_lr)<=0 or args.target_kl<0:
+        ap.error('invalid curriculum/LR/KL values')
+    if args.checkpoint_every<1:
+        ap.error('checkpoint-every must be positive')
+    if (args.sprint1 or args.curriculum_frac>0) and (args.red,args.blue)!=(1,1):
+        ap.error('Sprint 1 and curriculum are currently validated only for 1v1')
     deadline = None
     if args.stop_at:
         try:
@@ -304,13 +379,19 @@ def main():
     np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
 
-    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip, seed=args.seed, approach_weight=args.approach_weight)
-    eval_env = create_eval_env(128, args.red, args.blue, args.stadium, args.tick_skip)
+    gamma = discount_gamma(args.tick_skip,HALF_LIFE_S)
+    ppo_contract=dict(rollout_steps=T,epochs=EPOCHS,minibatches=N_MB,clip=CLIP,
+                      value_coef=VF_COEF,max_grad=MAX_GRAD,lambda_gae=LAM,gamma=gamma)
+    if resume and resume['config'].get('ppo_contract') != ppo_contract:
+        ap.error('resume PPO contract differs from the checkpoint')
+    env = create_training_env(args.envs,args.red,args.blue,args.stadium,args.tick_skip,
+          seed=args.seed,table=args.reward_table,approach_weight=args.approach_weight,
+          gamma=gamma,progress_weight=args.progress_weight,goal_weight=args.goal_weight,
+          pocket_offset=args.pocket_offset,pocket_radius=args.pocket_radius)
 
     P = args.red + args.blue
     obs_dim = env.obs_dim
     n_acts = env.action_space
-    gamma = math.exp(math.log(0.5) / ((60 / args.tick_skip) * HALF_LIFE_S))
 
     slots = np.arange(args.envs * P).reshape(args.envs, P)
     learner_idx = slots[:, : args.red].reshape(-1)
@@ -319,23 +400,25 @@ def main():
     opp_t = torch.as_tensor(opp_idx, device=dev)
     B = learner_idx.size
 
-    model = Policy(obs_dim, n_acts).to(dev)
+    model = Policy(obs_dim, n_acts,separate_critic=args.separate_critic).to(dev)
     if args.warm_start:
         ws_path = Path(args.warm_start)
         if not ws_path.is_file():
             raise FileNotFoundError(f"Warm-start checkpoint not found: {ws_path}")
         if ws_path.exists():
             print(f"Warm-starting policy weights from {ws_path}")
-            model.load_state_dict(torch.load(ws_path, map_location=dev))
-            if not args.keep_critic:
-                nn.init.zeros_(model.value.weight)
-                nn.init.zeros_(model.value.bias)
+            model.load_compatible(torch.load(ws_path,map_location=dev,weights_only=True),keep_critic=args.keep_critic)
     opp = Policy(obs_dim, n_acts).to(dev)
     opp.eval()
-    opt = torch.optim.Adam(model.parameters(), lr=LR)
+    if args.separate_critic:
+        opt=torch.optim.Adam([{'params':model.actor_parameters(),'lr':args.actor_lr,'base_lr':args.actor_lr},
+                              {'params':model.critic_parameters(),'lr':args.critic_lr,'base_lr':args.critic_lr}])
+    else:
+        opt=torch.optim.Adam(model.parameters(),lr=args.actor_lr)
+        opt.param_groups[0]['base_lr']=args.actor_lr
     pool: list[dict] = []
     if args.warm_start and Path(args.warm_start).exists():
-        pool.append({k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
+        pool.append(model.actor_state_dict())
 
     def snapshot():
         return {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
@@ -357,11 +440,14 @@ def main():
     obs = env.reset().reshape(args.envs * P, obs_dim)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    if (out/'config.json').exists():
+        raise FileExistsError('Use a new output directory; existing telemetry must not be overwritten')
     best = -1.0
     t0 = time.perf_counter()
     config = dict(vars(args), obs_dim=obs_dim, n_acts=list(n_acts), hidden=256, depth=2,
                   rollout_steps=T, epochs=EPOCHS, minibatches=N_MB, gamma=gamma,
-                  reward_weights={"goal":25,"approach":args.approach_weight,"progress":0.08},
+                  reward_weights={"goal":args.goal_weight,"approach":args.approach_weight,"progress":args.progress_weight},
+                  obs_schema="default16" if obs_dim==16 else "default",ppo_contract=ppo_contract,
                   repeat_kick=True, samples_per_iteration=T*B,
                   gradient_metric_sampling='first_minibatch_each_epoch',
                   actor_gradient_objective='ppo_surrogate_minus_entropy',
@@ -372,31 +458,90 @@ def main():
     meter = RewardMeter(env.reward_fn)
     env.reward_fn = meter
     reference = Policy(obs_dim,n_acts).to(dev)
-    reference.load_state_dict(model.state_dict()); reference.eval()
-    torch.save(snapshot(), out/'initial_policy.pt')
+    reference.load_actor_state(model.actor_state_dict()); reference.eval(); reference.requires_grad_(False)
+    anchors=[]
+    for state in (resume['anchors'] if resume else [torch.load(path,map_location='cpu',weights_only=True)
+                                                   for path in args.anchor_checkpoint]):
+        anchor=Policy(obs_dim,n_acts).to(dev);anchor.load_actor_state(state);anchor.eval();anchor.requires_grad_(False);anchors.append(anchor)
+    curriculum=OpponentCurriculum(args.envs,args.curriculum_frac,[reference,*anchors],args.seed+101)
+    config['fixed_opponent_probabilities']=dict(zip(curriculum.names,curriculum.weights.tolist()))
+    from haxballgym.stadium import stadium_text
+    config['stadium_sha256']=hashlib.sha256(stadium_text(args.stadium).encode()).hexdigest()
+    if resume and config['stadium_sha256'] != resume['config']['stadium_sha256']:
+        raise ValueError('Resumed stadium differs from checkpoint')
+    config['resume_semantics']='model/Adam/schedule/pool/RNG preserved; native matches reset'
+    # Rewrite config once additional provenance has been computed.
+    from telemetry import atomic_json
+    atomic_json(out/'config.json',config,durable=True)
+    atomic_torch_save(snapshot(), out/'initial_policy.pt')
     train_seconds=0.
+    start_iteration=0
+    best_state=None
+    best_iteration=0
+    if resume:
+        model.load_state_dict(resume['model'])
+        reference.load_actor_state(resume['reference'])
+        opt.load_state_dict(resume['optimizer'])
+        pool=resume['pool'];best=resume['best'];start_iteration=resume['iteration']
+        best_state=resume['best_model'];best_iteration=resume['best_iteration']
+        train_seconds=resume['train_seconds']
+        restore_random_state(resume['random'],rng)
+        curriculum.load_state_dict(resume['curriculum'])
+        atomic_torch_save(model.state_dict(),out/'initial_policy.pt')
+        if start_iteration>=args.iters:
+            raise ValueError('Resume checkpoint already reached its iteration budget')
+    stop_requested=False
+    def request_stop(signum,frame):
+        nonlocal stop_requested
+        stop_requested=True
+    signal.signal(signal.SIGTERM,request_stop)
+    signal.signal(signal.SIGINT,request_stop)
+
+    def save_resume(iteration):
+        payload=dict(schema_version=1,config=config,iteration=iteration,model=snapshot(),
+            optimizer=opt.state_dict(),reference=reference.actor_state_dict(),
+            anchors=[a.actor_state_dict() for a in anchors],pool=pool,best=best,
+            best_model=best_state,best_iteration=best_iteration,
+            train_seconds=train_seconds,random=random_state(rng),curriculum=curriculum.state_dict(),
+            stadium_text=stadium_text(args.stadium))
+        atomic_torch_save(payload,out/'resume.pt')
 
     def evaluate(iteration):
         telemetry.update(phase='evaluating', evaluation_iteration=iteration, evaluation_completed=0)
-        rows=panel(model, reference, args.stadium, args.seed,
-          lambda row:telemetry.append('evaluation_cases.jsonl',dict(iteration=iteration,**row)),
-          lambda case,total,bot,scenario:telemetry.update(phase='evaluating',evaluation_completed=case,
-            evaluation_total=total,evaluation_opponent=bot,evaluation_scenario=scenario),
-          n=args.eval_envs,steps=args.eval_steps,tick_skip=args.tick_skip)
-        score=balanced_score(rows)
+        rows=[]
+        for mode in args.eval_modes:
+            rows.extend(panel(model,reference,args.stadium,args.seed,
+              lambda row:telemetry.append('evaluation_cases.jsonl',dict(iteration=iteration,**row)),
+              lambda case,total,bot,scenario:telemetry.update(phase='evaluating',evaluation_completed=case,
+                evaluation_total=total,evaluation_opponent=bot,evaluation_scenario=scenario,evaluation_mode=mode),
+              n=args.eval_envs,steps=args.eval_steps,tick_skip=args.tick_skip,greedy=mode=='greedy',
+              extra_opponents={f'anchor_{i}':a for i,a in enumerate(anchors)}))
+        mean_score=balanced_score(rows)
+        groups={f'{mode}_{scenario}':balanced_score([r for r in rows if r['policy_mode']==mode and r['scenario']==scenario])
+                for mode in args.eval_modes for scenario in ('random','kickoff')}
+        valid=[v for v in groups.values() if v is not None]
+        score=min(valid) if valid and args.selection_metric=='minimum' else mean_score
+        if len(valid)!=len(groups):score=None
         scenario_scores={f'eval_{scenario}_score':balanced_score([r for r in rows if r['scenario']==scenario])
                          for scenario in ('random','kickoff')}
-        telemetry.append('evaluations.jsonl',dict(iteration=iteration,score=score,**scenario_scores,cases=rows))
+        telemetry.append('evaluations.jsonl',dict(iteration=iteration,score=score,mean_score=mean_score,
+                             mode_scenario_scores=groups,**scenario_scores,cases=rows))
         return score
 
     try:
-        baseline_score=evaluate(0)
-        best=baseline_score if baseline_score is not None else -1.
-        torch.save(snapshot(),out/'model.pt')
-        (out/'meta.json').write_text(json.dumps(dict(config, it=0, evaluation_score=baseline_score)))
+        baseline_score=evaluate(start_iteration)
+        if not resume:
+            best=baseline_score if baseline_score is not None else -1.
+            best_state=snapshot();best_iteration=start_iteration
+        elif baseline_score is not None and baseline_score>best:
+            best=baseline_score;best_state=snapshot();best_iteration=start_iteration
+        atomic_torch_save(best_state,out/'model.pt')
+        atomic_json(out/'meta.json',dict(config,it=best_iteration,evaluation_score=best),durable=True)
 
-        completed = 0
-        for it in range(1, args.iters + 1):
+        completed = start_iteration
+        save_resume(completed)
+        for it in range(start_iteration+1,args.iters+1):
+            if stop_requested:break
             if deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds:
                 break
             iteration_start=time.perf_counter()
@@ -404,26 +549,28 @@ def main():
             telemetry.update(phase="rollout",iteration=it,rollout_step=0)
             frac = (it - 1) / max(1, args.iters - 1)
             for g in opt.param_groups:
-                g["lr"] = LR * (1 - frac) + (LR / 3) * frac
+                base=g["base_lr"]
+                g["lr"] = base * (1 - frac) + (base / 3) * frac
             ent_coef = ENT0 * (1 - frac) + ENT1 * frac
 
             # pick frozen opponent: current copy or past snapshot
-            opp.load_state_dict(
-                pool[rng.integers(len(pool))] if (pool and rng.random() < POOL_PROB) else snapshot()
-            )
+            opp.load_actor_state(pool[rng.integers(len(pool))]
+                                 if (pool and rng.random()<POOL_PROB) else model.actor_state_dict())
 
             # --- rollout ---
             for t in range(T):
                 o = torch.as_tensor(obs, dtype=torch.float32, device=dev)
                 with torch.no_grad():
                     act, logp, val = model.act_train(o[learner_t])
-                    o_act = opp.act(o[opp_t])
+                    o_act = (torch.as_tensor(curriculum.act(env.prev_state,o[opp_t],opp),device=dev)
+                             if args.curriculum_frac>0 else opp.act(o[opp_t]))
                 S_obs[t], S_act[t], S_logp[t], S_val[t] = o[learner_t], act, logp, val
                 full = np.empty((args.envs * P, 3), dtype=np.int64)
                 full[learner_idx] = act.cpu().numpy()
                 full[opp_idx] = o_act.cpu().numpy()
                 nobs, rew, term, trunc = env.step(full.reshape(args.envs, P, 3))
                 obs = nobs.reshape(args.envs * P, obs_dim)
+                if args.curriculum_frac>0:curriculum.reset_episodes(term|trunc)
                 done = np.repeat(term | trunc, P)
                 S_term[t] = torch.as_tensor(np.repeat(term, P)[learner_idx], device=dev)
                 S_final_val[t].zero_()
@@ -434,18 +581,20 @@ def main():
                     final_red = final_obs[timeout, :args.red].reshape(-1, obs_dim)
                     timeout_slots = torch.as_tensor(np.repeat(timeout, args.red), device=dev)
                     with torch.no_grad():
-                        S_final_val[t, timeout_slots] = model._logits(
-                            torch.as_tensor(final_red, dtype=torch.float32, device=dev))[1]
+                        S_final_val[t, timeout_slots] = model.get_value(
+                            torch.as_tensor(final_red,dtype=torch.float32,device=dev))
                 S_rew[t] = torch.as_tensor(rew.reshape(-1)[learner_idx], dtype=torch.float32, device=dev)
                 S_done[t] = torch.as_tensor(done[learner_idx], device=dev)
+                if stop_requested:break
                 if (t+1)%8==0:
                     telemetry.update(phase='rollout',rollout_step=t+1)
 
+            if stop_requested:break
             rollout_seconds=time.perf_counter()-iteration_start
             telemetry.update(phase="updating")
             # --- GAE advantages ---
             with torch.no_grad():
-                last_val = model._logits(torch.as_tensor(obs, dtype=torch.float32, device=dev)[learner_t])[1]
+                last_val = model.get_value(torch.as_tensor(obs,dtype=torch.float32,device=dev)[learner_t])
             adv, ret = gae_returns(S_rew, S_val, S_term, S_done, S_final_val,
                                    last_val, gamma, LAM, args.timeout_bootstrap == 'final')
             timeout_values = S_final_val[S_done & ~S_term]
@@ -459,6 +608,8 @@ def main():
             ppo_metrics=[]
             gradient_metrics=[]
             combined_norms=[]
+            kl_stopped=False
+            actor_update_norms=[]
             for _ in range(EPOCHS):
                 np.random.shuffle(idx)
                 for s in range(0, len(idx), mb):
@@ -470,79 +621,106 @@ def main():
                     vl = 0.5 * (val - bret[mi]).pow(2).mean()
                     actor_loss = pl - ent_coef * ent.mean()
                     critic_loss = VF_COEF * vl
+                    if it<=args.critic_warmup_iters:
+                        actor_loss=0.*actor_loss
                     loss = actor_loss + critic_loss
                     if s == 0:
                         gradient_metrics.append(objective_gradient_metrics(model, actor_loss, critic_loss))
+                    if not torch.isfinite(loss):
+                        raise FloatingPointError('Nonfinite PPO loss; last durable resume remains available')
+                    measured_kl=float(((ratio-1)-(logp-bl[mi])).mean().detach())
+                    if args.target_kl and measured_kl>args.target_kl:
+                        kl_stopped=True
+                        break
+                    before=[p.detach().clone() for p in model.actor_parameters()] if s==0 else None
                     opt.zero_grad()
                     loss.backward()
-                    combined_norms.append(float(nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)))
+                    if it<=args.critic_warmup_iters:
+                        # No zero-gradient Adam steps: actor moments start only when actor learning starts.
+                        for parameter in model.actor_parameters():parameter.grad=None
+                    if args.separate_critic:
+                        an=nn.utils.clip_grad_norm_(model.actor_parameters(),MAX_GRAD,error_if_nonfinite=True)
+                        cn=nn.utils.clip_grad_norm_(model.critic_parameters(),MAX_GRAD,error_if_nonfinite=True)
+                        combined_norms.append(float(torch.sqrt(an.square()+cn.square())))
+                    else:
+                        combined_norms.append(float(nn.utils.clip_grad_norm_(model.parameters(),MAX_GRAD,error_if_nonfinite=True)))
                     opt.step()
+                    if before is not None:
+                        actor_update_norms.append(float(torch.sqrt(sum((p.detach()-v).square().sum()
+                                                   for p,v in zip(model.actor_parameters(),before)))))
                     with torch.no_grad():
                         lr_delta=logp-bl[mi]
                         kl=((lr_delta.exp()-1)-lr_delta).mean()
                         clipped=((ratio-1).abs()>CLIP).float().mean()
                         ppo_metrics.append([float(pl),float(vl),float(ent.mean()),float(kl),float(clipped)])
 
+                if kl_stopped:break
             iteration_seconds=time.perf_counter()-iteration_start
             train_seconds+=iteration_seconds
-            means=np.mean(ppo_metrics,axis=0)
+            means=np.mean(ppo_metrics,axis=0) if ppo_metrics else np.zeros(5)
             yvar=float(bret.var(unbiased=False))
             explained=1-float((bret-S_val.reshape(-1)).var(unbiased=False))/yvar if yvar>1e-9 else None
             grad_summary = {}
             for key in gradient_metrics[0]:
                 measured = [row[key] for row in gradient_metrics if row[key] is not None]
                 grad_summary[key] = float(np.mean(measured)) if measured else None
-            record=dict(**grad_summary,
+            record=dict(**grad_summary,critic_warmup=it<=args.critic_warmup_iters,kl_early_stop=kl_stopped,optimizer_minibatches=len(ppo_metrics),
+               actor_update_norm=float(np.mean(actor_update_norms)) if actor_update_norms else 0.,
+               opponents=curriculum.counts() if args.curriculum_frac>0 else {'selfplay':args.envs},
                gradient_metric_minibatches=len(gradient_metrics),
-               combined_grad_norm_pre_clip=float(np.mean(combined_norms)),
+               combined_grad_norm_pre_clip=float(np.mean(combined_norms)) if combined_norms else 0.,
                timeout_count=int(timeout_values.numel()),
                timeout_bootstrap_mean=float(timeout_values.mean()) if timeout_values.numel() else None,
                timeout_bootstrap_applied=args.timeout_bootstrap == 'final',iteration=it,samples=it*T*B,iteration_seconds=iteration_seconds,
                rollout_seconds=rollout_seconds,update_seconds=iteration_seconds-rollout_seconds,
                samples_per_second=T*B/iteration_seconds,training_samples_per_second=it*T*B/train_seconds,
-               wall_samples_per_second=it*T*B/(time.perf_counter()-t0),
+               wall_samples_per_second=(it-start_iteration)*T*B/(time.perf_counter()-t0),
                reward_mean=float(S_rew.mean()),reward_terms_per_sample={k:v/(T*B) for k,v in meter.sums.items()},
                reward_terms_absolute_per_sample={k:v/(T*B) for k,v in meter.absolute_sums.items()},
                goals_for=meter.gf,goals_against=meter.ga,completed_episodes=meter.finished,
                stationary_fraction=meter.stationary/max(1,meter.transitions),
                policy_loss=float(means[0]),value_loss=float(means[1]),entropy=float(means[2]),
                approximate_kl=float(means[3]),clip_fraction=float(means[4]),explained_variance=explained,
-               learning_rate=opt.param_groups[0]['lr'],snapshot_pool=len(pool))
+               learning_rate=opt.param_groups[0]['lr'],critic_learning_rate=opt.param_groups[-1]['lr'],snapshot_pool=len(pool))
             telemetry.append('training.jsonl',record)
             telemetry.update(completed_iterations=it,samples=it*T*B,phase='checkpoint',last_training=record)
 
             if it % SNAPSHOT_EVERY == 0:
-                pool.append(snapshot())
+                pool.append(model.actor_state_dict())
                 if len(pool) > POOL_SIZE:
                     pool.pop(0)
 
             if args.save_every and it % args.save_every == 0:
                 (out / "ckpts").mkdir(exist_ok=True)
-                torch.save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
+                atomic_torch_save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
 
             completed = it
-            if it % args.eval_every == 0 or it == args.iters or (deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds):
+            if not stop_requested and (it % args.eval_every == 0 or it == args.iters or (deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds)):
                 score=evaluate(it)
                 meta=dict(config,it=it,evaluation_score=score)
-                torch.save(snapshot(),out/'model_final.pt')
-                (out/'meta_final.json').write_text(json.dumps(meta))
+                atomic_torch_save(snapshot(),out/'model_final.pt')
+                atomic_json(out/'meta_final.json',meta,durable=True)
                 tag=''
                 if score is not None and score>best:
-                    best=score
-                    torch.save(snapshot(),out/'model.pt')
-                    (out/'meta.json').write_text(json.dumps(meta));tag=' <- saved best'
+                    best=score;best_state=snapshot();best_iteration=it
+                    atomic_torch_save(best_state,out/'model.pt')
+                    atomic_json(out/'meta.json',meta,durable=True);tag=' <- saved best'
                 score_label=f'{score:.3f}' if score is not None else 'n/a'
                 print(f'it {it:4d} | {record["samples_per_second"]/1000:.1f}k samples/s | balanced eval {score_label} (best {best:.3f}){tag}',flush=True)
+
+            if it % args.checkpoint_every==0:
+                save_resume(completed)
 
         # If the deadline was reached between iterations, preserve the exact endpoint.
         final_meta = out/'meta_final.json'
         final_it = json.loads(final_meta.read_text())['it'] if final_meta.exists() else -1
         if final_it != completed:
-            score = evaluate(completed) if time.time() < (deadline or float('inf')) - 30 else None
-            torch.save(snapshot(), out/'model_final.pt')
-            final_meta.write_text(json.dumps(dict(config,it=completed,evaluation_score=score)))
+            score = evaluate(completed) if not stop_requested and time.time() < (deadline or float('inf')) - 30 else None
+            atomic_torch_save(snapshot(), out/'model_final.pt')
+            atomic_json(final_meta,dict(config,it=completed,evaluation_score=score),durable=True)
+        save_resume(completed)
         telemetry.update(status="completed",phase="completed",completed_iterations=completed,
-                         stop_reason='deadline' if completed < args.iters else 'iteration_budget')
+                         stop_reason='signal' if stop_requested else ('deadline' if completed<args.iters else 'iteration_budget'))
         print(f"done. balanced score {best:.3f} -> {out / 'model.pt'}",flush=True)
     except BaseException as error:
         telemetry.update(status='failed',phase='failed',error=repr(error))

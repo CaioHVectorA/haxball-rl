@@ -57,7 +57,8 @@ class NeuralBot:
         meta = json.loads((model_dir / "meta.json").read_text())
         self.greedy = greedy
         self._torch = torch
-        self.model = Policy(meta["obs_dim"], meta["n_acts"], meta["hidden"], meta["depth"])
+        self.model = Policy(meta["obs_dim"], meta["n_acts"], meta["hidden"], meta["depth"],
+                            separate_critic=meta.get("separate_critic", False))
         self.model.load_state_dict(torch.load(model_dir / "model.pt", map_location="cpu"))
         self.model.eval()
 

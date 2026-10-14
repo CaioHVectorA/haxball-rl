@@ -31,13 +31,14 @@ def resolve(arg: str | None) -> tuple[Path, dict]:
     p = Path(arg)
     if p.suffix == ".pt":  # explicit checkpoint file
         sd_path = p if p.is_absolute() else (HERE.parent / p)
-        meta_path = sd_path.parent / "meta.json"
+        meta_filename = 'meta_final.json' if sd_path.name=='model_final.pt' else ('meta_latest.json' if sd_path.name=='latest.pt' else 'meta.json')
+        meta_path = sd_path.parent/meta_filename
     else:  # a run-dir name under checkpoints/ — prefer the deploy weights (model_final.pt)
         run = CKPT / arg
         sd_path = run / "model_final.pt"
         if not sd_path.exists():
             sd_path = run / "model.pt"
-        meta_path = run / "meta.json"
+        meta_path = run/('meta_final.json' if sd_path.name=='model_final.pt' else 'meta.json')
     if not meta_path.exists() and sd_path.parent.name == "ckpts":
         meta_path = sd_path.parent.parent / "config.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
@@ -65,10 +66,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("ckpt", nargs="?", default=None)
     ap.add_argument("--stadium", default=None, help="override; else meta.stadium, else classic")
+    ap.add_argument("--out",type=Path,help="destination policy JSON; default headless-bot/policy.json")
     args = ap.parse_args()
 
     sd_path, meta = resolve(args.ckpt)
-    sd = torch.load(sd_path, map_location="cpu")
+    sd = torch.load(sd_path,map_location="cpu",weights_only=True)
+    if meta.get('obs_schema','default16') not in ('default16','default'):
+        raise SystemExit('Unsupported observation schema; exporter must match browser observations')
     obs_dim = meta.get("obs_dim") or sd["trunk.0.weight"].shape[1]
     depth = sum(1 for k in sd if k.startswith("trunk.") and k.endswith(".weight"))
     if obs_dim != 16 or depth != 2:
@@ -90,6 +94,7 @@ def main():
         name = sd_path.stem
     policy = {
         "obs_dim": obs_dim,
+        "obs_schema": meta.get("obs_schema","default16"),
         "repeat_kick": bool(meta.get("repeat_kick", False)),
         "name": name,
         "stadium_name": stadium,
@@ -102,7 +107,8 @@ def main():
         "head_y": mat("head_y"),
         "head_k": mat("head_k"),
     }
-    out = HERE / "policy.json"
+    out = args.out or HERE / "policy.json"
+    out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps(policy))
     print(
         f"wrote {out.name} from {sd_path.relative_to(HERE.parent)} | obs_dim={obs_dim} "

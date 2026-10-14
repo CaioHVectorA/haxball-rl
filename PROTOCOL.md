@@ -128,3 +128,12 @@ Dashboard: stream de eventos a cada segundo, histórico da execução selecionad
 Cada execução mantém a mesma avaliação por adversário e grava inspeção de comportamento do checkpoint final. Comparar endpoints e cenários aleatórios; registrar melhor checkpoint separadamente. Os seis treinos são uma triagem, não prova de convergência robusta nem extrapolação para 20 mil iterações. O dashboard acompanha a execução ativa; os históricos anteriores permanecem em suas pastas.
 
 A inspeção registra distância da bola, intenção de chute durante proximidade, alinhamento aproximado com o gol, posição defensiva e períodos com bola parada. Essas métricas não identificam com certeza chutes efetivos nem autoria de gols. As parcelas absolutas de recompensa passam a ser gravadas para evitar confundir cancelamento do saldo de gols com ausência de sinal de gol.
+
+## Preset estrutural Sprint 1
+
+`--sprint1` implementa recompensa PBRS, crítico separado, clipping independente,
+calibração inicial do crítico, curriculum estacionário com âncoras neurais, avaliação
+greedy/amostrada e checkpoints retomáveis. O modo legado permanece disponível para
+comparações. A descrição completa, justificativas, limites e comandos estão em
+`experiments/sprint1_structural/README.md`; o relatório empírico em `REPORT.md`.
+Não interpretar o novo score mínimo modo×cenário como o antigo score médio greedy.

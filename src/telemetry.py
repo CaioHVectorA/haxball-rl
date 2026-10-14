@@ -7,11 +7,18 @@ from datetime import datetime, timezone
 import numpy as np
 
 
-def atomic_json(path, value):
+def atomic_json(path, value, durable=False):
     path = Path(path)
     temporary = path.with_name(path.name + '.tmp')
-    temporary.write_text(json.dumps(value, allow_nan=False))
-    os.replace(temporary, path)
+    with temporary.open('w') as handle:
+        handle.write(json.dumps(value,allow_nan=False))
+        if durable:
+            handle.flush();os.fsync(handle.fileno())
+    os.replace(temporary,path)
+    if durable:
+        directory=os.open(path.parent,os.O_DIRECTORY)
+        try:os.fsync(directory)
+        finally:os.close(directory)
 
 
 class Telemetry:

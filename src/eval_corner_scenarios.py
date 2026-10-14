@@ -12,8 +12,7 @@ from haxballgym import BLUE, RED
 
 
 def evaluate(checkpoint: Path, *, envs: int = 8, max_steps: int = 350):
-    model = Policy(16)
-    model.load_state_dict(torch.load(checkpoint, map_location="cpu", weights_only=True))
+    model = Policy.from_state_dict(torch.load(checkpoint,map_location="cpu",weights_only=True))
     model.eval()
     rows = []
     for side in (0, 1):

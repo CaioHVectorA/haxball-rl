@@ -14,7 +14,7 @@ from environment import STADIUM
 
 @torch.no_grad()
 def inspect(checkpoint,steps=1000,n=16):
-    model=Policy(16);model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
+    model=Policy.from_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
     rows=[];traces={}
     for scenario in ['kickoff','random']:
         for opponent in ['chase_no_noise','striker','keeper']:

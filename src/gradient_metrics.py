@@ -7,7 +7,8 @@ def objective_gradient_metrics(model, actor_loss, critic_loss):
     actor = torch.autograd.grad(actor_loss, params, retain_graph=True, allow_unused=True)
     critic = torch.autograd.grad(critic_loss, params, retain_graph=True, allow_unused=True)
     def norm(grads):
-        return torch.sqrt(sum(g.detach().square().sum() for g in grads if g is not None))
+        return torch.sqrt(sum((g.detach().square().sum() for g in grads if g is not None),
+                              params[0].new_zeros(())))
     trunk_ids = {id(p) for p in model.trunk.parameters()}
     pairs = [(a.detach(), c.detach()) for p, a, c in zip(params, actor, critic)
              if id(p) in trunk_ids and a is not None and c is not None]

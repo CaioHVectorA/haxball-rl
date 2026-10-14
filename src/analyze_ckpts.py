@@ -14,8 +14,7 @@ def analyze(path, n=128, steps=600):
     env = Env(engine=eng, obs_builder=DefaultObs(pos_coef="auto"), action_parser=DiscreteAction(kick_values=2),
               reward_fn=CombinedReward((GoalReward(), 1.0)), termination_cond=GoalCondition(),
               truncation_cond=TimeoutCondition(2000), state_mutator=KickoffSetter())
-    m = Policy(env.obs_dim, env.action_space)
-    m.load_state_dict(torch.load(path, map_location="cpu"))
+    m = Policy.from_state_dict(torch.load(path,map_location="cpu",weights_only=True))
     chase = ChaseBot(seed=0)
     obs = env.reset()
     gf = ga = contacts = kicks = far = idle = touch_steps = 0
