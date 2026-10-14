@@ -54,3 +54,6 @@ Ablação curta controlada: [ABLATION.md](ABLATION.md).
 Publicações anteriores: `a6ba071` (implementação), `8d05fc6` (validação independente).
 Backup desta revisão: it1405 / melhor it1350; resultados e verificação em JOURNAL.md.
 Decisões, publicações e limitações persistentes: [JOURNAL.md](JOURNAL.md).
+
+Publicação confirmada no GitHub: `337dd69`, branch `gpt`: ablação completa,
+curvas auditadas e bundle retomável it1405 / melhor it1350.

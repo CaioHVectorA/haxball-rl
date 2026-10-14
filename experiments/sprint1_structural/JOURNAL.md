@@ -86,3 +86,6 @@ conferida e models/model.pt original preservado. Esta publicação inclui
 a ablação completa, curvas e bundle; o checkpoint it450 validado continua
 preservado separadamente. O orçamento principal ainda não terminou; a
 comparação independente de melhor versus endpoint será feita ao finalizar.
+
+Publicação confirmada no GitHub: `337dd69`, branch `gpt`: ablação completa,
+curvas auditadas e bundle retomável it1405 / melhor it1350.
