@@ -195,3 +195,5 @@ Uma ablação curta controlada está em `ablation.py`: duas seeds, 40 iteraçõe
 comparando corrected/shared, PBRS/shared e PBRS/separate (com clipping separado).
 Esse POC serve para estudar direção/integridade; não deve determinar um vencedor
 definitivo ou invalidar o preset principal por pouca amostragem.
+
+Decisões e histórico de evidências: [JOURNAL.md](JOURNAL.md).

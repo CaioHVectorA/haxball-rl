@@ -86,7 +86,12 @@ def main():
         'Contratos, fundamento, decisões sobre a geometria e limites estão em README.md.',
         'Não se anuncia PFSP ou observação enriquecida como implementados: são etapa posterior.',
         'A etapa central que antes estava pendente — tabela PBRS, crítico separado e currículo —',
-        'foi implementada e está sendo treinada nesta execução.']
+        'foi implementada e está sendo treinada nesta execução.', '',
+        'Validação inédita do candidato: [HELDOUT.md](HELDOUT.md).',
+        'Ablação curta controlada: [ABLATION.md](ABLATION.md).',
+        'Publicações anteriores: `a6ba071` (implementação), `8d05fc6` (validação independente).',
+        'Backup desta revisão: it1405 / melhor it1350; resultados e verificação em JOURNAL.md.',
+        'Decisões, publicações e limitações persistentes: [JOURNAL.md](JOURNAL.md).']
     (OUT/'REPORT.md').write_text('\n'.join(lines)+'\n')
     (OUT/'audit.json').write_text(json.dumps(dict(status=live['status'],iteration=train[-1]['iteration'],
          last_evaluation=after['iteration'],finite=True,contract_verified=True,
