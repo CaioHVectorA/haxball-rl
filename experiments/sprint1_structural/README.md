@@ -217,3 +217,6 @@ Após confirmar o commit remoto, agenda shutdown com janela de 20 minutos para a
 Há também shutdown obrigatório às 11:44 (America/Sao_Paulo) de 15/10/2026;
 se necessário, prepara um bundle parcial 20 minutos antes, preservando a retomada.
 
+
+Recuperação em 15/10: uma substituição atômica de live.json falhou com WinError 5 após a iteração 5604. Adicionado retry limitado para leitores concorrentes no Windows; retomada via --resume do checkpoint durável 5600 em runs/gpu_continuation_recovery_20261015_035045. Registros anteriores e checkpoints intermediários foram preservados. A execução ativa está em runs/active_gpu_run.txt; o shutdown permanece às 11:48.
+

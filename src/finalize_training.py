@@ -74,7 +74,8 @@ def main():
         # Explicit allowlist: never archive env files, tokens, node_modules or credentials.
         filenames = ['training.jsonl', 'evaluations.jsonl', 'evaluation_cases.jsonl',
                      'config.json', 'live.json', 'train.log', 'meta.json', 'meta_final.json',
-                     'initial_policy.pt', 'model_final.pt', 'resume_stadium.hbs']
+                     'initial_policy.pt', 'model_final.pt', 'resume_stadium.hbs',
+                     'initial_policy_pre_recovery.pt', 'train_pre_recovery.log', 'train_error.log']
         files = [run/name for name in filenames if (run/name).is_file()]
         files += sorted((run/'ckpts').glob('*.pt'))
         manifest = []
