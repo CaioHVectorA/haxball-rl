@@ -19,13 +19,13 @@
 \newtheorem{proposicao}{Proposição}
 \newtheorem{observacao}{Observação}
 \title{\textbf{Por que o treinamento de HaxBall\\passou a funcionar melhor?}\\[5pt]
-\large Uma análise matemática e acessível de recompensa, valor, adversários e validação}
+\large Do HaxBall a outros jogos e à robótica: uma leitura guiada sobre aprender com consequências}
 \author{Relatório técnico do projeto \texttt{haxball-rl}}
 \date{15 de outubro de 2026}
 \begin{document}
 \maketitle
 \begin{abstract}
-Este artigo explica por que versões anteriores de um agente de HaxBall apresentavam progresso frágil e o que mudou na configuração que produziu melhora mensurável. A tese central é que não bastava aumentar a duração do treinamento: era necessário tornar coerentes o incentivo, a estimativa das consequências, os adversários e o critério de avaliação. A partir de código e registros do projeto, apresentam-se a formulação de aprendizado por reforço, a identidade matemática de recompensas por potenciais, o tratamento de cortes artificiais, a interação entre ator e crítico e a não estacionariedade do self-play. Cada mecanismo é acompanhado de uma interpretação para leitores sem formação em aprendizado de máquina. Um benchmark reservado do checkpoint 2.550 mostra score de 0,66895 contra sua origem em estados aleatórios com ações amostradas; a continuação GPU também apresenta avanço descritivo, embora oscilatório. Gráficos distinguem resultados observados de exemplos teóricos. As intervenções foram combinadas e não permitem atribuição causal individual. ``Dar certo'' significa aqui obter ganho verificável nas condições testadas, sem afirmar solução definitiva do jogo. A cooperação 2v2 é apresentada como perspectiva futura, ainda não validada.
+Este artigo explica por que versões anteriores de um agente de HaxBall apresentavam progresso frágil e o que mudou na configuração que produziu melhora mensurável. A tese central é que não bastava aumentar a duração do treinamento: era necessário tornar coerentes o incentivo, a estimativa das consequências, os adversários e o critério de avaliação. A partir de código e registros do projeto, apresentam-se a formulação de aprendizado por reforço, a identidade matemática de recompensas por potenciais, o tratamento de cortes artificiais, a interação entre ator e crítico e a não estacionariedade do self-play. Cada mecanismo é acompanhado de uma interpretação para leitores sem formação em aprendizado de máquina. Um benchmark reservado do checkpoint 2.550 mostra score de 0,66895 contra sua origem em estados aleatórios com ações amostradas; a continuação GPU também apresenta avanço descritivo, embora oscilatório. Gráficos distinguem resultados observados de exemplos teóricos. As intervenções foram combinadas e não permitem atribuição causal individual. ``Dar certo'' significa aqui obter ganho verificável nas condições testadas, sem afirmar solução definitiva do jogo. O teorema de Ng, Harada e Russell é explicado por exemplos de percursos e contabilidade de recompensas. Aplicações a Pokémon, robótica e outros jogos são propostas conceituais, sem experimentos realizados nesses domínios. A cooperação 2v2 permanece uma perspectiva ainda não validada.
 \end{abstract}
 \noindent\textbf{Palavras-chave:} aprendizado por reforço; PPO; reward shaping; HaxBall; cooperação multiagente.
 
@@ -39,6 +39,12 @@ A comparação com a \code{main} descreve mudanças de engenharia. Não houve no
 
 \paragraph{Como ler o artigo.}
 As fórmulas são acompanhadas por interpretação verbal. Um \emph{checkpoint} é uma versão salva do agente; uma \emph{iteração} reúne coleta e atualização; uma \emph{seed} fixa uma sequência pseudoaleatória. Seeds de avaliação variam as provas; seeds de treino repetem o processo de aprendizado. \emph{Greedy} escolhe sempre a ação mais provável; \emph{amostrado} sorteia de acordo com as probabilidades aprendidas. O score usado adiante vale um por vitória, meio por empate e zero por derrota: não é a própria recompensa de treinamento.
+
+
+\subsection*{Uma leitura em três voltas}
+Este texto pode ser lido sem tentar dominar todas as equações de uma vez. Na primeira volta, acompanhe as histórias e figuras: que comportamento queremos, que orientação oferecemos e como verificamos o resultado? Na segunda, observe as três grandezas centrais: recompensa é o que acabou de acontecer; valor é a previsão do que ainda virá; vantagem é o quanto a decisão foi melhor ou pior do que se esperava. Na terceira, volte às equações para conferir por que as afirmações fazem sentido.
+
+O símbolo $\Phi$, que aparecerá muitas vezes, pode ser lido simplesmente como ``nota da situação''. O símbolo $\gamma$ diz quanto o futuro pesa. A palavra \emph{política} significa a maneira de agir do agente, não uma regra que escrevemos manualmente para ele seguir. Não é necessário memorizar os hiperparâmetros para compreender o argumento.
 
 \section{O que significa dizer que antes deu errado?}
 \subsection{O problema era a fragilidade, não a ausência total de aprendizado}
@@ -158,17 +164,18 @@ Uma recompensa densa arbitrária pode modificar a preferência entre estratégia
 \end{equation}
 Nesse caso, o agente que maximiza a soma pode preferir a pior rota para o objetivo de gols. Isso é um risco geral de desenho de incentivos, não uma demonstração de que o bot antigo explorou exatamente esse mecanismo. O PBRS busca oferecer orientação local com um contrato matemático para a soma completa.
 
-\begin{proposicao}[Identidade de retorno do shaping]
+\subsection{O teorema de Ng, Harada e Russell: orientar sem trocar o objetivo}
+O resultado de Andrew Ng, Daishi Harada e Stuart Russell, publicado em 1999, responde a uma pergunta prática: é possível oferecer pistas intermediárias sem mudar quais políticas são ótimas? Em um processo de decisão de Markov (MDP), o estado reúne a informação necessária para prever o próximo passo, dadas as ações. Para esse modelo com desconto, uma construção que preserva essas políticas é acrescentar $F(s,s')=\gamma\Phi(s')-\Phi(s)$ à recompensa original, com as condições de horizonte e fronteira adequadas \cite{ng1999}. A conta abaixo mostra a ideia central. Não é uma afirmação de que qualquer bônus intuitivamente razoável tenha essa propriedade.
+
+\paragraph{A conta que explica o resultado.}
+
 Para potencial limitado, desconto $0<\gamma<1$ e fronteiras consistentes,
 \begin{equation}
  \sum_{t=0}^{H-1}\gamma^t[\gamma\Phi(s_{t+1})-\Phi(s_t)]
  =-\Phi(s_0)+\gamma^H\Phi(s_H).
 \end{equation}
 Em terminal absorvente com potencial zero, ou no limite $H\to\infty$, resta um deslocamento independente das ações, condicionado a $s_0$.
-\end{proposicao}
-\begin{proof}
-Expandindo a soma, todos os termos intermediários se cancelam. O termo final desaparece pelas condições enunciadas.
-\end{proof}
+A expressão parece abstrata, mas descreve um cancelamento simples. O potencial do estado seguinte entra uma vez como crédito e, na decisão seguinte, volta como débito. Os fatores de desconto fazem esses valores se alinharem. Sobram apenas a situação inicial e a fronteira final. Quando a fronteira final vale zero, a soma auxiliar depende só de onde a trajetória começou.
 Essa identidade fundamenta o PBRS \cite{ng1999}. A referência de invariância é o objetivo esparso de gols, não a tabela antiga. Não se segue que PPO com função aproximadora convirja ou aprenda mais rapidamente.
 
 
@@ -180,6 +187,58 @@ Considere, apenas para ilustração, $\gamma=0{,}9$ e potenciais $(-10,-6,-2,0)$
 Outra trajetória que comece com potencial $-10$ e termine no mesmo terminal absorvente também produz retorno auxiliar $10$, com as condições da proposição. Assim, o potencial redistribui a orientação no tempo sem acrescentar preferência líquida entre essas trajetórias; os gols continuam decidindo seu mérito no objetivo de referência. Os números deste exemplo não são dados do treinamento.
 
 Como uma redistribuição sem vantagem líquida pode ajudar? Porque o crítico e o ator aprendem com dados finitos, aproximações e passos locais. Receber informação em estados intermediários pode facilitar a estimativa do mérito, embora não haja garantia. O objetivo ideal pode ser equivalente enquanto a dificuldade prática da otimização muda.
+
+
+\subsubsection*{A intuição: um adiantamento que precisa fechar a conta}
+Imagine que o objetivo seja entregar uma encomenda. Receber dinheiro toda vez que se passa por uma rua perto do destino pode incentivar dar voltas nessa rua. Já um adiantamento vinculado à posição atual precisa ser acertado quando a posição muda. Avançar libera orientação; desfazer o avanço retira essa orientação. O agente não deveria aumentar o retorno total apenas oscilando.
+
+Essa analogia tem um detalhe essencial: o dinheiro do futuro vale menos por causa de $\gamma$. Por isso a fórmula não é simplesmente ``nota nova menos nota antiga''. O desconto precisa entrar no acerto. A Figura~\ref{fig:ngcycle} mostra uma conta pequena que pode ser conferida à mão.
+
+\begin{figure}[htbp]\centering
+\fbox{\parbox{.88\linewidth}{
+\textbf{Exemplo didático: sair e voltar ao mesmo lugar.}\\[4pt]
+$A\ (\Phi=0)\quad\longrightarrow\quad B\ (\Phi=1)\quad\longrightarrow\quad A\ (\Phi=0)$\\[5pt]
+Com $\gamma=0{,}9$, usar apenas a diferença sem desconto dá sinais $+1$ e $-1$. A soma descontada é $1+0{,}9(-1)=0{,}1$. A volta aparentemente neutra produziu lucro auxiliar.\\[5pt]
+Com PBRS, os sinais são $+0{,}9$ e $-1$. A soma descontada é $0{,}9+0{,}9(-1)=0$. O crédito e a devolução se compensam.
+}}
+\caption{Exemplo inventado para explicar o papel do desconto, não uma trajetória observada do bot. O estado inicial e o final têm potencial zero. Se não tivessem, o termo de fronteira também precisaria entrar na conta.}\label{fig:ngcycle}
+\end{figure}
+
+O exemplo não diz que toda repetição seja inútil. Um robô pode precisar recuar para contornar um obstáculo, e um jogador pode precisar devolver a bola para criar espaço. A questão é que o incentivo auxiliar não deveria transformar um ciclo sem benefício para a tarefa em uma fonte autônoma de retorno.
+
+\subsubsection*{Por que a melhor decisão permanece a mesma?}
+Chamemos de $G'$ o retorno com shaping e de $G$ o retorno original. Com as condições já explicadas,
+\begin{equation}
+ G'=G-\Phi(s_0),\qquad
+ Q'^{\pi}(s,a)=Q^{\pi}(s,a)-\Phi(s).
+\end{equation}
+Para quem decide no mesmo estado $s$, a quantidade subtraída é igual para todas as ações. Subtrair dez pontos de todas as alternativas não muda qual delas tem a maior nota. Logo,
+\begin{equation}
+ \arg\max_a Q'^*(s,a)=\arg\max_a Q^*(s,a).
+\end{equation}
+É isso que significa preservar a política ótima nesse contexto. Não significa que as recompensas de cada passo fiquem iguais, nem que os valores numéricos de $Q$ sejam os mesmos. Significa preservar a preferência ideal entre maneiras de agir.
+
+Essa conclusão pressupõe que as alternativas sejam comparadas a partir da mesma situação inicial, ou de uma distribuição inicial fixa. Se começamos a selecionar estados iniciais de forma diferente entre tratamentos, já modificamos outra parte do experimento. Também é necessário usar o mesmo desconto na recompensa auxiliar e no objetivo.
+
+\paragraph{Isso significa que só existe uma transformação permitida?}
+Não. Multiplicar todo o retorno por uma constante positiva também preserva a ordem das alternativas. A relevância do resultado é fornecer uma estrutura geral de shaping que não depende de adivinhar toda a dinâmica. Em um ambiente específico, outras mudanças podem por acaso preservar a solução; isso exige outra justificativa. Em particular, somar um bônus por passo não é sempre neutro: se os episódios têm durações diferentes, pode passar a valer a pena prolongá-los. Não se deve confundir essa operação com subtrair a mesma constante de todas as alternativas em um estado.
+
+\subsubsection*{E se a nossa nota da situação estiver errada?}
+O potencial não precisa ser um oráculo. Um mapa de distância que ignora obstáculos pode julgar boa uma posição que, na prática, é uma armadilha. Ainda assim, um potencial fixo, limitado e aplicado com as fronteiras corretas mantém a identidade de retorno. O problema é prático: as pistas podem conduzir a exploração para lugares ruins e tornar o aprendizado lento. Preservar o destino matemático não garante fornecer um bom caminho para chegar até ele.
+
+No HaxBall, ficar atrás da bola parece uma pista útil para criar uma situação de chute. Não significa que ficar atrás seja sempre a melhor decisão tática. Às vezes a boa ação é defender, interceptar ou se afastar. O objetivo de gols é que deve decidir a estratégia final; o potencial tenta facilitar a orientação local.
+
+Também se pode construir um potencial a partir de um modelo que prevê chance de sucesso. Se ele for congelado e satisfizer as condições, continua sendo um potencial. Se o atualizarmos durante o treino, a justificativa de potencial fixo já não pode ser usada automaticamente: seria necessário analisar a dependência temporal e os respectivos termos. Uma ideia promissora ainda precisa de contrato de implementação.
+
+\subsubsection*{O que esse resultado não promete}
+O teorema trata da relação entre objetivos, não do sucesso garantido de qualquer programa que use sua fórmula. Nossa rede pode representar mal uma estratégia, explorar pouco, estimar valores incorretamente ou gastar todo o orçamento antes de encontrar uma solução. O clipping do PPO e a coleta finita também fazem parte da dificuldade prática.
+
+Um potencial baseado em observação incompleta pode continuar obedecendo à conta telescópica se for aplicado consistentemente; isso não devolve à política a informação que ela nunca recebeu. A identidade algébrica não exige que a nota seja uma descrição completa do mundo. Já a interpretação clássica de política ótima em estados usa o modelo de decisão especificado. Memória, informação oculta e restrições da rede continuam relevantes.
+
+O teorema também não escolhe para nós a recompensa original. Se ela expressa mal o que desejamos, preservar suas soluções ótimas preserva o problema. No HaxBall, retorno descontado de gols e score de uma partida finita são critérios diferentes; PBRS não elimina essa diferença. Em um episódio realmente finito, não se pode simplesmente descartar um potencial final dependente das ações e continuar alegando invariância.
+
+\paragraph{Uma pergunta para levar à próxima leitura.}
+Quando surgir a ideia de ``dar um pontinho por uma coisa boa'', vale perguntar: esse ponto representa o objetivo que quero mudar, uma pista cuja conta fecha, ou apenas uma métrica que desejo observar? São três usos legítimos, mas com consequências diferentes.
 
 \begin{observacao}
 Para $\Phi(s)<0$, um estado estacionário pode gerar $(\gamma-1)\Phi(s)>0$. O sinal de um passo isolado não demonstra exploração indevida da recompensa; importam a soma descontada e suas fronteiras.
@@ -592,6 +651,84 @@ Cada braço deve partir do mesmo ator $\theta^*$, usar orçamento e mapa iguais 
 \end{equation}
 Reamostrar blocos de seeds preserva o pareamento; intervalos são descritivos e não eliminam a necessidade de seeds de treinamento independentes. Recompensas acumuladas de tabelas diferentes não devem ser diretamente usadas para eleger uma vencedora. Adversários e seeds reservados devem permanecer fora da seleção repetida de checkpoints.
 
+
+\section{Como levar o raciocínio a Pokémon, robótica e outros jogos}
+Os exemplos desta seção são propostas de desenho, não resultados obtidos pelo nosso modelo. A transferência mais importante não é copiar os pesos $0{,}15$ e $0{,}08$. É repetir o raciocínio: definir sucesso, separar sucesso de pistas, entender o que o agente observa e testar contra desafios que não serviram para escolher o modelo.
+
+\subsection{Pokémon: ganhar uma batalha não é apenas causar dano}
+Antes de escrever uma recompensa, é preciso escolher a tarefa. Um agente de batalha, um agente que percorre o mundo e um agente que tenta completar uma coleção resolvem problemas diferentes. Para batalhas, uma referência simples poderia ser $+1$ por vitória e $-1$ por derrota. Para exploração, o objetivo pode estar ligado a marcos de progresso. Não existe uma única tabela ideal para tudo que chamamos de ``jogar Pokémon''.
+
+Considere o agente de batalha. Premiar dano causado parece sensato, mas uma ação que causa dano agora pode desperdiçar um recurso ou expor uma peça essencial. Uma troca sem dano imediato pode ser a decisão que permite ganhar depois. Assim como perseguir a bola não é igual a jogar bem HaxBall, causar dano não é igual a maximizar chance de vitória.
+
+Como exemplo inicial de potencial, poderíamos usar uma nota limitada de recursos do time:
+\begin{equation}
+ \Phi(s)=c\left[\frac{1}{n}\sum_{i=1}^{n}h_i^{\rm nosso}
+ -\frac{1}{m}\sum_{j=1}^{m}h_j^{\rm adversario}\right],
+ \qquad 0\leq h\leq1.
+\end{equation}
+Aqui $h$ representa a fração de vida de cada membro de uma composição fixa, incluindo derrotados com valor zero. É apenas uma heurística: pesos iguais ignoram funções estratégicas, composição e informação desconhecida. Mesmo que a fórmula facilite o começo, não é uma avaliação confiável de todas as posições. Em observação parcial, nem todos esses valores estarão disponíveis ao agente; usar informação privilegiada no treino precisa ser uma decisão explícita, especialmente para não vazar dados ao ator na avaliação.
+
+Dar um bônus a cada turno por ter muita vida e aplicar a diferença descontada desse potencial são tratamentos distintos. O primeiro pode valorizar prolongar a batalha ou recuperar vida sem progredir; o segundo exige fechar a conta. Todos os terminais relevantes precisam receber o tratamento consistente, inclusive derrotas. Usar potencial zero no fim apenas das vitórias deixaria uma fronteira diferente nas derrotas.
+
+A informação também muda o problema. No nosso HaxBall, posição e velocidade são importantes. Em batalhas com recursos ocultos, o histórico pode informar hipóteses sobre o adversário. Uma rede sem memória pode receber duas observações aparentemente iguais que exigem decisões diferentes devido ao passado. Aumentar o bônus de dano não resolve essa falta de informação. Uma memória ou um resumo explícito do histórico seria uma hipótese arquitetural a comparar.
+
+O benchmark deveria separar adversários, composições e estilos conhecidos de combinações reservadas. Um agente pode decorar uma população estreita. A pergunta útil é se a vitória se mantém em novas situações, e não apenas se a recompensa de dano continua subindo.
+
+\subsection{Pokémon de exploração: o exemplo da porta trancada}
+Imagine um objetivo atrás de uma porta que exige buscar uma chave longe dali. A distância em linha reta ao objetivo piora quando o agente vai pegar a chave. Um bônus imediato por diminuir a distância pode desincentivar exatamente a preparação necessária.
+
+Um potencial de distância descontado pode preservar o objetivo sob suas condições, mas ainda oferecer orientação local ruim. Uma nota que represente também possuir a chave e acessar novas regiões seria uma hipótese melhor informada. Isso mostra duas distinções: uma pista pode ser formalmente compatível com o objetivo e, mesmo assim, pouco útil; e uma observação que não representa a chave pode impedir o agente de distinguir situações essenciais.
+
+Também é preciso decidir se obter a chave é uma pista para a missão ou parte do objetivo em si. Se o usuário deseja explorar e colecionar, recompensar descobertas pode definir legitimamente a tarefa. Nesse caso, não há motivo para alegar que se preservou um objetivo antigo de apenas chegar ao destino: decidiu-se treinar outra preferência.
+
+\subsection{Robótica: aproximar a mão não é o mesmo que concluir a tarefa}
+Considere, como exemplo conceitual em simulação, um braço que precisa pegar um objeto e colocá-lo numa região. Uma recompensa por proximidade pode ensinar aproximação sem preensão; uma recompensa por elevar o objeto pode não ensinar depositá-lo corretamente. As etapas não são intercambiáveis com o sucesso completo.
+
+Um potencial simples seria $\Phi(s)=-c\,d(s)$, com distância limitada ao alvo. Mas que alvo? No começo, a mão precisa alcançar o objeto; depois, o objeto precisa alcançar a região de entrega. Essa escolha exige representar a fase da tarefa no estado e testar como as transições de fase entram no potencial. Trocar manualmente a regra no meio da execução sem registrar o contexto pode produzir sinais contraditórios.
+
+Se o objetivo inclui suavidade ou baixo consumo, uma formulação possível é
+\begin{equation}
+ r_{\rm tarefa}=r_{\rm sucesso}-\lambda_E\|u_t\|^2
+ -\lambda_S\|u_t-u_{t-1}\|^2,
+\end{equation}
+onde $u_t$ é o comando. Esses custos mudam o objetivo: aceitam trocar sucesso, esforço e suavidade conforme seus pesos. Não são automaticamente PBRS. Certos limites operacionais podem precisar ser restrições da tarefa ou do controlador; preservar uma política ótima de recompensa não estabelece uma garantia física de execução.
+
+Há ainda uma particularidade temporal. Se passarmos de comandos a cada $0{,}1$ s para comandos a cada $0{,}01$ s, copiar o mesmo $\gamma$ por decisão muda o quanto o futuro pesa em segundos. Uma parametrização por meia-vida física evita essa troca silenciosa:
+\begin{equation}
+ \gamma(\Delta t)=2^{-\Delta t/T_{1/2}}.
+\end{equation}
+A ideia já aparece no nosso treino de HaxBall. Em jogos por turnos, pode fazer mais sentido pensar em turnos; em controle físico, em tempo real. Se a duração das ações varia, o desconto precisa refletir a duração escolhida na formulação.
+
+Uma alternativa de pesquisa é o Hindsight Experience Replay, que reaproveita experiências considerando metas efetivamente alcançadas, estudado em tarefas com objetivos \cite{andrychowicz2017}. Ele não é a mesma técnica que PBRS. A versão clássica foi desenvolvida com aprendizado off-policy; não se deve anexar replay de metas ao nosso PPO on-policy e presumir compatibilidade sem mudanças no algoritmo.
+
+\subsection{Outros jogos competitivos: o adversário também faz parte do problema}
+Em corrida, velocidade instantânea não substitui completar a pista; em estratégia, coletar recursos não substitui vencer; em um jogo de luta, causar dano não substitui administrar posição e risco. São analogias de desenho, não diagnósticos de implementações específicas. Em cada caso, um indicador intermediário pode ser útil para explicar progresso sem necessariamente virar recompensa.
+
+Contra um adversário congelado, podemos estudar o ambiente induzido por ele. Contra um oponente que aprende junto, esse ambiente muda. O telescopamento do potencial continua sendo uma conta de trajetória quando suas condições valem; não torna estacionária a população de oponentes nem garante convergência de self-play.
+
+A identidade também ajuda a pensar no caso multiagente: se, para cada jogador, o retorno de qualquer combinação de estratégias muda só por uma constante independente das estratégias, suas preferências entre respostas permanecem. Esse é um argumento por identidade de retorno, não uma alegação de que nosso PPO encontre um equilíbrio. É preciso fechar as fronteiras para todos os jogadores e manter clara a informação usada por cada um.
+
+A lição das âncoras do HaxBall se transporta bem como hipótese: continuar enfrentando estilos antigos ajuda a medir e treinar retenção. Depois, desafios novos podem ampliar a pressão de aprendizado. Atualizar todos os adversários, a recompensa e a observação ao mesmo tempo dificulta saber por que o resultado mudou.
+
+\begin{table}[htbp]\centering\small
+\caption{O mesmo raciocínio em tarefas diferentes. Exemplos prospectivos; não são configurações já validadas.}
+\begin{tabularx}{\textwidth}{@{}lYYY@{}}\toprule
+Caso & Sucesso de referência & Pista possível & O que a pista não prova\\\midrule
+HaxBall & Retorno de gols & Posição atrás da bola & Que defender ou recuar seja ruim\\
+Batalha & Vencer & Balanço de recursos & Que dano imediato seja a melhor jogada\\
+Exploração & Cumprir missão & Acesso e distância & Que o caminho mais curto esteja liberado\\
+Manipulação & Pegar e depositar & Distância por fase & Que aproximação signifique preensão\\
+Corrida & Completar a tarefa & Avanço na pista & Que velocidade alta signifique controle\\\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Um roteiro de perguntas para novos projetos}
+Primeiro, escreva o que contaria como sucesso em uma frase concreta. Depois, pergunte o que o agente consegue observar e o que precisa lembrar. Só então escolha uma pista intermediária e decida se ela deve mudar o objetivo ou apenas orientar o aprendizado. Se a justificativa for PBRS, confira desconto, estado inicial, terminais e cortes artificiais.
+
+Antes de investir num treino longo, construa exemplos pequenos: ficar parado, avançar e recuar, repetir um ciclo, falhar e alcançar a meta. A soma auxiliar deve bater com a identidade esperada. Em seguida, verifique que a avaliação mede a tarefa original, com situações reservadas. Se mudar o objetivo, essa mudança deve aparecer explicitamente na documentação e na comparação.
+
+Esse roteiro não fornece os melhores pesos. Ele evita confundir mais recompensa com mais competência. No HaxBall, essa distinção foi essencial para deixar de interpretar qualquer pico como uma solução.
+
 \section{Perspectiva posterior: cooperação 2v2}
 \subsection{Contratos que precisam ser corrigidos}
 No builder instalado,
@@ -658,12 +795,12 @@ Os próximos testes devem distinguir diversidade de desafios, schedules, explora
 \section{Rastreabilidade e leitura dos indicadores}
 Os dados numéricos foram extraídos de \code{experiments/sprint1_structural/gpu_hourly/training.jsonl} e \code{evaluations.jsonl}. Janelas de treino contêm $1\,000$ registros cada; as janelas de avaliação têm $21$, $22$, $21$ e $21$ registros, exatamente como armazenados. Não são amostras independentes de treinamento.
 
-A extração reprodutível está em \code{articles/evolucao_limites_e_2v2_evidence.json}; o benchmark anterior, em \code{experiments/sprint1_structural/benchmark_3000}; a correção física, em \code{experiments/map_containment}. Este documento é autônomo: não depende de bibliografia ou figuras externas para compilar.
+A extração reprodutível está em \code{articles/evolucao_limites_e_2v2_evidence.json}; o benchmark anterior, em \code{experiments/sprint1_structural/benchmark_3000}; a correção física, em \code{experiments/map_containment}. As aplicações fora de HaxBall e os exemplos de ciclos são construções didáticas, não medições. Este documento é autônomo: não depende de bibliografia ou figuras externas para compilar.
 
 \begin{thebibliography}{9}
 \bibitem{ng1999} A. Y. Ng, D. Harada e S. Russell.
 \emph{Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping}. ICML, 1999.
-\url{https://people.eecs.berkeley.edu/~russell/papers/icml99-shaping.pdf}.
+\url{https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf}.
 \bibitem{schulman2017} J. Schulman, F. Wolski, P. Dhariwal, A. Radford e O. Klimov.
 \emph{Proximal Policy Optimization Algorithms}. 2017.
 \url{https://arxiv.org/abs/1707.06347}.
@@ -673,5 +810,8 @@ A extração reprodutível está em \code{articles/evolucao_limites_e_2v2_eviden
 \bibitem{yu2022} C. Yu et al.
 \emph{The Surprising Effectiveness of PPO in Cooperative, Multi-Agent Games}. 2022.
 \url{https://arxiv.org/abs/2103.01955}.
+\bibitem{andrychowicz2017} M. Andrychowicz et al.
+\emph{Hindsight Experience Replay}. NeurIPS, 2017.
+\url{https://arxiv.org/abs/1707.01495}.
 \end{thebibliography}
 \end{document}
