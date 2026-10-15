@@ -204,3 +204,16 @@ O orçamento foi reduzido a **3000 iterações**. O horizonte dos schedules
 originais é preservado; o supervisor envia SIGTERM no endpoint e não reinicia
 treinamento depois. O benchmark pós-treino e preparação de jogo humano estão
 especificados em [BENCHMARK_PROTOCOL.md](BENCHMARK_PROTOCOL.md).
+
+## Continuação CUDA autorizada em 2026-10-14
+
+A autorização posterior substitui a parada em 3000: retomar via --resume até o horizonte original de 10000, preservando receita, Adam, schedules, referências e avaliações internas. PyTorch CUDA 12.4; execução em runs/gpu_continuation_20261014_214556. Bundle final em models/sprint1_10000, preservando models/model.pt.
+
+Em 15/10, o usuário autorizou publicar os registros e checkpoints intermediários,
+exportações para teste web e instruções para warm start. `src/finalize_training.py`
+acompanha a execução existente, aguarda o supervisor original e publica os artefatos
+em ZIPs de tamanho limitado com manifesto SHA-256. Não reinicia o treinador.
+Após confirmar o commit remoto, agenda shutdown com janela de 20 minutos para aviso.
+Há também shutdown obrigatório às 11:44 (America/Sao_Paulo) de 15/10/2026;
+se necessário, prepara um bundle parcial 20 minutos antes, preservando a retomada.
+

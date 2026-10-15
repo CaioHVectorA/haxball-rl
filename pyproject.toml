@@ -14,11 +14,11 @@ dependencies = [
 package = false            # a folder of scripts, not an installable distribution
 
 [tool.uv.sources]
-torch = { index = "pytorch-cpu" }
+torch = { index = "pytorch-cuda" }
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [tool.ruff]

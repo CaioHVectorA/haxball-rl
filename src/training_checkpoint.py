@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import torch
 import numpy as np
+from telemetry import atomic_replace
 
 
 def atomic_torch_save(value, path):
@@ -11,10 +12,11 @@ def atomic_torch_save(value, path):
     with temporary.open('wb') as handle:
         torch.save(value,handle)
         handle.flush();os.fsync(handle.fileno())
-    os.replace(temporary,path)
-    directory=os.open(path.parent,os.O_DIRECTORY)
-    try:os.fsync(directory)
-    finally:os.close(directory)
+    atomic_replace(temporary,path)
+    if hasattr(os,'O_DIRECTORY'):
+        directory=os.open(path.parent,os.O_DIRECTORY)
+        try:os.fsync(directory)
+        finally:os.close(directory)
 
 
 def random_state(rng):

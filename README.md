@@ -17,10 +17,10 @@ Os comandos abaixo leem os modelos da pasta padrão `models/`:
 
 ```bash
 uv run src/eval.py --benchmark --stadium futsal-classic
-uv run src/select.py --stadium futsal-classic
+uv run src/select_checkpoint.py --stadium futsal-classic
 ```
 
-`select.py` promove o vencedor para `models/model.pt` e atualiza `meta.json`. Os scripts antigos usam gols agregados. `src/repair_bot.py` oferece uma avaliação mais completa com seeds, cenários variados e resultados por episódio.
+`select_checkpoint.py` promove o vencedor para `models/model.pt` e atualiza `meta.json`. Os scripts antigos usam gols agregados. `src/repair_bot.py` oferece uma avaliação mais completa com seeds, cenários variados e resultados por episódio.
 
 ## Experimento de correção 1v1
 
@@ -48,7 +48,7 @@ O exportador atual aceita observações de 16 dimensões e uma rede de duas cama
 
 - `src/model.py`, `src/bot.py`: política e bots de referência.
 - `src/train.py`: PPO, recompensas e self-play.
-- `src/eval.py`, `src/select.py`: benchmark e torneio de checkpoints.
+- `src/eval.py`, `src/select_checkpoint.py`: benchmark e torneio de checkpoints.
 - `src/replay.py`: utilitários de replay.
 - `maps/`: estádios; `models/`: pesos e metadados.
 - Scripts `inspect_*` e `test_*` na raiz: diagnósticos e experimentos, sem uma suíte unificada.

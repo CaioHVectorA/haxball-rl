@@ -69,7 +69,7 @@ Comparar a tabela atual com uma base de três termos: gol, aproximação do joga
 
 - `eval_vs_chase`: a cada 50 iterações e no fim, 128 ambientes × 350 decisões, learner vermelho com ações amostradas, Chase azul com seed 0 e resets de kickoff. Saldo de gols seleciona `model.pt`.
 - `src/eval.py`: padrão de 256 ambientes × 600 decisões, NeuralBot greedy; benchmark contra Chase e Random. O indicador chamado “winrate estimada” é proporção dos gols, não taxa de vitória por partida.
-- `src/select.py`: torneio de checkpoints em `models/ckpts/` e modelo final; cada par joga nos dois lados, com ações amostradas. Ranking por proporção de gols, desempate por saldo. Não usa TrueSkill nem matriz de vitórias. Promove o vencedor sobrescrevendo `model.pt`; metadados herdados do modelo final podem não descrever a iteração do vencedor.
+- `src/select_checkpoint.py`: torneio de checkpoints em `models/ckpts/` e modelo final; cada par joga nos dois lados, com ações amostradas. Ranking por proporção de gols, desempate por saldo. Não usa TrueSkill nem matriz de vitórias. Promove o vencedor sobrescrevendo `model.pt`; metadados herdados do modelo final podem não descrever a iteração do vencedor.
 
 Esses caminhos usam configurações de ambiente distintas: treino/avaliação interna criam o ambiente explicitamente; benchmark/torneio usam `make_default_env`. Alinhar condições para comparações reproduzíveis.
 

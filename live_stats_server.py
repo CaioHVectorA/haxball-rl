@@ -43,9 +43,22 @@ def live_state(run):
         age=(datetime.now(timezone.utc)-datetime.fromisoformat(state['updated_at'])).total_seconds()
         state['heartbeat_age_s']=age
         try:
-            os.kill(state['pid'],0)
-            command=Path(f'/proc/{state["pid"]}/cmdline').read_bytes().decode().replace('\0',' ')
-            alive='src/train.py' in command
+            if os.name=='nt':
+                import ctypes
+                from ctypes import wintypes
+                kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+                kernel.OpenProcess.restype=wintypes.HANDLE
+                handle=kernel.OpenProcess(0x1000,False,state['pid'])
+                alive=False
+                if handle:
+                    try:
+                        code=wintypes.DWORD()
+                        alive=bool(kernel.GetExitCodeProcess(wintypes.HANDLE(handle),ctypes.byref(code))) and code.value==259
+                    finally:kernel.CloseHandle(wintypes.HANDLE(handle))
+            else:
+                os.kill(state['pid'],0)
+                command=Path(f'/proc/{state["pid"]}/cmdline').read_bytes().decode().replace('\0',' ')
+                alive='src/train.py' in command
         except (ProcessLookupError,PermissionError,FileNotFoundError,KeyError):alive=False
         if state.get('status')=='running' and not alive:state['status']='interrupted'
         elif state.get('status')=='running' and age>20:state['status']='stale'

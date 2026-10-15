@@ -1,6 +1,6 @@
 """Pick the strongest checkpoint from a training run via Round-Robin tournament.
 
-    uv run src/select.py            # round-robin models/ckpts/*.pt (+ model_final.pt), winner -> model.pt
+    uv run src/select_checkpoint.py            # round-robin models/ckpts/*.pt (+ model_final.pt), winner -> model.pt
 
 Plays every saved checkpoint against every other (head-to-head, both colors; goals counted
 from `state.scored`, so it's reward-independent) and copies the one with the best overall

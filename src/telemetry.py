@@ -7,6 +7,18 @@ from datetime import datetime, timezone
 import numpy as np
 
 
+def atomic_replace(source, destination):
+    # Windows readers can briefly deny replacement while a dashboard request is open.
+    for attempt in range(101):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError as error:
+            if os.name != 'nt' or error.winerror not in (5, 32) or attempt == 100:
+                raise
+            time.sleep(.02)
+
+
 def atomic_json(path, value, durable=False):
     path = Path(path)
     temporary = path.with_name(path.name + '.tmp')
@@ -14,8 +26,8 @@ def atomic_json(path, value, durable=False):
         handle.write(json.dumps(value,allow_nan=False))
         if durable:
             handle.flush();os.fsync(handle.fileno())
-    os.replace(temporary,path)
-    if durable:
+    atomic_replace(temporary,path)
+    if durable and hasattr(os,'O_DIRECTORY'):
         directory=os.open(path.parent,os.O_DIRECTORY)
         try:os.fsync(directory)
         finally:os.close(directory)
