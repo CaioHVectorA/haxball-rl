@@ -7,7 +7,7 @@
 \usepackage{booktabs,tabularx,array}
 \usepackage{microtype,xcolor,enumitem,xurl,hyperref}
 \hypersetup{colorlinks=true,linkcolor=blue!45!black,citecolor=blue!45!black,urlcolor=blue!55!black,
- pdftitle={Evolução e limites de PPO em HaxBall: do 1v1 à cooperação 2v2}}
+ pdftitle={Por que o treinamento de HaxBall passou a funcionar melhor}}
 \setlength{\emergencystretch}{3em}
 \setlist{itemsep=2pt,topsep=4pt}
 \newcommand{\E}{\mathbb{E}}
@@ -18,14 +18,14 @@
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newtheorem{proposicao}{Proposição}
 \newtheorem{observacao}{Observação}
-\title{\textbf{Evolução e limites de PPO em HaxBall:\\do controle 1v1 à cooperação 2v2}\\[5pt]
-\large Estudo de caso com auditoria de implementação, diagnóstico empírico e proposta experimental}
+\title{\textbf{Por que o treinamento de HaxBall\\passou a funcionar melhor?}\\[5pt]
+\large Uma análise matemática e acessível de recompensa, valor, adversários e validação}
 \author{Relatório técnico do projeto \texttt{haxball-rl}}
 \date{15 de outubro de 2026}
 \begin{document}
 \maketitle
 \begin{abstract}
-Investiga-se a evolução de um agente de HaxBall treinado com Proximal Policy Optimization (PPO), distinguindo progresso observado, limitações de implementação e hipóteses sobre desaceleração. A versão estudada utiliza recompensa por potenciais descontados, crítico independente, currículo com adversários congelados e avaliação em múltiplos modos. A média do critério de seleção aumentou de $0{,}86591$ para $0{,}88334$ entre janelas iniciais e finais da continuação GPU, sem evidência de um teto definitivo. A análise identifica possíveis limites de diversidade, exploração, observabilidade e atribuição temporal de crédito. Uma inspeção estrutural de 2v2 revelou resets inválidos e mudança de dimensão das observações. Propõe-se uma transferência explícita do ator, treinamento centralizado do crítico e currículo de passes e apoio. Não são apresentados resultados de treinamento 2v2 nem uma comparação causal controlada entre as branches.
+Este artigo explica por que versões anteriores de um agente de HaxBall apresentavam progresso frágil e o que mudou na configuração que produziu melhora mensurável. A tese central é que não bastava aumentar a duração do treinamento: era necessário tornar coerentes o incentivo, a estimativa das consequências, os adversários e o critério de avaliação. A partir de código e registros do projeto, apresentam-se a formulação de aprendizado por reforço, a identidade matemática de recompensas por potenciais, o tratamento de cortes artificiais, a interação entre ator e crítico e a não estacionariedade do self-play. Cada mecanismo é acompanhado de uma interpretação para leitores sem formação em aprendizado de máquina. Um benchmark reservado do checkpoint 2.550 mostra score de 0,66895 contra sua origem em estados aleatórios com ações amostradas; a continuação GPU também apresenta avanço descritivo, embora oscilatório. Gráficos distinguem resultados observados de exemplos teóricos. As intervenções foram combinadas e não permitem atribuição causal individual. ``Dar certo'' significa aqui obter ganho verificável nas condições testadas, sem afirmar solução definitiva do jogo. A cooperação 2v2 é apresentada como perspectiva futura, ainda não validada.
 \end{abstract}
 \noindent\textbf{Palavras-chave:} aprendizado por reforço; PPO; reward shaping; HaxBall; cooperação multiagente.
 
@@ -35,6 +35,65 @@ A melhora de um agente não deve ser inferida apenas da recompensa acumulada. É
 Este estudo combina inspeção de código, métricas do treino até $10\,000$ iterações, benchmarks anteriores e um teste de reset 2v2. A referência de código é a branch \code{main}, revisão \code{9ea2497}; o diagnóstico usa o estado do projeto em \code{c48c249} e os dados GPU publicados em \code{2694aa8}. O checkpoint selecionado é o da iteração $9\,900$.
 
 A comparação com a \code{main} descreve mudanças de engenharia. Não houve novo experimento com ambas as branches treinadas do zero, sob o mesmo orçamento. O agente denominado \emph{origem} nos benchmarks anteriores é o início da nossa continuação, não uma reprodução independente da \code{main}. Consequentemente, ganhos não podem ser atribuídos isoladamente a uma alteração.
+
+
+\paragraph{Como ler o artigo.}
+As fórmulas são acompanhadas por interpretação verbal. Um \emph{checkpoint} é uma versão salva do agente; uma \emph{iteração} reúne coleta e atualização; uma \emph{seed} fixa uma sequência pseudoaleatória. Seeds de avaliação variam as provas; seeds de treino repetem o processo de aprendizado. \emph{Greedy} escolhe sempre a ação mais provável; \emph{amostrado} sorteia de acordo com as probabilidades aprendidas. O score usado adiante vale um por vitória, meio por empate e zero por derrota: não é a própria recompensa de treinamento.
+
+\section{O que significa dizer que antes deu errado?}
+\subsection{O problema era a fragilidade, não a ausência total de aprendizado}
+A expressão ``antes deu errado'' exige precisão. As versões anteriores executavam atualizações válidas e chegaram a aprender comportamentos úteis. O problema documentado era que melhorar uma métrica não assegurava preservar outras competências. Houve oscilação entre checkpoints, diferença entre jogo amostrado e jogo determinístico e perda contra uma referência neural apesar de ganhos contra heurísticas.
+
+Na continuação noturna, o melhor painel interno marcou $0{,}87147$, enquanto o endpoint caiu para $0{,}70907$. Em uma avaliação posterior, com condições próprias, o score greedy contra a referência neural passou de $0{,}90854$ na origem para $0{,}58959$ no melhor candidato. Esses dois exemplos vêm de painéis distintos e não devem ser unidos numa única curva. Eles demonstram dois problemas diferentes: regressão ao continuar treinando e ganho agregado que encobre perda contra um adversário.
+
+Também houve uma tentativa de corrigir apenas o bootstrap de timeout, comparando três pares de seeds B0/E1. A diferença média E1 menos B0 foi $+0{,}01238$ em estados aleatórios, mas $-0{,}05368$ em kickoff. Uma correção compatível com um objetivo matemático não garantiu melhorar o score de partida. Isso foi informação útil: não existia evidência para continuar alterando a mesma máscara até aparecer um número favorável.
+
+\subsection{Uma cadeia de aprendizado, com vários pontos de falha}
+A política é uma regra probabilística de decisão; o crítico é uma previsão de consequências. O ambiente fornece experiências e a avaliação verifica o resultado. A Figura~\ref{fig:chain} organiza essas funções.
+\begin{figure}[htbp]\centering\small
+\begin{tabular}{c}
+\fbox{\parbox{.86\linewidth}{\centering\textbf{Ambiente e adversário}\\Determinam quais situações e consequências o agente encontra.}}\\[3pt]
+$\downarrow$\\[3pt]
+\fbox{\parbox{.86\linewidth}{\centering\textbf{Recompensa e crítico}\\Definem o incentivo e estimam o mérito futuro das decisões.}}\\[3pt]
+$\downarrow$\\[3pt]
+\fbox{\parbox{.86\linewidth}{\centering\textbf{Atualização do ator}\\Aumenta ou reduz probabilidades das ações, com passos limitados.}}\\[3pt]
+$\downarrow$\\[3pt]
+\fbox{\parbox{.86\linewidth}{\centering\textbf{Avaliação externa à atualização}\\Testa adversários, lados e modos; detecta regressões e escolhe o checkpoint.}}
+\end{tabular}
+\caption{Esquema conceitual, não um resultado experimental. As experiências do próximo ciclo dependem da política atual; uma falha em qualquer ligação pode comprometer o conjunto. Avaliar corretamente melhora a seleção e o diagnóstico, mas não fornece por si só um gradiente melhor.}\label{fig:chain}
+\end{figure}
+
+Uma analogia é treinar um jogador com exercícios, um placar e um treinador. Se o placar recompensa a tarefa errada, ele aprende o exercício errado. Se a previsão do treinador é ruim, a orientação pode ser ruim mesmo com um placar correto. Se só enfrenta um estilo, pode se especializar. Se a prova só mede esse estilo, a especialização parece uma melhora universal. A intervenção estrutural tratou conjuntamente esses pontos.
+
+\section{Fundamentos de RL: como uma experiência vira aprendizado}
+\subsection{Retorno, valor e vantagem em linguagem operacional}
+O aprendizado por reforço não recebe para cada imagem uma ação humana correta. Recebe consequências depois de agir. Para desconto $\gamma$, o retorno é
+\begin{equation}
+ G_t=r_t+\gamma r_{t+1}+\gamma^2r_{t+2}+\cdots.
+\end{equation}
+O fator $\gamma$ reduz o peso do futuro. O valor $V^\pi(s)=\E[G_t\mid s_t=s]$ resume o futuro médio ao seguir a política $\pi$. Já $Q^\pi(s,a)$ considera primeiro uma ação específica. A vantagem ideal é
+\begin{equation}
+ A^\pi(s,a)=Q^\pi(s,a)-V^\pi(s).
+\end{equation}
+Ela compara uma decisão com o que seria esperado naquela situação. Uma ação com vantagem positiva não precisa resultar imediatamente em gol: pode apenas criar uma oportunidade melhor do que a alternativa habitual. Uma vantagem negativa também não significa necessariamente derrota: pode representar uma oportunidade desperdiçada.
+
+Sob as hipóteses usuais do gradiente de política, sua direção tem a forma
+\begin{equation}
+ \nabla_\theta J\ \propto\
+ \E\!\left[\nabla_\theta\log\pi_\theta(a_t\mid o_t)\,A^\pi(s_t,a_t)\right].
+ \label{eq:pg}
+\end{equation}
+O fator de proporcionalidade depende da convenção de normalização da distribuição descontada de estados. A leitura prática é: reforçar decisões estimadas como melhores do que o esperado e enfraquecer as piores. Portanto, se a estimativa de vantagem estiver distorcida, atualizar corretamente a rede ainda pode reforçar ações inadequadas.
+
+Um baseline $b(s)$ independente da ação não muda a esperança do gradiente ideal, pois
+\begin{equation}
+ \E_{a\sim\pi_\theta}[\nabla_\theta\log\pi_\theta(a\mid s)b(s)]
+ =b(s)\nabla_\theta\sum_a\pi_\theta(a\mid s)=0.
+\end{equation}
+Isso explica por que subtrair o valor pode reduzir variância sem alterar o objetivo ideal. Não significa que um crítico aproximado seja inofensivo: o GAE usa bootstrap, há amostras finitas, e PPO normaliza e reutiliza vantagens em uma otimização aproximada.
+
+\subsection{Por que aumentar o número de partidas não resolve tudo}
+Mais dados reduzem algumas fontes de ruído e permitem mais atualizações. Contudo, repetir experiências de uma distribuição limitada não cria automaticamente novos desafios. Uma recompensa inadequada também não se torna adequada após milhões de repetições. Há três perguntas diferentes: o algoritmo está executando corretamente? Está otimizando o objetivo definido? Esse objetivo e essa distribuição produzem a habilidade desejada? Os testes de software respondem principalmente à primeira; partidas reservadas ajudam a responder à terceira.
 
 \section{Modelo do problema e política}
 Sejam $s_t$ o estado físico, $o_t^i=O_i(s_t)$ a observação do jogador $i$ e $\pi_j^-$ uma política adversária congelada. Para uma distribuição curricular $q(j)$, o objetivo de referência é
@@ -87,6 +146,18 @@ O potencial combinado e a recompensa efetiva são
 \end{align}
 com $\bar\Phi=0$ em terminal de gol. Os pesos numéricos foram preservados, mas as funções auxiliares mudaram: posicionamento atrás da bola substituiu o deslocamento simples em sua direção, e o progresso passou a comparar os dois gols.
 
+
+\subsection{Por que a estrutura da recompensa importa mais que o nome dos pesos}
+Dizer que os pesos continuam $0{,}15$, $0{,}08$ e $25$ não significa que a tarefa de aprendizado continuou igual. Um peso multiplica uma função; mudar a função muda o sinal de treinamento. Na tabela corrected intermediária, perseguir a bola era um incentivo mais direto; essa descrição não reconstrói por si só toda a recompensa padrão da dependência usada pela main histórica. Agora, o potencial de posição avalia um ponto atrás dela, alinhado ao gol. Aproximar-se da bola pela frente e aproximar-se por uma posição de chute deixam de ser equivalentes para o sinal auxiliar.
+
+Uma recompensa densa arbitrária pode modificar a preferência entre estratégias. Para uma rota $\mathcal A$ e outra $\mathcal B$, pode ocorrer
+\begin{equation}
+ G_{\rm gol}(\mathcal A)>G_{\rm gol}(\mathcal B),\quad
+ G_{\rm gol}(\mathcal A)+G_{\rm aux}(\mathcal A)
+ <G_{\rm gol}(\mathcal B)+G_{\rm aux}(\mathcal B).
+\end{equation}
+Nesse caso, o agente que maximiza a soma pode preferir a pior rota para o objetivo de gols. Isso é um risco geral de desenho de incentivos, não uma demonstração de que o bot antigo explorou exatamente esse mecanismo. O PBRS busca oferecer orientação local com um contrato matemático para a soma completa.
+
 \begin{proposicao}[Identidade de retorno do shaping]
 Para potencial limitado, desconto $0<\gamma<1$ e fronteiras consistentes,
 \begin{equation}
@@ -99,6 +170,16 @@ Em terminal absorvente com potencial zero, ou no limite $H\to\infty$, resta um d
 Expandindo a soma, todos os termos intermediários se cancelam. O termo final desaparece pelas condições enunciadas.
 \end{proof}
 Essa identidade fundamenta o PBRS \cite{ng1999}. A referência de invariância é o objetivo esparso de gols, não a tabela antiga. Não se segue que PPO com função aproximadora convirja ou aprenda mais rapidamente.
+
+
+\paragraph{Um exemplo numérico da demonstração.}
+Considere, apenas para ilustração, $\gamma=0{,}9$ e potenciais $(-10,-6,-2,0)$ ao longo de três decisões. Os sinais auxiliares são $4{,}6$, $4{,}2$ e $2$. O retorno auxiliar descontado é
+\begin{equation}
+ 4{,}6+0{,}9\times4{,}2+0{,}9^2\times2=10=-\Phi(s_0).
+\end{equation}
+Outra trajetória que comece com potencial $-10$ e termine no mesmo terminal absorvente também produz retorno auxiliar $10$, com as condições da proposição. Assim, o potencial redistribui a orientação no tempo sem acrescentar preferência líquida entre essas trajetórias; os gols continuam decidindo seu mérito no objetivo de referência. Os números deste exemplo não são dados do treinamento.
+
+Como uma redistribuição sem vantagem líquida pode ajudar? Porque o crítico e o ator aprendem com dados finitos, aproximações e passos locais. Receber informação em estados intermediários pode facilitar a estimativa do mérito, embora não haja garantia. O objetivo ideal pode ser equivalente enquanto a dificuldade prática da otimização muda.
 
 \begin{observacao}
 Para $\Phi(s)<0$, um estado estacionário pode gerar $(\gamma-1)\Phi(s)>0$. O sinal de um passo isolado não demonstra exploração indevida da recompensa; importam a soma descontada e suas fronteiras.
@@ -113,6 +194,16 @@ Sejam $z_t$ um término real e $\tau_t$ um corte artificial. O código usa a obs
  \label{eq:gae}
 \end{align}
 O timeout mantém o bootstrap, mas interrompe a propagação da vantagem através do reset. Se o objetivo fosse vencer uma partida genuinamente finita, tempo restante deveria fazer parte da formulação \cite{pardo2018}. O score no limite de tempo e o objetivo descontado de gols continuam distintos.
+
+
+\paragraph{A diferença entre terminar o jogo e parar de filmar.}
+Um gol encerra o episódio definido pelo treino. Um timeout artificial apenas interrompe a coleta de uma continuação conceitual. Zerar ambos equivale a afirmar que o futuro após qualquer corte vale zero. Para um corte artificial, o erro imediato no alvo TD, se todo o resto for igual, é
+\begin{equation}
+ \delta_t^{\rm zero}-\delta_t^{\rm bootstrap}=-\gamma V_\psi(o_{t+1}^{\rm final}).
+\end{equation}
+Se o valor previsto for positivo, zerar o futuro reduz o alvo; se for negativo, aumenta. Por exemplo, $r_t=0$, $V(o_t)=5$, $V(o_{t+1})=5$ e $\gamma=0{,}99$ produzem resíduo $-0{,}05$ com bootstrap, contra $-5$ sem ele. É uma ilustração, não uma medição do bot. Usar a observação após o autoreset seria outro erro: avaliaria uma partida nova como se fosse a continuação da anterior.
+
+A implementação atual distingue essas fronteiras. Ainda assim, prever um futuro errado continua possível. A correção remove uma inconsistência para a semântica escolhida; não torna perfeito o valor, nem transforma o score finito do benchmark no mesmo objetivo do treino.
 
 \section{Atualização PPO e mudanças frente à \texttt{main}}
 Com $\rho_t(\theta)=\pi_\theta(a_t\mid o_t)/\pi_{\theta_{\mathrm{old}}}(a_t\mid o_t)$, a implementação segue o objetivo clipped de PPO \cite{schulman2017}:
@@ -131,6 +222,39 @@ Nas primeiras $20$ iterações, apenas o crítico é atualizado. O ator carregad
  \qquad \widehat D_{\mathrm{KL}}>0{,}03\ \Longrightarrow\ \text{interrupção da atualização restante}.
 \end{equation}
 É um critério empírico, não uma garantia formal de região de confiança.
+
+
+\subsection{Por que separar ator e crítico pode estabilizar o warm start}
+No tronco compartilhado antigo, sejam $\omega$ seus parâmetros e $g_\pi$, $g_V$ os gradientes de suas perdas. Simplificando para um passo de descida comum,
+\begin{equation}
+ \Delta\omega=-\alpha(g_\pi+c_Vg_V),\qquad
+ \Delta L_\pi\approx-\alpha\left(\norm{g_\pi}^2+c_Vg_\pi^\top g_V\right).
+\end{equation}
+Se o produto interno for suficientemente negativo, a componente de valor pode contrariar a direção que reduziria a perda da política. A expressão explica uma possibilidade geométrica; o Adam real não é essa atualização simples, e um cosseno negativo isolado não demonstra a causa de uma derrota.
+
+O clipping global também acopla as escalas. Para gradiente concatenado $g$ e limite $c$,
+\begin{equation}
+ g_{\rm clip}=g\min\left(1,\frac{c}{\norm{g}+\varepsilon}\right).
+\end{equation}
+Um gradiente grande do crítico pode reduzir junto a componente do ator. Parâmetros e clipping independentes retiram esses dois acoplamentos diretos. Não tornam o ator independente da qualidade do crítico: a vantagem continua sendo sua orientação.
+
+Ao trocar a recompensa, o significado de ``valor futuro'' muda. Preservar um ator que já sabe jogar e permitir vinte iterações de ajuste só do crítico evita mover esse ator durante a primeira recalibração. É semelhante a atualizar a régua de avaliação antes de orientar o jogador com ela. A imobilidade do ator nessa fase foi testada; a superioridade universal dessa duração não foi demonstrada.
+
+\subsection{Por que PPO não promete melhora a cada checkpoint}
+O clipping limita o incentivo para mudar muito as probabilidades nos dados coletados; não impõe uma barreira absoluta sobre toda a política. Estados não visitados, reutilização de minibatches, erros de vantagem e adaptação do adversário podem produzir perdas futuras. Mais épocas também não significam automaticamente melhor aprendizado. A guarda de KL e os checkpoints protegem contra alguns riscos operacionais, sem oferecer um teorema de melhoria monotônica do placar.
+
+\subsection{Adversários estáveis e memória de competências}
+Contra um adversário $j$, a transição vista pelo aprendiz pode ser escrita como
+\begin{equation}
+ P_j(s'\mid s,a)=\sum_b P(s'\mid s,a,b)\,\pi_j^-(b\mid O_j(s)).
+\end{equation}
+Ao alterar o adversário, altera-se essa dinâmica. No modo antigo ele podia mudar entre rollouts, inclusive dentro de uma partida. O crítico precisava acompanhar esse alvo móvel. Na nova mistura, o adversário é sorteado por episódio e permanece fixo nele. O processo aumentado $(s,j)$ tem uma dinâmica estável para uma mistura fixa; como $j$ não é explicitamente observado, o problema do ator ainda pode ser parcialmente observável.
+
+As referências históricas mantêm adversários neurais antigos presentes no treino. O objetivo passa a cobrar, em cada nova amostra de episódio, desempenho na mistura
+\begin{equation}
+ J_q(\theta)=\sum_j q_jJ_j(\theta).
+\end{equation}
+Isso torna o esquecimento treinável e mensurável. Entretanto, maximizar uma soma ainda permite trocas entre adversários; não garante melhorar todos. É por isso que os resultados individuais precisam acompanhar a média. Em jogos, uma política pode vencer outra e perder para uma terceira: não existe necessariamente uma escada única de força.
 
 \begin{table}[htbp]
 \centering\small
@@ -176,6 +300,239 @@ A diferença entre as janelas extremas é aproximadamente $0{,}01743$, ou $1{,}7
 O benchmark independente anterior avaliou o checkpoint $2\,550$, não o $9\,900$: foram $3\,324$ casos e $106\,368$ primeiras partidas completas, incluindo repetições determinísticas identificadas. Contra a origem em estados aleatórios, o score foi $0{,}65381$ em greedy e $0{,}66895$ em sampled. A estimativa sampled teve intervalo bootstrap por seed $[0{,}64941;0{,}68799]$. Os resultados desse teste não podem ser atribuídos automaticamente ao modelo GPU.
 
 Repetições idênticas de kickoff greedy contra uma política determinística não geram observações independentes. Seeds de avaliação não substituem seeds de treinamento. Há apenas uma continuação de treinamento neste estudo.
+
+
+\begin{figure}[htbp]\centering\setlength{\unitlength}{1mm}
+\begin{picture}(155,100)
+\put(39,10){\line(1,0){100}}
+\put(36,88){\makebox(0,0)[r]{\small Origem}}
+{\color{black!35}\put(39,90){\rule{50.290mm}{2mm}}}
+{\color{blue!65!black}\put(39,87){\rule{75.720mm}{2mm}}}
+\put(36,78){\makebox(0,0)[r]{\small Chase}}
+{\color{black!35}\put(39,80){\rule{76.570mm}{2mm}}}
+{\color{blue!65!black}\put(39,77){\rule{89.160mm}{2mm}}}
+\put(36,68){\makebox(0,0)[r]{\small Striker}}
+{\color{black!35}\put(39,70){\rule{86.060mm}{2mm}}}
+{\color{blue!65!black}\put(39,67){\rule{94.760mm}{2mm}}}
+\put(36,58){\makebox(0,0)[r]{\small Keeper}}
+{\color{black!35}\put(39,60){\rule{80.820mm}{2mm}}}
+{\color{blue!65!black}\put(39,57){\rule{97.120mm}{2mm}}}
+\put(36,48){\makebox(0,0)[r]{\small Interceptor}}
+{\color{black!35}\put(39,50){\rule{84.910mm}{2mm}}}
+{\color{blue!65!black}\put(39,47){\rule{93.710mm}{2mm}}}
+\put(36,38){\makebox(0,0)[r]{\small Defensor}}
+{\color{black!35}\put(39,40){\rule{88.100mm}{2mm}}}
+{\color{blue!65!black}\put(39,37){\rule{96.080mm}{2mm}}}
+\put(36,28){\makebox(0,0)[r]{\small Dribbler}}
+{\color{black!35}\put(39,30){\rule{86.210mm}{2mm}}}
+{\color{blue!65!black}\put(39,27){\rule{95.190mm}{2mm}}}
+\put(36,18){\makebox(0,0)[r]{\small Finalizador}}
+{\color{black!35}\put(39,20){\rule{74.630mm}{2mm}}}
+{\color{blue!65!black}\put(39,17){\rule{95.100mm}{2mm}}}
+\put(39,6){\makebox(0,0){\scriptsize 0.0}}
+\put(59,6){\makebox(0,0){\scriptsize 0.2}}
+\put(79,6){\makebox(0,0){\scriptsize 0.4}}
+\put(99,6){\makebox(0,0){\scriptsize 0.6}}
+\put(119,6){\makebox(0,0){\scriptsize 0.8}}
+\put(139,6){\makebox(0,0){\scriptsize 1.0}}
+\put(39,0){\makebox(0,0)[l]{\scriptsize Cinza: política de origem. Azul: checkpoint 2.550.}}
+\end{picture}
+\caption{Benchmark reservado anterior: score médio com pesos iguais dos quatro grupos modo$\times$cenário. ``Origem na primeira linha é também o adversário fixo. Barras são estimativas agregadas descritivas, sem IC agregado; os ICs por célula estão no relatório auditado. Defensor e Finalizador abreviam CounterDefender e AimedStriker. Não são resultados do checkpoint 9.900.}\label{fig:benchmark}
+\end{figure}
+\subsection{Como a avaliação antiga podia contar uma história incompleta}
+Se um agente obtém score $0{,}90$ contra um perseguidor simples e $0{,}20$ contra uma política neural, avaliar apenas o primeiro esconderia o segundo. Esse exemplo é hipotético; a regressão neural histórica relatada no início é real. Incluir referências e ambos os lados não modifica diretamente o gradiente, mas torna a conclusão e a escolha de checkpoint mais confiáveis.
+
+A política treinada é estocástica. Na sala, a execução greedy escolhe
+\begin{equation}
+ \mu_\theta(o)=\left(\arg\max_{a_x}\pi_{\theta,x},
+ \arg\max_{a_y}\pi_{\theta,y},\arg\max_{a_k}\pi_{\theta,k}\right).
+\end{equation}
+Essa é outra política. Se duas ações mudam de probabilidades $(0{,}49,0{,}51)$ para $(0{,}51,0{,}49)$, a distribuição muda pouco, mas a ação greedy troca completamente. Em sequências de decisões isso pode mudar a trajetória inteira. O exemplo explica a possibilidade; a inspeção de margens feita no projeto não demonstrou que esse fosse o mecanismo dominante da regressão anterior.
+
+O mínimo dos quatro grupos cobra consistência entre modos e cenários. Porém, nenhum resumo substitui os casos individuais. Um score $0{,}5$ em self-play é especialmente ambíguo: políticas idênticas têm simetria de resultado, sejam fortes ou fracas. No kickoff greedy anterior, tanto o melhor quanto o endpoint empataram todas as partidas simétricas, mas a bola ficou estacionária em $10{,}4\%$ das decisões no primeiro e em $100\%$ no segundo. O placar igual escondia dinâmicas muito diferentes.
+
+\subsection{O que os experimentos permitem atribuir às mudanças}
+``Agora deu certo'' tem sustentação operacional: houve ganho em confrontos reservados e o sistema passou a medir regressões antes ocultas. A explicação de mecanismo mais consistente é a combinação de incentivos coerentes, valor recalibrado, diversidade preservada e seleção mais exigente. Não temos, contudo, um experimento longo que isole a contribuição de cada componente.
+
+A ablação curta ajuda a evitar uma narrativa conveniente. Em duas seeds e apenas 40 iterações com 64 ambientes, os endpoints foram:
+\begin{table}[htbp]\centering\small
+\caption{Ablação exploratória documentada; baseline comum $0{,}69405$. Não é a comparação entre a \texttt{main} inteira e o sistema final.}
+\begin{tabular}{@{}lrrr@{}}\toprule
+Configuração & Seed 0 & Seed 1 & Média\\\midrule
+Corrected, crítico compartilhado & 0,65646 & 0,59226 & 0,62436\\
+PBRS, crítico compartilhado & 0,68869 & 0,66084 & 0,67477\\
+PBRS, crítico separado & 0,59762 & 0,73750 & 0,66756\\
+PBRS, separado e calibração & 0,67560 & 0,72083 & 0,69821\\\bottomrule
+\end{tabular}
+\end{table}
+PBRS superou corrected nos dois pares, mas os orçamentos foram pequenos. Separar o crítico teve efeitos distintos entre seeds. A calibração reservou metade das 40 iterações ao crítico, portanto também mudou o número de atualizações do ator. Os dados não autorizam dizer que cada mudança, isoladamente, sempre melhora o agente.
+
+\begin{figure}[htbp]\centering
+\setlength{\unitlength}{1mm}
+\begin{picture}(155,76)
+\put(18,12){\line(1,0){125}}
+\put(18,12){\line(0,1){48}}
+\put(16,12.000){\makebox(0,0)[r]{\scriptsize 0.75}}
+{\color{black!12}\put(18,12.000){\line(1,0){125}}}
+\put(16,24.000){\makebox(0,0)[r]{\scriptsize 0.80}}
+{\color{black!12}\put(18,24.000){\line(1,0){125}}}
+\put(16,36.000){\makebox(0,0)[r]{\scriptsize 0.85}}
+{\color{black!12}\put(18,36.000){\line(1,0){125}}}
+\put(16,48.000){\makebox(0,0)[r]{\scriptsize 0.90}}
+{\color{black!12}\put(18,48.000){\line(1,0){125}}}
+\put(16,60.000){\makebox(0,0)[r]{\scriptsize 0.95}}
+{\color{black!12}\put(18,60.000){\line(1,0){125}}}
+\put(18.000,8){\makebox(0,0){\scriptsize 3000}}
+\put(49.250,8){\makebox(0,0){\scriptsize 4750}}
+\put(80.500,8){\makebox(0,0){\scriptsize 6500}}
+\put(111.750,8){\makebox(0,0){\scriptsize 8250}}
+\put(143.000,8){\makebox(0,0){\scriptsize 10000}}
+\put(81,2){\makebox(0,0){\small Iteração de treinamento}}
+\put(18,68){\makebox(0,0)[l]{\small Score mínimo dos quatro grupos}}
+{\color{blue!65!black}\linethickness{0.32mm}
+\qbezier(18.000,39.235)(18.446,39.481)(18.893,39.727)
+\qbezier(18.893,39.727)(19.339,37.461)(19.786,35.195)
+\qbezier(19.786,35.195)(20.232,37.959)(20.679,40.723)
+\qbezier(20.679,40.723)(21.125,40.366)(21.571,40.010)
+\qbezier(21.571,40.010)(22.018,40.287)(22.464,40.564)
+\qbezier(22.464,40.564)(22.911,40.197)(23.357,39.831)
+\qbezier(23.357,39.831)(23.804,39.751)(24.250,39.671)
+\qbezier(24.250,39.671)(24.696,40.458)(25.143,41.244)
+\qbezier(25.143,41.244)(25.589,40.782)(26.036,40.320)
+\qbezier(26.036,40.320)(26.482,40.421)(26.929,40.523)
+\qbezier(26.929,40.523)(27.375,38.366)(27.821,36.210)
+\qbezier(27.821,36.210)(28.268,39.099)(28.714,41.988)
+\qbezier(28.714,41.988)(29.161,40.569)(29.607,39.149)
+\qbezier(29.607,39.149)(30.054,39.392)(30.500,39.634)
+\qbezier(30.500,39.634)(30.946,40.188)(31.393,40.742)
+\qbezier(31.393,40.742)(31.839,40.508)(32.286,40.274)
+\qbezier(32.286,40.274)(32.732,40.036)(33.179,39.798)
+\qbezier(33.179,39.798)(33.625,39.448)(34.071,39.098)
+\qbezier(34.071,39.098)(34.518,40.364)(34.964,41.629)
+\qbezier(34.964,41.629)(35.411,41.132)(35.857,40.634)
+\qbezier(35.857,40.634)(36.304,40.706)(36.750,40.779)
+\qbezier(36.750,40.779)(37.196,41.609)(37.643,42.440)
+\qbezier(37.643,42.440)(38.089,42.539)(38.536,42.639)
+\qbezier(38.536,42.639)(38.982,42.117)(39.429,41.594)
+\qbezier(39.429,41.594)(39.875,41.977)(40.321,42.359)
+\qbezier(40.321,42.359)(40.768,39.527)(41.214,36.695)
+\qbezier(41.214,36.695)(41.661,38.435)(42.107,40.175)
+\qbezier(42.107,40.175)(42.554,41.602)(43.000,43.028)
+\qbezier(43.000,43.028)(43.446,41.800)(43.893,40.572)
+\qbezier(43.893,40.572)(44.339,41.090)(44.786,41.609)
+\qbezier(44.786,41.609)(45.232,41.842)(45.679,42.075)
+\qbezier(45.679,42.075)(46.125,40.585)(46.571,39.095)
+\qbezier(46.571,39.095)(47.018,40.331)(47.464,41.568)
+\qbezier(47.464,41.568)(47.911,39.000)(48.357,36.433)
+\qbezier(48.357,36.433)(48.804,38.683)(49.250,40.933)
+\qbezier(49.250,40.933)(49.696,41.973)(50.143,43.013)
+\qbezier(50.143,43.013)(50.589,42.995)(51.036,42.976)
+\qbezier(51.036,42.976)(51.482,43.147)(51.929,43.318)
+\qbezier(51.929,43.318)(52.375,44.017)(52.821,44.715)
+\qbezier(52.821,44.715)(53.268,43.342)(53.714,41.970)
+\qbezier(53.714,41.970)(54.161,42.528)(54.607,43.086)
+\qbezier(54.607,43.086)(55.054,42.545)(55.500,42.004)
+\qbezier(55.500,42.004)(55.946,42.120)(56.393,42.235)
+\qbezier(56.393,42.235)(56.839,43.176)(57.286,44.118)
+\qbezier(57.286,44.118)(57.732,44.311)(58.179,44.504)
+\qbezier(58.179,44.504)(58.625,31.615)(59.071,18.726)
+\qbezier(59.071,18.726)(59.518,27.677)(59.964,36.629)
+\qbezier(59.964,36.629)(60.411,27.466)(60.857,18.304)
+\qbezier(60.857,18.304)(61.304,30.492)(61.750,42.680)
+\qbezier(61.750,42.680)(62.196,42.579)(62.643,42.478)
+\qbezier(62.643,42.478)(63.089,42.837)(63.536,43.195)
+\qbezier(63.536,43.195)(63.982,43.950)(64.429,44.706)
+\qbezier(64.429,44.706)(64.875,43.223)(65.321,41.740)
+\qbezier(65.321,41.740)(65.768,38.938)(66.214,36.137)
+\qbezier(66.214,36.137)(66.661,36.308)(67.107,36.479)
+\qbezier(67.107,36.479)(67.554,38.772)(68.000,41.065)
+\qbezier(68.000,41.065)(68.446,41.830)(68.893,42.596)
+\qbezier(68.893,42.596)(69.339,42.671)(69.786,42.746)
+\qbezier(69.786,42.746)(70.232,43.252)(70.679,43.757)
+\qbezier(70.679,43.757)(71.125,43.415)(71.571,43.073)
+\qbezier(71.571,43.073)(72.018,43.900)(72.464,44.728)
+\qbezier(72.464,44.728)(72.911,40.554)(73.357,36.381)
+\qbezier(73.357,36.381)(73.804,39.923)(74.250,43.466)
+\qbezier(74.250,43.466)(74.696,43.560)(75.143,43.655)
+\qbezier(75.143,43.655)(75.589,43.337)(76.036,43.019)
+\qbezier(76.036,43.019)(76.482,43.055)(76.929,43.090)
+\qbezier(76.929,43.090)(77.375,43.612)(77.821,44.134)
+\qbezier(77.821,44.134)(78.268,43.256)(78.714,42.377)
+\qbezier(78.714,42.377)(79.161,39.172)(79.607,35.967)
+\qbezier(79.607,35.967)(80.054,39.969)(80.500,43.970)
+\qbezier(80.500,43.970)(80.946,40.150)(81.393,36.329)
+\qbezier(81.393,36.329)(81.839,39.943)(82.286,43.557)
+\qbezier(82.286,43.557)(82.732,44.531)(83.179,45.506)
+\qbezier(83.179,45.506)(83.625,44.840)(84.071,44.174)
+\qbezier(84.071,44.174)(84.518,44.239)(84.964,44.304)
+\qbezier(84.964,44.304)(85.411,44.322)(85.857,44.339)
+\qbezier(85.857,44.339)(86.304,44.157)(86.750,43.975)
+\qbezier(86.750,43.975)(87.196,43.931)(87.643,43.887)
+\qbezier(87.643,43.887)(88.089,44.710)(88.536,45.533)
+\qbezier(88.536,45.533)(88.982,45.680)(89.429,45.828)
+\qbezier(89.429,45.828)(89.875,43.999)(90.321,42.171)
+\qbezier(90.321,42.171)(90.768,42.729)(91.214,43.287)
+\qbezier(91.214,43.287)(91.661,43.324)(92.107,43.362)
+\qbezier(92.107,43.362)(92.554,39.707)(93.000,36.053)
+\qbezier(93.000,36.053)(93.446,40.522)(93.893,44.992)
+\qbezier(93.893,44.992)(94.339,43.453)(94.786,41.914)
+\qbezier(94.786,41.914)(95.232,38.965)(95.679,36.016)
+\qbezier(95.679,36.016)(96.125,36.215)(96.571,36.415)
+\qbezier(96.571,36.415)(97.018,40.603)(97.464,44.792)
+\qbezier(97.464,44.792)(97.911,44.019)(98.357,43.247)
+\qbezier(98.357,43.247)(98.804,43.023)(99.250,42.799)
+\qbezier(99.250,42.799)(99.696,44.120)(100.143,45.441)
+\qbezier(100.143,45.441)(100.589,45.452)(101.036,45.462)
+\qbezier(101.036,45.462)(101.482,40.893)(101.929,36.324)
+\qbezier(101.929,36.324)(102.375,40.693)(102.821,45.062)
+\qbezier(102.821,45.062)(103.268,44.786)(103.714,44.509)
+\qbezier(103.714,44.509)(104.161,40.172)(104.607,35.835)
+\qbezier(104.607,35.835)(105.054,27.348)(105.500,18.861)
+\qbezier(105.500,18.861)(105.946,31.639)(106.393,44.416)
+\qbezier(106.393,44.416)(106.839,44.605)(107.286,44.793)
+\qbezier(107.286,44.793)(107.732,44.641)(108.179,44.490)
+\qbezier(108.179,44.490)(108.625,44.614)(109.071,44.739)
+\qbezier(109.071,44.739)(109.518,44.428)(109.964,44.117)
+\qbezier(109.964,44.117)(110.411,44.393)(110.857,44.669)
+\qbezier(110.857,44.669)(111.304,31.788)(111.750,18.908)
+\qbezier(111.750,18.908)(112.196,31.381)(112.643,43.854)
+\qbezier(112.643,43.854)(113.089,44.383)(113.536,44.912)
+\qbezier(113.536,44.912)(113.982,44.704)(114.429,44.496)
+\qbezier(114.429,44.496)(114.875,44.887)(115.321,45.278)
+\qbezier(115.321,45.278)(115.768,44.071)(116.214,42.863)
+\qbezier(116.214,42.863)(116.661,44.543)(117.107,46.223)
+\qbezier(117.107,46.223)(117.554,45.580)(118.000,44.936)
+\qbezier(118.000,44.936)(118.446,45.307)(118.893,45.677)
+\qbezier(118.893,45.677)(119.339,45.120)(119.786,44.564)
+\qbezier(119.786,44.564)(120.232,45.140)(120.679,45.716)
+\qbezier(120.679,45.716)(121.125,44.848)(121.571,43.980)
+\qbezier(121.571,43.980)(122.018,44.962)(122.464,45.943)
+\qbezier(122.464,45.943)(122.911,41.171)(123.357,36.399)
+\qbezier(123.357,36.399)(123.804,40.674)(124.250,44.949)
+\qbezier(124.250,44.949)(124.696,40.288)(125.143,35.628)
+\qbezier(125.143,35.628)(125.589,40.545)(126.036,45.462)
+\qbezier(126.036,45.462)(126.482,44.659)(126.929,43.855)
+\qbezier(126.929,43.855)(127.375,44.150)(127.821,44.445)
+\qbezier(127.821,44.445)(128.268,44.879)(128.714,45.312)
+\qbezier(128.714,45.312)(129.161,40.694)(129.607,36.076)
+\qbezier(129.607,36.076)(130.054,40.933)(130.500,45.789)
+\qbezier(130.500,45.789)(130.946,45.133)(131.393,44.478)
+\qbezier(131.393,44.478)(131.839,44.411)(132.286,44.345)
+\qbezier(132.286,44.345)(132.732,45.581)(133.179,46.817)
+\qbezier(133.179,46.817)(133.625,45.866)(134.071,44.915)
+\qbezier(134.071,44.915)(134.518,44.416)(134.964,43.917)
+\qbezier(134.964,43.917)(135.411,44.563)(135.857,45.210)
+\qbezier(135.857,45.210)(136.304,46.051)(136.750,46.893)
+\qbezier(136.750,46.893)(137.196,46.152)(137.643,45.412)
+\qbezier(137.643,45.412)(138.089,45.824)(138.536,46.236)
+\qbezier(138.536,46.236)(138.982,41.407)(139.429,36.577)
+\qbezier(139.429,36.577)(139.875,41.120)(140.321,45.663)
+\qbezier(140.321,45.663)(140.768,46.405)(141.214,47.146)
+\qbezier(141.214,47.146)(141.661,46.153)(142.107,45.161)
+\qbezier(142.107,45.161)(142.554,44.925)(143.000,44.690)
+}\end{picture}
+\caption{Curva real do painel GPU, sem suavização. Em iterações repetidas após retomada, usa-se o último registro. O eixo vertical começa em 0,75 para mostrar oscilações; não representa taxa de vitória. Painel reutilizado para seleção: os pontos não são replicações independentes e a curva não é validação reservada do checkpoint 9.900.}\label{fig:gpu}
+\end{figure}
 
 \section{Diagnóstico da desaceleração}
 \subsection{Schedules e exploração: candidatos, não causas demonstradas}
@@ -235,7 +592,7 @@ Cada braço deve partir do mesmo ator $\theta^*$, usar orçamento e mapa iguais 
 \end{equation}
 Reamostrar blocos de seeds preserva o pareamento; intervalos são descritivos e não eliminam a necessidade de seeds de treinamento independentes. Recompensas acumuladas de tabelas diferentes não devem ser diretamente usadas para eleger uma vencedora. Adversários e seeds reservados devem permanecer fora da seleção repetida de checkpoints.
 
-\section{Estudo prospectivo de cooperação 2v2}
+\section{Perspectiva posterior: cooperação 2v2}
 \subsection{Contratos que precisam ser corrigidos}
 No builder instalado,
 \begin{equation}
@@ -288,10 +645,14 @@ onde $\ell$ representa eventos de toque e $C_B$ controle sustentado. O estado di
 
 O estudo deve avançar por: (i) passe para receptor livre em posições variadas; (ii) pressão em 2v1 com alternativas de condução/finalização; (iii) passe seguido de deslocamento para nova linha; (iv) 2v2 com duplas e parceiros diversos. Medir recepção, perdas, cobertura, gols após passe e casos em que passar é uma decisão ruim. Validar também troca de lados e IDs. Nenhuma dessas fases foi treinada neste relatório.
 
-\section{Limitações e conclusão}
+\section{Síntese: por que o conjunto passou a funcionar melhor}
 A evidência é restrita a uma continuação, a um painel reutilizado e a benchmarks específicos. A comparação com a \code{main} não é causal; ganhos do checkpoint anterior não certificam o atual. Os dados não demonstram teto definitivo, planejamento de jogadas ou força humana consolidada.
 
-A base 1v1 apresentou progresso. Os próximos testes devem distinguir diversidade de desafios, schedules, exploração e observação, sem atribuir toda desaceleração à recompensa. Para 2v2, o avanço imediato é corrigir os contratos e demonstrar recepção e apoio em cenários controlados. Não houve alteração de pesos nem novo treinamento durante este estudo.
+A interpretação mais defensável é que o sistema anterior aprendia competências parciais com orientação e medição frágeis. A mudança estrutural alinhou a soma da recompensa ao objetivo descontado de gols, retirou interferências diretas do crítico no ator, manteve adversários de referência e passou a selecionar modelos sob condições mais amplas. Há razões matemáticas para essas decisões e evidência empírica de progresso do conjunto; falta identificar causalmente quanto cada decisão contribuiu.
+
+Para o leitor que busca uma resposta direta: não foi simplesmente ``colocar mais pontos no gol'' nem ``treinar por mais tempo''. Foi reorganizar como o agente recebe orientação, estima consequências, pratica e é examinado. O resultado melhorou nos testes registrados, mas permanece vulnerável a situações e adversários não cobertos.
+
+Os próximos testes devem distinguir diversidade de desafios, schedules, exploração e observação, sem atribuir toda desaceleração à recompensa. Para 2v2, o avanço imediato é corrigir os contratos e demonstrar recepção e apoio em cenários controlados. Não houve alteração de pesos nem novo treinamento durante este estudo.
 
 \appendix
 \section{Rastreabilidade e leitura dos indicadores}
