@@ -1,0 +1,105 @@
+{
+  "main_revision": "9ea2497357dccadfaa441873b5171093e47c8e18",
+  "analysis_revision": "c48c249c0f579cc2951fe2497238e1fe475eb52f",
+  "training_windows": [
+    {
+      "start": 3001,
+      "end": 4000,
+      "n": 1000,
+      "kl_stops": 0,
+      "means": {
+        "entropy": 1.3503409381955862,
+        "learning_rate": 0.00023000300030003,
+        "approximate_kl": 0.0031800402733811097,
+        "clip_fraction": 0.03425602722167969,
+        "explained_variance": 0.8437409243418739,
+        "stationary_fraction": 0.21200442504882813,
+        "reward_mean": 0.2819601434916258,
+        "rollout_seconds": 1.121179969400153,
+        "update_seconds": 0.34541904309990057
+      }
+    },
+    {
+      "start": 9001,
+      "end": 10000,
+      "n": 1000,
+      "kl_stops": 0,
+      "means": {
+        "entropy": 1.2089164464374382,
+        "learning_rate": 0.00010999099909990998,
+        "approximate_kl": 0.0018982776021684155,
+        "clip_fraction": 0.016862157185872396,
+        "explained_variance": 0.8705357995449088,
+        "stationary_fraction": 0.21300729370117188,
+        "reward_mean": 0.3388083162009716,
+        "rollout_seconds": 1.1018672263002371,
+        "update_seconds": 0.33612270999979227
+      }
+    }
+  ],
+  "evaluation_windows": [
+    {
+      "start": 3000,
+      "end": 4000,
+      "n": 21,
+      "mean": 0.8659125496289171
+    },
+    {
+      "start": 5000,
+      "end": 6000,
+      "n": 22,
+      "mean": 0.8660857376549475
+    },
+    {
+      "start": 7000,
+      "end": 8000,
+      "n": 21,
+      "mean": 0.8709481468870806
+    },
+    {
+      "start": 9000,
+      "end": 10000,
+      "n": 21,
+      "mean": 0.8833385665358022
+    }
+  ],
+  "teams_dry_run": {
+    "observation_shape": [
+      1,
+      4,
+      24
+    ],
+    "teams": [
+      2,
+      2,
+      4,
+      4
+    ],
+    "kickoff_positions": [
+      [
+        -200,
+        0
+      ],
+      [
+        200,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "passed": false,
+    "reason": "KickoffSetter assumes two players; this was a reset-only probe, not a training run"
+  },
+  "limitations": [
+    "No fresh budget-matched main versus gpt experiment",
+    "One training seed",
+    "Known selection panel",
+    "New containment map requires a new common evaluation baseline"
+  ]
+}
