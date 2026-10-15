@@ -1,0 +1,43 @@
+{
+  "scenarios": [
+    {
+      "speed": 4,
+      "cases": 360,
+      "baselineEscapes": 0,
+      "containedEscapes": 0
+    },
+    {
+      "speed": 8,
+      "cases": 360,
+      "baselineEscapes": 22,
+      "containedEscapes": 0
+    },
+    {
+      "speed": 12,
+      "cases": 360,
+      "baselineEscapes": 70,
+      "containedEscapes": 0
+    },
+    {
+      "speed": 20,
+      "cases": 360,
+      "baselineEscapes": 258,
+      "containedEscapes": 0
+    },
+    {
+      "speed": 40,
+      "cases": 360,
+      "baselineEscapes": 330,
+      "containedEscapes": 0
+    },
+    {
+      "speed": 80,
+      "cases": 360,
+      "baselineEscapes": 356,
+      "containedEscapes": 0
+    }
+  ],
+  "lowSpeedIdentical": true,
+  "bothGoalsRemainFunctional": true,
+  "geometryAndPhysicsParametersPreserved": true
+}
