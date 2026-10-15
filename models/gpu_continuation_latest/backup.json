@@ -1,0 +1,1 @@
+{"iteration": 5600, "best_iteration": 4950, "best_score": 0.8863118857023711, "source": "runs\\gpu_continuation_20261014_214556", "resume_sha256": "bce102d8df2f62a9da2b124128dfc82b3966fd7422090baa6422a4b601a50ed5", "resume_semantics": "model/Adam/schedule/pool/RNG preserved; native matches reset"}
