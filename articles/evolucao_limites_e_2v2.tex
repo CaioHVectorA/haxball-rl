@@ -1,0 +1,316 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern,amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=2.25cm]{geometry}
+\usepackage{booktabs,tabularx,array}
+\usepackage{microtype,xcolor,enumitem,xurl,hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,citecolor=blue!45!black,urlcolor=blue!55!black,
+ pdftitle={Evolução e limites de PPO em HaxBall: do 1v1 à cooperação 2v2}}
+\setlength{\emergencystretch}{3em}
+\setlist{itemsep=2pt,topsep=4pt}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\code}[1]{\nolinkurl{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newtheorem{proposicao}{Proposição}
+\newtheorem{observacao}{Observação}
+\title{\textbf{Evolução e limites de PPO em HaxBall:\\do controle 1v1 à cooperação 2v2}\\[5pt]
+\large Estudo de caso com auditoria de implementação, diagnóstico empírico e proposta experimental}
+\author{Relatório técnico do projeto \texttt{haxball-rl}}
+\date{15 de outubro de 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+Investiga-se a evolução de um agente de HaxBall treinado com Proximal Policy Optimization (PPO), distinguindo progresso observado, limitações de implementação e hipóteses sobre desaceleração. A versão estudada utiliza recompensa por potenciais descontados, crítico independente, currículo com adversários congelados e avaliação em múltiplos modos. A média do critério de seleção aumentou de $0{,}86591$ para $0{,}88334$ entre janelas iniciais e finais da continuação GPU, sem evidência de um teto definitivo. A análise identifica possíveis limites de diversidade, exploração, observabilidade e atribuição temporal de crédito. Uma inspeção estrutural de 2v2 revelou resets inválidos e mudança de dimensão das observações. Propõe-se uma transferência explícita do ator, treinamento centralizado do crítico e currículo de passes e apoio. Não são apresentados resultados de treinamento 2v2 nem uma comparação causal controlada entre as branches.
+\end{abstract}
+\noindent\textbf{Palavras-chave:} aprendizado por reforço; PPO; reward shaping; HaxBall; cooperação multiagente.
+
+\section{Introdução e escopo da evidência}
+A melhora de um agente não deve ser inferida apenas da recompensa acumulada. É necessário verificar se ele vence adversários relevantes, preserva competências e generaliza para situações não usadas na seleção. Em linguagem simples: aprender a ganhar pontos durante o treino e aprender a jogar bem são avaliações relacionadas, mas distintas.
+
+Este estudo combina inspeção de código, métricas do treino até $10\,000$ iterações, benchmarks anteriores e um teste de reset 2v2. A referência de código é a branch \code{main}, revisão \code{9ea2497}; o diagnóstico usa o estado do projeto em \code{c48c249} e os dados GPU publicados em \code{2694aa8}. O checkpoint selecionado é o da iteração $9\,900$.
+
+A comparação com a \code{main} descreve mudanças de engenharia. Não houve novo experimento com ambas as branches treinadas do zero, sob o mesmo orçamento. O agente denominado \emph{origem} nos benchmarks anteriores é o início da nossa continuação, não uma reprodução independente da \code{main}. Consequentemente, ganhos não podem ser atribuídos isoladamente a uma alteração.
+
+\section{Modelo do problema e política}
+Sejam $s_t$ o estado físico, $o_t^i=O_i(s_t)$ a observação do jogador $i$ e $\pi_j^-$ uma política adversária congelada. Para uma distribuição curricular $q(j)$, o objetivo de referência é
+\begin{equation}
+ J(\theta;q)=\E_{j\sim q,\,\pi_\theta,\,\pi_j^-}
+ \left[\sum_{t=0}^{\infty}\gamma^t r_t^{\mathrm{gol}}\right],
+ \qquad r_t^{\mathrm{gol}}=25\bigl(g_t^+-g_t^-\bigr),
+ \label{eq:objective}
+\end{equation}
+com $g_t^+,g_t^-\in\{0,1\}$ indicando gol a favor e contra. A observação atual é vetorial, sem memória explícita. Posições e velocidades não incluem necessariamente todo o estado interno relevante, como o rearme do chute; não se assume observabilidade Markov plena.
+
+As ações e sua distribuição são
+\begin{equation}
+ a_t^i=(a_x,a_y,a_k)\in\{0,1,2\}^2\times\{0,1\},\qquad
+ \pi_\theta(a\mid o)=\prod_{h\in\{x,y,k\}}\pi_{\theta,h}(a_h\mid o).
+\end{equation}
+Os bins de movimento representam $-1,0,+1$; o chute representa soltar ou pressionar. O wrapper de execução rearma o chute dentro da janela física. Pressionar não comprova um chute efetivo.
+
+O ator possui duas camadas de $256$ unidades com $\tanh$; o crítico atual tem parâmetros separados. Com decisões a cada oito ticks e motor a $60$ Hz,
+\begin{equation}
+ \Delta t=\frac{8}{60}\,\mathrm{s},\qquad
+ \gamma=2^{-\Delta t/12}\approx0{,}99232795.
+\end{equation}
+Para $N=512$ ambientes, $T=64$ decisões e $m$ jogadores aprendizes por ambiente,
+\begin{equation}
+ B_{\mathrm{agente}}=NTm,\qquad B_{\mathrm{mundo}}=NT,
+ \qquad T\Delta t\approx8{,}53\,\mathrm{s}.
+ \label{eq:budget}
+\end{equation}
+No 1v1, $m=1$ e são $32\,768$ transições do aprendiz por iteração. Contar dois companheiros em 2v2 dobra transições de agentes, mas não cria o dobro de partidas independentes.
+
+\section{Recompensa: formulação e condições}
+Sejam $b$ a posição da bola, $p_i$ a posição do jogador, $c_i^+$ o centro do gol atacado e $\mathcal G_i^\pm$ os segmentos de gol. Definem-se
+\begin{align}
+ u_i(s)&=\frac{c_i^+-b}{\max(\norm{c_i^+-b},\varepsilon)},&
+ q_i(s)&=b-22u_i(s),\\
+ \Phi_{\mathrm{pos}}^i(s)&=-\frac{\operatorname{clip}(\norm{p_i-q_i(s)}-2,\,0,\,2000)}{\ell},&
+ \Phi_{\mathrm{bola}}^i(s)&=\frac{d(b,\mathcal G_i^-)-d(b,\mathcal G_i^+)}{2\ell},
+\end{align}
+onde $\ell=21{,}12$ é a escala de deslocamento por decisão no mapa de referência. Para um segmento $[v_0,v_1]$,
+\begin{equation}
+ d(b,[v_0,v_1])=\norm{b-v_0-\operatorname{clip}\!\left(
+ \frac{(b-v_0)^\top(v_1-v_0)}{\norm{v_1-v_0}^2},0,1\right)(v_1-v_0)}.
+\end{equation}
+O potencial combinado e a recompensa efetiva são
+\begin{align}
+ \Phi^i(s)&=0{,}15\Phi_{\mathrm{pos}}^i(s)+0{,}08\Phi_{\mathrm{bola}}^i(s),\\
+ r_t^i&=25(g_t^+-g_t^-)+\gamma\bar\Phi^i(s_{t+1})-\Phi^i(s_t),
+ \label{eq:shaping}
+\end{align}
+com $\bar\Phi=0$ em terminal de gol. Os pesos numéricos foram preservados, mas as funções auxiliares mudaram: posicionamento atrás da bola substituiu o deslocamento simples em sua direção, e o progresso passou a comparar os dois gols.
+
+\begin{proposicao}[Identidade de retorno do shaping]
+Para potencial limitado, desconto $0<\gamma<1$ e fronteiras consistentes,
+\begin{equation}
+ \sum_{t=0}^{H-1}\gamma^t[\gamma\Phi(s_{t+1})-\Phi(s_t)]
+ =-\Phi(s_0)+\gamma^H\Phi(s_H).
+\end{equation}
+Em terminal absorvente com potencial zero, ou no limite $H\to\infty$, resta um deslocamento independente das ações, condicionado a $s_0$.
+\end{proposicao}
+\begin{proof}
+Expandindo a soma, todos os termos intermediários se cancelam. O termo final desaparece pelas condições enunciadas.
+\end{proof}
+Essa identidade fundamenta o PBRS \cite{ng1999}. A referência de invariância é o objetivo esparso de gols, não a tabela antiga. Não se segue que PPO com função aproximadora convirja ou aprenda mais rapidamente.
+
+\begin{observacao}
+Para $\Phi(s)<0$, um estado estacionário pode gerar $(\gamma-1)\Phi(s)>0$. O sinal de um passo isolado não demonstra exploração indevida da recompensa; importam a soma descontada e suas fronteiras.
+\end{observacao}
+
+\subsection{Gols, timeouts e vantagens}
+Sejam $z_t$ um término real e $\tau_t$ um corte artificial. O código usa a observação anterior ao autoreset para calcular
+\begin{align}
+ \delta_t&=r_t+\gamma(1-z_t)V_\psi(o_{t+1}^{\mathrm{final}})-V_\psi(o_t),\\
+ \widehat A_t&=\delta_t+\gamma\lambda(1-z_t)(1-\tau_t)\widehat A_{t+1},
+ \qquad\lambda=0{,}95.
+ \label{eq:gae}
+\end{align}
+O timeout mantém o bootstrap, mas interrompe a propagação da vantagem através do reset. Se o objetivo fosse vencer uma partida genuinamente finita, tempo restante deveria fazer parte da formulação \cite{pardo2018}. O score no limite de tempo e o objetivo descontado de gols continuam distintos.
+
+\section{Atualização PPO e mudanças frente à \texttt{main}}
+Com $\rho_t(\theta)=\pi_\theta(a_t\mid o_t)/\pi_{\theta_{\mathrm{old}}}(a_t\mid o_t)$, a implementação segue o objetivo clipped de PPO \cite{schulman2017}:
+\begin{align}
+ L_{\mathrm{clip}}(\theta)&=\widehat\E_t\!\left[\min\left(
+ \rho_t\widehat A_t,\operatorname{clip}(\rho_t,1-\epsilon,1+\epsilon)\widehat A_t\right)\right],\\
+ L_{\mathrm{ator}}&=-L_{\mathrm{clip}}-\beta_k\widehat\E_t\mathcal H[\pi_\theta(\cdot\mid o_t)],\\
+ L_{\mathrm{crit}}&=\frac{c_V}{2}\widehat\E_t\left[(V_\psi(o_t)-\widehat R_t)^2\right],
+ \qquad\epsilon=0{,}2,\quad c_V=0{,}5.
+\end{align}
+Os parâmetros $\theta$ e $\psi$ são disjuntos. A separação elimina o gradiente direto do crítico nas camadas do ator; $\widehat A_t$ ainda depende de $V_\psi$. Cada grupo é clipado em norma $0{,}5$; a norma conjunta pode atingir $\sqrt2\,0{,}5$.
+
+Nas primeiras $20$ iterações, apenas o crítico é atualizado. O ator carregado permanece invariável e seus gradientes ficam ausentes, evitando passos Adam artificiais. A guarda usa
+\begin{equation}
+ \widehat D_{\mathrm{KL}}=\widehat\E_t[(\rho_t-1)-\log\rho_t],
+ \qquad \widehat D_{\mathrm{KL}}>0{,}03\ \Longrightarrow\ \text{interrupção da atualização restante}.
+\end{equation}
+É um critério empírico, não uma garantia formal de região de confiança.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Diferenças verificadas por inspeção; não constituem ablação causal.}
+\begin{tabularx}{\textwidth}{@{}lYY@{}}\toprule
+Componente & \texttt{main} inspecionada & Sprint 1 estudada\\\midrule
+Recompensa & Padrão da dependência & Equação~\eqref{eq:shaping}\\
+Valor/política & Tronco compartilhado & Crítico independente; calibração\\
+Adversários & Política atual/snapshot por rollout & Mistura congelada por episódio\\
+Timeout & Bootstrap zerado como em término & Equação~\eqref{eq:gae}\\
+Desconto & Meia-vida de 5 s & Meia-vida de 12 s\\
+Atualizações & Até 4 épocas & Até 6 épocas; 4 minibatches; guarda KL\\
+Avaliação & Contra Chase & Dois modos, cenários e referências neurais\\
+Retomada & Pesos/snapshots & Adam, schedules, referências, pool e RNGs\\\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Resultados observados e unidade de avaliação}
+Para vitórias $W$, empates $D$ e derrotas $L$, o score de um caso é
+\begin{equation}
+ \widehat S=\frac{W+\tfrac12D}{W+D+L}.
+\end{equation}
+Cada grupo combina adversários, seeds de avaliação e lados com a agregação balanceada do painel. O checkpoint é escolhido por
+\begin{equation}
+ \widehat J_{\mathrm{sel}}(k)=\min_{m\in\{\mathrm{greedy},\mathrm{sampled}\},\ c\in\{\mathrm{random},\mathrm{kickoff}\}}
+ \widehat S_{m,c}(k),\qquad
+ k^*=\arg\max_k\widehat J_{\mathrm{sel}}(k).
+\end{equation}
+O mínimo protege contra um pico em apenas um grupo, mas ainda pode ocultar falhas por adversário.
+
+\begin{table}[htbp]\centering
+\caption{Médias descritivas do painel GPU; avaliações sucessivas são correlacionadas.}
+\begin{tabular}{@{}lrr@{}}\toprule
+Janela de iterações & Registros & Média de $\widehat J_{\mathrm{sel}}$\\\midrule
+3.000--4.000 & 21 & 0,86591\\
+5.000--6.000 & 22 & 0,86609\\
+7.000--8.000 & 21 & 0,87095\\
+9.000--10.000 & 21 & 0,88334\\\bottomrule
+\end{tabular}
+\end{table}
+A diferença entre as janelas extremas é aproximadamente $0{,}01743$, ou $1{,}74$ ponto percentual de score. O melhor registro foi $0{,}89644$ na iteração $9\,900$; o endpoint marcou $0{,}88621$. Isso é compatível com progresso oscilatório, não com monotonicidade nem com um teto estabelecido.
+
+O benchmark independente anterior avaliou o checkpoint $2\,550$, não o $9\,900$: foram $3\,324$ casos e $106\,368$ primeiras partidas completas, incluindo repetições determinísticas identificadas. Contra a origem em estados aleatórios, o score foi $0{,}65381$ em greedy e $0{,}66895$ em sampled. A estimativa sampled teve intervalo bootstrap por seed $[0{,}64941;0{,}68799]$. Os resultados desse teste não podem ser atribuídos automaticamente ao modelo GPU.
+
+Repetições idênticas de kickoff greedy contra uma política determinística não geram observações independentes. Seeds de avaliação não substituem seeds de treinamento. Há apenas uma continuação de treinamento neste estudo.
+
+\section{Diagnóstico da desaceleração}
+\subsection{Schedules e exploração: candidatos, não causas demonstradas}
+As médias de duas janelas de mil iterações são apresentadas na Tabela~\ref{tab:diag}.
+\begin{table}[htbp]\centering\small
+\caption{Telemetria da continuação GPU.}\label{tab:diag}
+\begin{tabular}{@{}lrr@{}}\toprule
+Grandeza & 3.001--4.000 & 9.001--10.000\\\midrule
+Taxa de aprendizado & $2{,}30003\,10^{-4}$ & $1{,}09991\,10^{-4}$\\
+Entropia (nats) & 1,35034 & 1,20892\\
+KL aproximada & 0,003180 & 0,001898\\
+Fração de clipping & 0,03426 & 0,01686\\
+Variância explicada & 0,84374 & 0,87054\\
+Fração de bola estacionária & 0,21200 & 0,21301\\
+Recompensa média/transição & 0,28196 & 0,33881\\
+Interrupções por guarda KL & 0/1.000 & 0/1.000\\\bottomrule
+\end{tabular}
+\end{table}
+O schedule é
+\begin{equation}
+ \alpha_k=3\,10^{-4}(1-f_k)+10^{-4}f_k,\quad
+ \beta_k=0{,}02(1-f_k)+0{,}01f_k,\quad
+ f_k=\frac{k-1}{K-1},\quad K=10\,000.
+\end{equation}
+Passos menores podem reduzir progresso e também evitar instabilidade. A guarda de KL não foi acionada nessas janelas; os dados não sustentam responsabilizá-la pelo freio. Para as três cabeças,
+\begin{equation}
+ \mathcal H_{\max}=\log3+\log3+\log2=\log18\approx2{,}8904.
+\end{equation}
+A entropia diminuiu, mas não demonstra colapso total. Variância explicada alta tampouco certifica precisão em situações raras:
+\begin{equation}
+ \operatorname{EV}=1-\frac{\operatorname{Var}(\widehat R-V_\psi)}{\operatorname{Var}(\widehat R)}.
+\end{equation}
+
+\subsection{Currículo, observação e crédito temporal}
+A mistura por novo episódio permanece em $65\%$ de heurísticas e $35\%$ de referências neurais fixas. Um conjunto finito pode deixar de pressionar novas respostas; isso é hipótese a testar com oponentes recentes, mantendo âncoras contra esquecimento. Mudança de adversário pode produzir mais aprendizado que ajuste de recompensa, mas ainda não houve esse contraste controlado.
+
+A política não tem memória explícita. Isso pode limitar decisões dependentes de informações internas não observadas; não prova que a dimensão da rede esteja insuficiente. No GAE, o fator de propagação é $\gamma\lambda\approx0{,}94271$, com escala geométrica indicativa
+\begin{equation}
+ \frac{1}{1-\gamma\lambda}\approx17{,}45\ \text{decisões}\approx2{,}33\ \mathrm{s}.
+\end{equation}
+Essa escala não é um horizonte rígido: o bootstrap do crítico pode representar consequências mais longas. Ainda assim, jogadas encadeadas exigem estimativas de valor adequadas para atribuir mérito a ações anteriores.
+
+\subsection{Eficiência computacional}
+Na janela final GPU, coleta e atualização levaram aproximadamente $1{,}102$ s e $0{,}336$ s. A coleta inclui simulação, inferência e transferências de dados. Para fração acelerável $f\approx0{,}234$ e aceleração $a$ apenas da atualização, a decomposição idealizada fornece
+\begin{equation}
+ S(a)=\frac{1}{(1-f)+f/a},\qquad S(\infty)\approx1{,}31.
+\end{equation}
+Esse limite ilustrativo ignora avaliações e outros custos; não prevê uma máquina específica. Mostra que acelerar somente a atualização já não acelera todo o treinamento proporcionalmente. Tempos de máquinas distintas não isolam causalmente o efeito da GPU.
+
+\section{Protocolo mínimo para testar novos incentivos}
+A variante de contenção do mapa alterou colisões nas fronteiras, preservando parâmetros e geometria. É necessário estabelecer uma referência nova nesse mapa. Os $2\,160$ testes físicos sem fuga não são um benchmark de habilidade.
+
+Cada braço deve partir do mesmo ator $\theta^*$, usar orçamento e mapa iguais e alterar um único fator. Em warm starts, o controle também deve reiniciar Adam e receber a mesma calibração do crítico; do contrário, recompensa e reinicialização ficam confundidas. Uma comparação válida é
+\begin{equation}
+ \Delta_z=S_{\mathrm{variante},z}-S_{\mathrm{controle},z},\qquad
+ \widehat\Delta=\frac{1}{Z}\sum_{z=1}^{Z}\Delta_z.
+\end{equation}
+Reamostrar blocos de seeds preserva o pareamento; intervalos são descritivos e não eliminam a necessidade de seeds de treinamento independentes. Recompensas acumuladas de tabelas diferentes não devem ser diretamente usadas para eleger uma vencedora. Adversários e seeds reservados devem permanecer fora da seleção repetida de checkpoints.
+
+\section{Estudo prospectivo de cooperação 2v2}
+\subsection{Contratos que precisam ser corrigidos}
+No builder instalado,
+\begin{equation}
+ d(P)=12+4(P-1),\qquad d(2)=16,\quad d(4)=24.
+\end{equation}
+O teste de reset retornou
+\begin{equation}
+ (p_{R_1},p_{R_2},p_{B_1},p_{B_2})=
+ ((-200,0),(200,0),(0,0),(0,0)).
+\end{equation}
+Há um aliado no lado oposto e dois jogadores sobrepostos. A ordem dos demais jogadores também muda o significado dos slots entre times. Antes de treinar, precisamos de spawns válidos, organização consistente de aliados/adversários, testes de permutação e simetria, ações para quatro jogadores e exportação compatível. O preset atual não está validado para 2v2.
+
+\subsection{Transferência do ator com semântica explícita}
+Se $W\in\R^{256\times16}$ é a primeira camada e $\widetilde o\in\R^{24}$ a nova observação, uma transferência inicial possível é
+\begin{equation}
+ \widetilde W=WP,\qquad P\in\R^{16\times24},\qquad
+ \widetilde W\widetilde o+b=W(P\widetilde o)+b.
+\end{equation}
+$P$ deve selecionar grandezas equivalentes, incluindo um adversário de referência. Colocar o aliado no slot antigo do adversário e copiar pesos por posição seria semanticamente incorreto. Novas colunas podem iniciar em zero, com posterior ajuste de todas as camadas. O crítico e o otimizador exigem tratamento explícito; o loader atual rejeita corretamente dimensões incompatíveis. Devem ser comparados transferência e treino do zero.
+
+\subsection{Objetivo coletivo e apoio sem bola}
+Uma proposta é compartilhar o ator entre companheiros e usar crítico com estado global durante o treino, mantendo execução por observação individual. Essa separação é estudada em MAPPO \cite{yu2022}. Não se presume sua superioridade neste ambiente.
+
+Para adversários congelados, a política conjunta pode ser fatorada como
+\begin{equation}
+ \pi_\theta^{\mathcal T}(a^1,a^2\mid o^1,o^2)
+ =\pi_\theta(a^1\mid o^1)\pi_\theta(a^2\mid o^2),
+ \qquad V_\psi=V_\psi(s,i).
+\end{equation}
+A recompensa de gol é coletiva. Repetir para ambos o incentivo de ficar atrás da bola pode orientar a exploração para aglomeração; isso não torna cooperação teoricamente impossível. Como hipótese de shaping conjunto, sejam $q_a(s)$ um alvo de pressão e $q_s(s)$ um alvo de apoio lateral/cobertura:
+\begin{equation}
+ \Phi_{\mathcal T}(s)=-\frac{1}{\ell}\min_{\sigma\in\mathfrak S_2}
+ \left[w_a\min(D,\norm{p_{\sigma(1)}-q_a})+
+ w_s\min(D,\norm{p_{\sigma(2)}-q_s})\right].
+\end{equation}
+A minimização permite trocar papéis sem fixar um jogador como atacante permanente. Os alvos e pesos ainda precisam de especificação e validação. Com potencial limitado, desconto consistente e terminal zero,
+\begin{equation}
+ r_t^{\mathcal T}=25(g_t^+-g_t^-)+
+ \eta[\gamma\bar\Phi_{\mathcal T}(s_{t+1})-\Phi_{\mathcal T}(s_t)]
+\end{equation}
+herda a identidade telescópica para o retorno coletivo. Isso é uma proposta, não uma implementação ou resultado experimental.
+
+\subsection{Currículo de passes e critérios de sucesso}
+Um passe completo deve ser instrumentado como toque real de $A$ seguido de controle por $B$, sem toque adversário intermediário. Com limiares pré-especificados,
+\begin{equation}
+ I_{\mathrm{passe}}=\ind\{\ell_t=A,\ \ell_{t'}=B,\
+ 0<t'-t\leq\Delta_p,\ \norm{b_{t'}-b_t}\geq d_p,\ C_B(t')=1\},
+\end{equation}
+onde $\ell$ representa eventos de toque e $C_B$ controle sustentado. O estado disponível não expõe diretamente esses eventos; proximidade geométrica não basta. A métrica tampouco identifica intenção. Inicialmente, medir passes é preferível a premiar qualquer troca, que pode gerar circulação sem utilidade.
+
+O estudo deve avançar por: (i) passe para receptor livre em posições variadas; (ii) pressão em 2v1 com alternativas de condução/finalização; (iii) passe seguido de deslocamento para nova linha; (iv) 2v2 com duplas e parceiros diversos. Medir recepção, perdas, cobertura, gols após passe e casos em que passar é uma decisão ruim. Validar também troca de lados e IDs. Nenhuma dessas fases foi treinada neste relatório.
+
+\section{Limitações e conclusão}
+A evidência é restrita a uma continuação, a um painel reutilizado e a benchmarks específicos. A comparação com a \code{main} não é causal; ganhos do checkpoint anterior não certificam o atual. Os dados não demonstram teto definitivo, planejamento de jogadas ou força humana consolidada.
+
+A base 1v1 apresentou progresso. Os próximos testes devem distinguir diversidade de desafios, schedules, exploração e observação, sem atribuir toda desaceleração à recompensa. Para 2v2, o avanço imediato é corrigir os contratos e demonstrar recepção e apoio em cenários controlados. Não houve alteração de pesos nem novo treinamento durante este estudo.
+
+\appendix
+\section{Rastreabilidade e leitura dos indicadores}
+Os dados numéricos foram extraídos de \code{experiments/sprint1_structural/gpu_hourly/training.jsonl} e \code{evaluations.jsonl}. Janelas de treino contêm $1\,000$ registros cada; as janelas de avaliação têm $21$, $22$, $21$ e $21$ registros, exatamente como armazenados. Não são amostras independentes de treinamento.
+
+A extração reprodutível está em \code{articles/evolucao_limites_e_2v2_evidence.json}; o benchmark anterior, em \code{experiments/sprint1_structural/benchmark_3000}; a correção física, em \code{experiments/map_containment}. Este documento é autônomo: não depende de bibliografia ou figuras externas para compilar.
+
+\begin{thebibliography}{9}
+\bibitem{ng1999} A. Y. Ng, D. Harada e S. Russell.
+\emph{Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping}. ICML, 1999.
+\url{https://people.eecs.berkeley.edu/~russell/papers/icml99-shaping.pdf}.
+\bibitem{schulman2017} J. Schulman, F. Wolski, P. Dhariwal, A. Radford e O. Klimov.
+\emph{Proximal Policy Optimization Algorithms}. 2017.
+\url{https://arxiv.org/abs/1707.06347}.
+\bibitem{pardo2018} F. Pardo, A. Tavakoli, V. Levdik e P. Kormushev.
+\emph{Time Limits in Reinforcement Learning}. ICML, PMLR 80, pp.~4045--4054, 2018.
+\url{https://proceedings.mlr.press/v80/pardo18a.html}.
+\bibitem{yu2022} C. Yu et al.
+\emph{The Surprising Effectiveness of PPO in Cooperative, Multi-Agent Games}. 2022.
+\url{https://arxiv.org/abs/2103.01955}.
+\end{thebibliography}
+\end{document}
