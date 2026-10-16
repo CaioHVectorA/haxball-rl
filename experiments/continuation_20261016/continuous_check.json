@@ -3,5 +3,7 @@
   "schedule_horizon": 2,
   "continuous": true,
   "returncode": 0,
-  "stop_reason": "signal"
+  "stop_reason": "signal",
+  "resumed_iteration": 6,
+  "resume_restores_continuous": true
 }
