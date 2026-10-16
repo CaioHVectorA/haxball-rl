@@ -92,3 +92,18 @@ termos PBRS reais. Score mostrado não é taxa de vitória. Gráficos atualizam 
 SSE a cada segundo; avaliações novas aparecem a cada50 iterações. JS passou
 verificação sintática e endpoints HTML/JS/state/history responderam200 com dados
 do run ativo. Não houve alteração na fonte congelada do treinador.
+
+## Encerramento solicitado pelo usuário
+
+Treino encerrado normalmente por SIGTERM na iteração8018 desta continuação:
+262.733.824 transições adicionais. Resume/modelos verificados finitos e contador
+coerente; processo do treinador saiu. Melhor checkpoint preservado: it7300,
+score mínimo conhecido0.8756387742, contra baseline0.8464586515. O endpoint8018
+foi salvo sem nova avaliação final, pois a prioridade foi interromper conforme
+pedido; não atribuir a ele o score do melhor.
+
+Bundle final em `models/local_warmstart_latest`: melhor, latest, metadados,
+mapa e resume. A sala humana permanece no melhor7300. O usuário relatou dificuldade
+em vencê-lo; é evidência informal de utilidade no jogo real, não benchmark humano
+controlado ou prova de robustez universal. Nenhum reinício está autorizado após
+este pedido de parada. Detalhes verificáveis em `STOP.json`.

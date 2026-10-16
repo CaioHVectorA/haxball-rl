@@ -1,0 +1,10 @@
+{
+  "run": "/home/usuario/develop/haxball-rl/runs/continued_warmstart_20261016_021328",
+  "final_iteration": 8018,
+  "best_iteration": 7300,
+  "best_score": 0.8756387741725143,
+  "samples": 262733824,
+  "reason": "User requested stop after human games; no restart authorized",
+  "weights_finite": true,
+  "process_exited": true
+}
