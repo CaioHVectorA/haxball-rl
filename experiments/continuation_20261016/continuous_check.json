@@ -1,0 +1,7 @@
+{
+  "iteration": 4,
+  "schedule_horizon": 2,
+  "continuous": true,
+  "returncode": 0,
+  "stop_reason": "signal"
+}

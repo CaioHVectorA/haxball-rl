@@ -1,58 +1,81 @@
 # Warm start local — 16/10/2026
 
-Autorização: usuário pediu continuar o treinamento do modelo atual em seu ambiente,
-por longo prazo. Uma única execução foi iniciada; nenhuma mudança no artigo LaTeX.
+O usuário pediu continuar a partir do modelo atual e esclareceu que espera deixar
+rodando por aproximadamente dez horas, podendo parar antes ou deixar mais.
+**Não há orçamento de 100 mil iterações nem corte de dez horas.** O modo contínuo
+encerra por sinal, deadline opcional ou falha; não relança silenciosamente após erro.
+Nenhuma mudança no artigo LaTeX nesta etapa.
 
-## Origem e diferenças explícitas
+## Origem e receita
 
-- Melhor checkpoint da continuação GPU: `models/sprint1_10000/model.pt`, iteração
-  9900. Conferido idêntico a `resume.pt:best_model`, com pesos finitos.
-- Warm start de ator **e crítico**, não retomada do endpoint 10000: Adam, RNG,
-  pool e schedules reiniciam. O ator permanece fixo nas primeiras 20 iterações
-  de calibração do crítico. O estado inicial inteiro foi comparado tensor a tensor.
-- Mapa `maps/futsal_1v1_contained.hbs`: correção de fronteira já testada em 2160
-  cenários físicos. A física de fronteira mudou; não comparar scores diretamente
-  ao mapa antigo nem afirmar ausência de todo bug possível.
-- Preservados PBRS 0.15/0.08/25, crítico independente, desconto de meia-vida 12 s,
-  512 ambientes, rollout64/épocas6/minibatches4, target KL .03.
-- LR inicial de ator e crítico **1e-4**, em vez de reaquecer a 3e-4; schedule
-  linear até 1e-4/3 ao final do bloco. Entropia segue preset .02→.01. Isso é uma
-  escolha conservadora para esta etapa, não uma ablação demonstrando superioridade.
-- Mesmas duas âncoras extraídas do checkpoint retomável anterior; a referência
-  inicial agora é a política 9900. Portanto o painel tem uma referência nova:
-  seu score bruto não é diretamente comparável ao painel antigo.
-- Runtime detectado: PyTorch 2.14.1+cpu, CUDA indisponível. CPU com 2 threads
-  PyTorch; não se afirma execução na GPU do outro ambiente.
+Melhor checkpoint GPU: `models/sprint1_10000/model.pt`, iteração 9900. Conferido
+igual a `resume.pt:best_model`, pesos finitos. Warm start de ator **e crítico**:
+Adam, RNG, pool e schedules recomeçam. Vinte iterações iniciais calibram somente
+o crítico. Mapa **original exato** em `models/sprint1_10000/stadium.hbs`.
 
-## Orçamento e durabilidade
+Preservados PBRS 0.15/0.08/25, crítico independente, meia-vida12s,
+512 ambientes, rollout64/épocas6/minibatches4, KL .03. LR inicial1e-4 para ambos
+os grupos, decrescendo até1e-4/3 em10000 novas iterações e permanecendo nesse piso
+se o treino continuar. Entropia .02→.01 no mesmo horizonte, com piso .01.
+Esse horizonte controla schedules; **não encerra o processo** com `--continuous`.
+Escolha conservadora de fine-tuning, não ablação que demonstrou superioridade.
 
-Primeiro bloco **100000 novas iterações** (até 3.276.800.000 transições), sem limite
-por horário. É um orçamento longo finito, não uma promessa de evolução ilimitada.
-O supervisor não lança ciclos sem fim nem reinicia silenciosamente uma falha.
-Ao terminar o bloco, comparar melhor versus endpoint e decidir a próxima etapa.
+As duas âncoras antigas foram extraídas do checkpoint retomável. A referência
+inicial agora é o modelo9900; não comparar scores brutos com o painel anterior.
+Runtime: PyTorch2.14.1+cpu, CUDA indisponível; duas threads PyTorch.
 
-Fonte, mapa, origem e âncoras ficam congelados dentro da pasta do run; hashes e
-comando completo em `launch.json`. `runs/active_local_warmstart.txt` identifica o
-run ativo. Um novo lançamento recusa outro treinador já ativo.
+## Incidente inicial e correção
 
-Resume atômico a cada 5 iterações; snapshots a cada 1000; avaliação a cada 50
-inclui modos greedy/amostrado, lados, kickoff/random, heurísticas e referências.
-O melhor modelo inclui o baseline antes de treinar e é selecionado pelo mínimo
-modo×cenário. Não substitui `models/model.pt` nem o checkpoint GPU publicado.
-O supervisor exporta bundle coerente em `models/local_warmstart_latest` a cada
-30 minutos e após a saída. Isso é backup local; não significa push automático.
+O primeiro lançamento (`launch_manifest.json`, apenas histórico) usou o mapa
+`futsal_1v1_contained.hbs`, validado no motor JS da sala. A avaliação inicial
+apresentou forte assimetria por lado; ele foi encerrado por SIGTERM ainda durante
+a calibração, antes de alterar o ator (identidade dos tensores conferida).
+Não houve promoção desse modelo.
 
-Para encerrar, conferir a identidade do PID em `launch.json` e enviar SIGTERM ao
-**treinador**, permitindo salvamento normal. Para retomar após shutdown, usar UMA
-pasta nova e `src/train.py --resume CAMINHO/train/resume.pt --device cpu --out NOVO`;
-as partidas físicas recomeçam, mas Adam e schedules desse bloco são preservados.
-A disponibilidade do processo depende de a máquina permanecer ligada.
+O probe reproduzível `map_probe.py`, seed1701,8env,200 decisões,greedy/Chase:
 
-## Interpretação
+| Mapa | Lado | Gols a favor | Contra |
+|---|---|---:|---:|
+| Original do checkpoint | vermelho | 20 | 1 |
+| Original do checkpoint | azul | 23 | 1 |
+| Contenção | vermelho | 0 | 19 |
+| Contenção | azul | 18 | 0 |
 
-Mais treino pode melhorar e também causar regressão. A avaliação mede progresso
-no painel conhecido; só um benchmark reservado posterior pode avaliar generalização.
-Nenhum ganho novo é reivindicado no lançamento. Seeds de avaliação não representam
-novas seeds independentes de treinamento. Não trocar hipóteses/recompensa em resposta
-a um score isolado. Revisar referências individuais, curvas e comportamento antes
- de promover um novo modelo para jogo humano.
+Números completos em `map_probe.json`. É um diagnóstico de compatibilidade,
+não um benchmark de força. A causa interna na física/representação ainda não
+foi isolada; não afirmar que determinado bias/plane foi o responsável. Testar
+contenção no motor da sala não certifica o motor nativo de treinamento.
+A correção desta execução é voltar ao mapa original; o problema de contenção no
+motor nativo continua pendente. O mapa da sala web não foi modificado.
+
+## Execução, parada e retomada
+
+Fonte/mapa/origem/âncoras congelados no run; comando e hashes em `launch.json`.
+`runs/active_local_warmstart.txt` identifica a execução. O launcher recusa um
+outro treinador ativo. O manifesto ativo está em `active_launch_manifest.json`.
+
+Resume atômico a cada5 iterações; snapshots a cada1000; avaliação a cada50, nos
+dois modos/cenários/lados e referências. Melhor inclui baseline inicial. Originais
+`models/model.pt` e `models/sprint1_10000` são preservados. Supervisor exporta
+bundle coerente para `models/local_warmstart_latest` a cada30min e na saída.
+É backup local, não push automático. Processo depende da máquina ligada.
+
+Para parar: conferir PID/identidade em `launch.json` e enviar SIGTERM ao treinador,
+aguardando saída normal e salvamento. Desligamento abrupto pode perder as últimas
+cinco iterações ainda não salvas. Para retomar, UMA pasta nova:
+
+```bash
+.venv/bin/python src/train.py --resume CAMINHO/train/resume.pt --device cpu --out NOVO
+```
+
+A flag contínua é restaurada do checkpoint, junto de Adam/schedules; as partidas
+físicas reiniciam. Não executar `launch.py` de novo para uma retomada: ele cria um
+warm start novo. Manter o código que entende `--continuous` ao retomar.
+
+## Validação do controle contínuo
+
+Três testes de orçamento/iterador e floors, quatro de telemetria e14 estruturais
+passaram. Teste real com horizonte2 ultrapassou esse horizonte e salvou resume
+coerente após SIGTERM (`continuous_check.json`). Não se repetiu benchmark caro.
+Esses testes verificam execução, não evolução. Mais treino pode regredir;
+comparar melhor versus endpoint em dados reservados antes de promover o resultado.

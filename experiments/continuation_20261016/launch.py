@@ -32,7 +32,7 @@ def main():
     run.mkdir(parents=True, exist_ok=False)
     frozen = run / 'frozen'
     shutil.copytree(ROOT / 'src', frozen / 'src', ignore=shutil.ignore_patterns('__pycache__'))
-    shutil.copy2(ROOT / 'maps/futsal_1v1_contained.hbs', frozen / 'stadium.hbs')
+    shutil.copy2(ROOT / 'models/sprint1_10000/stadium.hbs', frozen / 'stadium.hbs')
     shutil.copy2(ROOT / 'models/sprint1_10000/model.pt', frozen / 'origin.pt')
     shutil.copy2(ROOT / 'models/sprint1_10000/meta.json', frozen / 'origin_meta.json')
     import torch
@@ -47,7 +47,7 @@ def main():
                '--warm-start', str(frozen / 'origin.pt'), '--keep-critic',
                '--stadium', str(frozen / 'stadium.hbs'), '--device', 'cpu',
                '--envs', '512', '--threads', '2', '--seed', '16',
-               '--iters', '100000', '--actor-lr', '0.0001', '--critic-lr', '0.0001',
+               '--continuous', '--iters', '10000', '--actor-lr', '0.0001', '--critic-lr', '0.0001',
                '--eval-every', '50', '--checkpoint-every', '5', '--save-every', '1000',
                '--out', str(run / 'train')]
     for i in range(len(resume['anchors'])):
@@ -57,9 +57,9 @@ def main():
                     command=command, supervisor_pid=os.getpid(), torch=torch.__version__,
                     cuda_available=torch.cuda.is_available(),
                     semantics='Warm start: actor and critic retained; Adam/pool/RNG/schedules reset; physical matches reset',
-                    map_change='Contained boundary map; do not directly compare old-map scores',
+                    map_change='Exact original checkpoint stadium; contained map rejected after native-engine side asymmetry probe',
                     evaluation_reference='Warm-start policy (9900); old two anchors preserved; baseline measured before updates',
-                    budget='First block: 100000 new iterations; no wall-clock cutoff and no automatic restart on failure',
+                    budget='Continuous until user interruption or failure; --iters 10000 sets schedule horizon only, not stopping budget',
                     hashes={str(p.relative_to(run)):digest(p) for p in frozen.rglob('*') if p.is_file()})
     with (run / 'train.log').open('w') as log:
         trainer = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,

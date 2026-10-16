@@ -1,0 +1,6 @@
+{
+  "iteration": 9,
+  "actor_tensors_identical": true,
+  "actor_tensors": 10,
+  "reason": "side asymmetry on contained stadium; stopped during critic-only calibration"
+}

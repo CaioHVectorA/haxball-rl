@@ -7,6 +7,7 @@ and rich randomized in-game scenarios.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import time
@@ -270,9 +271,20 @@ def eval_vs_chase(eval_env, model, dev, n_red, n_blue, steps=350):
     return rg - bg
 
 
+def training_iterations(start, horizon, continuous=False):
+    """In continuous mode horizon controls schedules, not process lifetime."""
+    return itertools.count(start + 1) if continuous else range(start + 1, horizon + 1)
+
+
+def schedule_fraction(iteration, horizon):
+    """Keep positive LR/entropy floors after the schedule horizon."""
+    return min(1., max(0., (iteration - 1) / max(1, horizon - 1)))
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--iters", type=int, default=1500)
+    ap.add_argument("--iters", type=int, default=1500, help="iteration budget, or schedule horizon with --continuous")
+    ap.add_argument("--continuous", action="store_true", help="train until signal/deadline; keep schedule floors beyond --iters")
     ap.add_argument("--envs", type=int, default=512, help="parallel games")
     ap.add_argument("--red", type=int, default=1)
     ap.add_argument("--blue", type=int, default=1)
@@ -324,8 +336,9 @@ def main():
         protected=('envs','red','blue','tick_skip','seed','reward_table','separate_critic',
                    'curriculum_frac','approach_weight','progress_weight','goal_weight',
                    'pocket_offset','pocket_radius','actor_lr','critic_lr','target_kl',
-                   'eval_modes','selection_metric','timeout_bootstrap','iters','eval_envs','eval_steps','eval_every','critic_warmup_iters')
+                   'eval_modes','selection_metric','timeout_bootstrap','iters','continuous','eval_envs','eval_steps','eval_every','critic_warmup_iters')
         resume['config'].setdefault('critic_warmup_iters',0)
+        resume['config'].setdefault('continuous',False)
         for key in protected:
             flag='--'+key.replace('_','-')
             if flag in sys.argv and getattr(args,key)!=resume['config'][key]:
@@ -425,7 +438,7 @@ def main():
 
     print(
         f"self-play PPO (snapshot pool) | {args.red}v{args.blue} {args.stadium or 'classic'} | "
-        f"obs_dim={obs_dim} n_acts={n_acts} train_slots={B} gamma={gamma:.4f} device={dev} iters={args.iters}"
+        f"obs_dim={obs_dim} n_acts={n_acts} train_slots={B} gamma={gamma:.4f} device={dev} iters={args.iters} continuous={args.continuous}"
     )
 
     S_obs = torch.zeros(T, B, obs_dim, device=dev)
@@ -488,7 +501,7 @@ def main():
         restore_random_state(resume['random'],rng)
         curriculum.load_state_dict(resume['curriculum'])
         atomic_torch_save(model.state_dict(),out/'initial_policy.pt')
-        if start_iteration>=args.iters:
+        if start_iteration>=args.iters and not args.continuous:
             raise ValueError('Resume checkpoint already reached its iteration budget')
     stop_requested=False
     def request_stop(signum,frame):
@@ -540,14 +553,14 @@ def main():
 
         completed = start_iteration
         save_resume(completed)
-        for it in range(start_iteration+1,args.iters+1):
+        for it in training_iterations(start_iteration, args.iters, args.continuous):
             if stop_requested:break
             if deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds:
                 break
             iteration_start=time.perf_counter()
             meter.clear()
             telemetry.update(phase="rollout",iteration=it,rollout_step=0)
-            frac = (it - 1) / max(1, args.iters - 1)
+            frac = schedule_fraction(it, args.iters)
             for g in opt.param_groups:
                 base=g["base_lr"]
                 g["lr"] = base * (1 - frac) + (base / 3) * frac
@@ -720,7 +733,7 @@ def main():
             atomic_json(final_meta,dict(config,it=completed,evaluation_score=score),durable=True)
         save_resume(completed)
         telemetry.update(status="completed",phase="completed",completed_iterations=completed,
-                         stop_reason='signal' if stop_requested else ('deadline' if completed<args.iters else 'iteration_budget'))
+                         stop_reason='signal' if stop_requested else ('deadline' if args.continuous or completed<args.iters else 'iteration_budget'))
         print(f"done. balanced score {best:.3f} -> {out / 'model.pt'}",flush=True)
     except BaseException as error:
         telemetry.update(status='failed',phase='failed',error=repr(error))
