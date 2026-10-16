@@ -8,7 +8,7 @@
 <article><span>Iterações completas</span><strong id="iterations">—</strong><small id="phase">—</small><progress id="progress" max="1000" value="0"></progress></article>
 <article><span>Amostras coletadas</span><strong id="samples">—</strong><small id="setup">—</small></article>
 <article><span>Velocidade do treino</span><strong id="speed">—</strong><small id="eta">Tempo restante: —</small></article>
-<article><span>Última avaliação global</span><strong id="score">—</strong><small id="eval-age">Ainda sem avaliação concluída</small></article>
+<article><span>Score mínimo atual</span><strong id="score">—</strong><small id="eval-age">Ainda sem avaliação concluída</small></article>
 </section>
 <section class="panel"><div class="section-head"><div><h2>Desempenho por adversário</h2><p>Vitória vale 1, empate ½ e derrota 0. Média equilibrada entre lados e seeds.</p></div><label>Cenário <select id="scenario"><option value="random">Posições variadas</option><option value="kickoff">Kickoff fixo</option><option value="all">Ambos, com peso igual</option></select></label></div>
 <div id="legend" class="legend"></div><div id="performance-chart" class="chart" aria-label="Pontuação por adversário ao longo das iterações"></div>
@@ -19,7 +19,7 @@
 <section class="panel"><h2>Bola parada durante o treino</h2><p>Fração de decisões com deslocamento da bola menor que 0,01 unidade. Inclui momentos normais de kickoff.</p><div id="stationary-chart" class="chart" aria-label="Fração de bola parada por iteração"></div></section>
 </div>
 <div class="two-columns">
-<section class="panel"><h2>Recompensas observadas</h2><p>Média por amostra de cada parcela já ponderada. Recompensa crescente não comprova melhora no jogo.</p><div class="legend"><span><i class="swatch" style="background:#63b3ff"></i>Aproximação</span><span><i class="swatch" style="background:#62d6a3"></i>Progresso</span><span><i class="swatch" style="background:#b49cff"></i>Gol</span></div><div id="reward-chart" class="chart" aria-label="Contribuição média das recompensas"></div></section>
+<section class="panel"><h2>Recompensas observadas</h2><p>Média por amostra de cada parcela já ponderada. Recompensa crescente não comprova melhora no jogo.</p><div class="legend"><span><i class="swatch" style="background:#63b3ff"></i>Posição de chute</span><span><i class="swatch" style="background:#62d6a3"></i>Progresso da bola</span><span><i class="swatch" style="background:#b49cff"></i>Gol</span></div><div id="reward-chart" class="chart" aria-label="Contribuição média das recompensas"></div></section>
 <section class="panel"><h2>Saúde do PPO</h2><p id="ppo-detail">Aguardando atualização da rede.</p><div class="legend"><label>Métrica <select id="ppo-metric"><option value="entropy">Entropia das ações</option><option value="approximate_kl">KL aproximada</option><option value="clip_fraction">Fração limitada pelo clip</option><option value="value_loss">Erro do critic</option><option value="explained_variance">Variância explicada</option></select></label></div><div id="ppo-chart" class="chart" aria-label="Métrica de treinamento PPO"></div></section>
 </div>
 <footer><span id="configuration">—</span><span>Atualização automática a cada segundo · dados da execução atual</span></footer>

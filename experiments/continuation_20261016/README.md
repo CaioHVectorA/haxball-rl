@@ -79,3 +79,16 @@ passaram. Teste real com horizonte2 ultrapassou esse horizonte e salvou resume
 coerente após SIGTERM (`continuous_check.json`). Não se repetiu benchmark caro.
 Esses testes verificam execução, não evolução. Mais treino pode regredir;
 comparar melhor versus endpoint em dados reservados antes de promover o resultado.
+
+## Dashboard local
+
+Acesso: http://127.0.0.1:8085 — somente nesta máquina. Servidor somente leitura,
+sem interferir no treinador. `runs/active.json` aponta para o subdiretório `train`
+do run ativo. Inicialização: `.venv/bin/python live_stats_server.py --port 8085`.
+Processo atual registra saída em `runs/dashboard_server.log`.
+
+Painel ajustado para modo contínuo (sem ETA de fim), duas âncoras históricas e
+termos PBRS reais. Score mostrado não é taxa de vitória. Gráficos atualizam por
+SSE a cada segundo; avaliações novas aparecem a cada50 iterações. JS passou
+verificação sintática e endpoints HTML/JS/state/history responderam200 com dados
+do run ativo. Não houve alteração na fonte congelada do treinador.
