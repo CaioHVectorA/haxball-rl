@@ -1,0 +1,14 @@
+[
+  {
+    "original_path": "models/model_final.pt",
+    "archived_path": "artifacts/legacy_root_models/model_final.pt",
+    "sha256": "0254d0020b421ba3e640131fd9ced34afa162ed9102e54ee6347c6004c2fc4b3",
+    "size": 294599
+  },
+  {
+    "original_path": "models/meta_final.json",
+    "archived_path": "artifacts/legacy_root_models/meta_final.json",
+    "sha256": "8e2d8f66dc4ce9b1f41d687210ba331e4bfc06e192dc4dc9a8c94ea7c49c99be",
+    "size": 147
+  }
+]
