@@ -1,0 +1,130 @@
+{
+  "files": [
+    {
+      "path": "models/ckpts/it1000.pt",
+      "size": 293997,
+      "sha256": "4f929b335892fad1140d92965abd467e85ce7d20991c4d143a39f66d633c6182"
+    },
+    {
+      "path": "models/ckpts/it10000.pt",
+      "size": 294079,
+      "sha256": "476b031b7dc5bc0ec6cf64ceeddab68bc49a2140ecdc681a5754df8be3c93a1d"
+    },
+    {
+      "path": "models/ckpts/it11000.pt",
+      "size": 294079,
+      "sha256": "9aa62d3ae2ff1af508476179f280b25dd5d3beafe6008ab1dd9f38f6bd85e772"
+    },
+    {
+      "path": "models/ckpts/it1200.pt",
+      "size": 293997,
+      "sha256": "6b4742edfcfec54406bb62033c2955a371094920f40cfbdf5a68322cbb45d123"
+    },
+    {
+      "path": "models/ckpts/it12000.pt",
+      "size": 294079,
+      "sha256": "cdea1af761d6931f8edf5110dd5a8f0d781268b553061908cde67696cc1ccc81"
+    },
+    {
+      "path": "models/ckpts/it13000.pt",
+      "size": 294079,
+      "sha256": "a0252133a69298cc0b5944584afa8965e51605bb787d87af0de776a7367379e0"
+    },
+    {
+      "path": "models/ckpts/it14000.pt",
+      "size": 294079,
+      "sha256": "d06f1c223a5930751ae74bbb9af2efe70e9fa1ff2c66086e574c5a88a6e02a8f"
+    },
+    {
+      "path": "models/ckpts/it1500.pt",
+      "size": 293997,
+      "sha256": "2edfcef78a345e8659dd3a3094a02c730fc6cf789f6314925d1a88721965a718"
+    },
+    {
+      "path": "models/ckpts/it15000.pt",
+      "size": 294079,
+      "sha256": "ceec6df78aaeda21fc8607b576c6d51a9c6fa2191b514bb634fb36cb30a7bd64"
+    },
+    {
+      "path": "models/ckpts/it16000.pt",
+      "size": 294079,
+      "sha256": "0adec165261494ac1303ae72ec1e1d76f9031f67dab2591f9be805e51a9014b3"
+    },
+    {
+      "path": "models/ckpts/it200.pt",
+      "size": 293979,
+      "sha256": "d578e208932d453de4d2f51c04dbc24f37f0937a0640c9d572310b4f3b8113af"
+    },
+    {
+      "path": "models/ckpts/it2000.pt",
+      "size": 293997,
+      "sha256": "79e34ab65ac64caeb9c26759066bba1dd49e05786f1d17fb01caccb4addc2ab5"
+    },
+    {
+      "path": "models/ckpts/it250.pt",
+      "size": 293979,
+      "sha256": "931d57548587516f52593d85b4d1e84698d26e6564bdc29ca047c66cf049b1ff"
+    },
+    {
+      "path": "models/ckpts/it2500.pt",
+      "size": 293997,
+      "sha256": "eeea813eb7527da7ab4ae9d960fcaad0f3f205ca7fdb6813625a05da61f8383a"
+    },
+    {
+      "path": "models/ckpts/it3000.pt",
+      "size": 293997,
+      "sha256": "ddd5b2ece382c828ed4f6a2759c350f6289eab700a43b5d21a66fd4bd19ae581"
+    },
+    {
+      "path": "models/ckpts/it400.pt",
+      "size": 293979,
+      "sha256": "cc4f67914c44636c3da3e10320a54154920daaf9165c58e69ffe2eaf9861e3ab"
+    },
+    {
+      "path": "models/ckpts/it4000.pt",
+      "size": 293997,
+      "sha256": "808f05ae528ebbcfc98d0656fe8988dca70e70cd31c914c6fc3ab821b6fe19a0"
+    },
+    {
+      "path": "models/ckpts/it500.pt",
+      "size": 293979,
+      "sha256": "8b7f6d08dc998191a1c60ec34f1c793c63ef9716a9904012349756b206efa185"
+    },
+    {
+      "path": "models/ckpts/it5000.pt",
+      "size": 293997,
+      "sha256": "e1e6f839597f51713a948ab69ee0c7ce9fa73558aece411b78d0deb3a0f4ac30"
+    },
+    {
+      "path": "models/ckpts/it600.pt",
+      "size": 293979,
+      "sha256": "cd87d587c168de8f7e98ada7ead9658aa01b8443866fe6d651bbb1dc6cc8a874"
+    },
+    {
+      "path": "models/ckpts/it6000.pt",
+      "size": 293997,
+      "sha256": "9390354e10f8b007fe944cda4f227e1e3d90da4f1af946eeb181cca574db96a8"
+    },
+    {
+      "path": "models/ckpts/it7000.pt",
+      "size": 293997,
+      "sha256": "899069700298d0154b9495962977d9956fe6aa5e6120298914101eb3c72b53d5"
+    },
+    {
+      "path": "models/ckpts/it800.pt",
+      "size": 293979,
+      "sha256": "ff03819715c6cecc1b49f9b7ac4baea1bc99ec701e0c322c5aad408626625f79"
+    },
+    {
+      "path": "models/ckpts/it8000.pt",
+      "size": 293997,
+      "sha256": "e30df293d89818726f2b21a840c469e4df36aa57b3a0b9de8621a5c8455f6405"
+    },
+    {
+      "path": "models/ckpts/it9000.pt",
+      "size": 293997,
+      "sha256": "490b7fd9e7ee072698f2f5ef77498e7656e12c4559b5b1b9f4371d97a8094ff7"
+    }
+  ],
+  "archive_sha256": "73ebf2c339b7b0fd2ca3b33715fead3b8736cd500ccc77df6f6e596710f1837c"
+}

@@ -1,0 +1,755 @@
+{
+  "kind": "delta-overlay",
+  "base": "../full_runs_20261014",
+  "files": [
+    {
+      "path": "runs/active.json",
+      "sha256": "c7525931d637890ee1df08abf4c681056b99d4555645bd60d8dbc56081e2fa6b",
+      "size": 91
+    },
+    {
+      "path": "runs/active_local_warmstart.txt",
+      "sha256": "9b8efe83d39d63830f6a6697e9d8fda0d121647fef7a750f8214b2b90bc70b2e",
+      "size": 74
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/backup.log",
+      "sha256": "8353f6549d2972f16307927fb51b187531e392389463b55af0a90878afb0333a",
+      "size": 666
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/exit.json",
+      "sha256": "a2b3354bc7ba45d617865e27c0b9f7969021c7484f8a1301d1ae35073ea0c185",
+      "size": 62
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/anchor_0.pt",
+      "sha256": "afe9a4232c63a0df003c59cfe0972c40353770db511e30df88795e0814e13434",
+      "size": 292757
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/anchor_1.pt",
+      "sha256": "23a979393ad21fa8cbcefd0023eaf87f517db8da2f31533cb5c0d6bb633be9eb",
+      "size": 292757
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/origin.pt",
+      "sha256": "abc8b46418ed57179bc5da6d2649a5c93bf2122b6888e1de6278f99329fb69cb",
+      "size": 575078
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/origin_meta.json",
+      "sha256": "996bf24f1b89022563668ced69af9e8bd22e4a43803f26029d3ba2a3d4efac20",
+      "size": 2211
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/analyze_ckpts.py",
+      "sha256": "7acb9cb15839c321c27a23e2168b4dd79d88550ba4739d4b9ae76b1902f36ce7",
+      "size": 2406
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/backup_training.py",
+      "sha256": "fc847e6cf2a2d725f2b574d6b8e0edf27da598b1667c62c74cafb76db0666cea",
+      "size": 2173
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/benchmark_cpu.py",
+      "sha256": "d7c7b68936a5ed0a53287673e309b3a7bac0df6f8f9265f3134de74aa0bcfeb3",
+      "size": 5026
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/bot.py",
+      "sha256": "244431795d1781c8e6f8393008beba7e2ca3e3bf39d8b5a4530579f3628a0c61",
+      "size": 5062
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/diagnose_poc_game.py",
+      "sha256": "6d8f2d1121711ee24187cfe75afad1b5295c029b9d2eb3373b877ccb0aea2941",
+      "size": 4389
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/environment.py",
+      "sha256": "a05130774049c0c3c4eac2ee0e7d111135d2e1d576ce0ba9b5414a87f28009a1",
+      "size": 6392
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/eval.py",
+      "sha256": "4747eaf9f9587c16f616ae3432c73835b6449ac747853c4815f769f5bc963dc4",
+      "size": 3764
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/eval_corner_scenarios.py",
+      "sha256": "2d58474c104ec28438fedffa01d1cc3a8efab72b161683f653b6a1319f19e104",
+      "size": 6877
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/finalize_training.py",
+      "sha256": "384b0ce97848b5ea6dba347b786581b2e9abef4a796d75cb2843ece2abcfb5f8",
+      "size": 8699
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/gradient_metrics.py",
+      "sha256": "a4ad7043804758227712400c0797b65e2f5b4edba01dce1252776011ee38811b",
+      "size": 1101
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/inspect_policy.py",
+      "sha256": "09cd82091a6cedf584431fd844c677a9b721fa5a7e4a7f691cd241f036e09539",
+      "size": 6091
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/live_evaluation.py",
+      "sha256": "93b8c6674a7104ff98c85c44edcacaa733fe4ba34284e7b4b20be8f5d4d6a6d3",
+      "size": 4727
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/model.py",
+      "sha256": "98c2d6d372b6f00225cdedd2b40777a687046daf9538345f2cf62af0e080edbd",
+      "size": 7716
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/opponents.py",
+      "sha256": "f9b5f4cb57ad9bf49fdcbdeeae67a9aa30344c2e1d77ca9159442cf980775bfc",
+      "size": 2609
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/poc_reward.py",
+      "sha256": "83c5e66f0593ada8f4f7e5cf84881fdff613dd1a5bbef8009067139e7ab84f15",
+      "size": 10594
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/ppo_returns.py",
+      "sha256": "801bcd63edb5709a9b877a273ea8eb04c4ea65687565d0b35b5e4c500972bc5a",
+      "size": 1199
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/repair_bot.py",
+      "sha256": "c67558d02b9e1f371db0a42ff7ddb2c1b07897930c989e7a9fc67285223961fe",
+      "size": 6904
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/replay.py",
+      "sha256": "72ae39b996e3a82a379e906cee218f66dd8cbe29e49a0fc61adb568ccf1cde23",
+      "size": 4148
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/reward_sweep.py",
+      "sha256": "df2f0b3de7c518633af907f0d26d89d0015e90109cc688019f980f0f76240dbc",
+      "size": 3542
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/select_checkpoint.py",
+      "sha256": "ea3eb80d2d4db73ab3fd9371de9a538271c9a88edb052e9cd820d577c0a23311",
+      "size": 4846
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/telemetry.py",
+      "sha256": "04660c31c536c78b249f347367f19c619cb8bf7024fca9ad2922ccfb60b4313a",
+      "size": 3403
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/train.py",
+      "sha256": "d1566d383d4c006a15eb1cb3c6b3f43953a245ef96d886c4d2a1f6f019ae04bf",
+      "size": 39815
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/src/training_checkpoint.py",
+      "sha256": "4618b9359ec186f7fab0610250b42738b8075090c8d3aa1208c5026a9cedea3c",
+      "size": 1342
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/frozen/stadium.hbs",
+      "sha256": "ab8dcd1bbc15f6290178b911a6340ab407157fb845a87b44c5ec83c7c6037cc0",
+      "size": 8395
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/launch.json",
+      "sha256": "b2969117fc9fa57446691e98505fff0af91be074ad790b385af390503ca587aa",
+      "size": 4594
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/config.json",
+      "sha256": "a7797a1c017440420c9713a7c347aca9945c303c55af5b98cd0438a53746fd1a",
+      "size": 2450
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/evaluation_cases.jsonl",
+      "sha256": "d63beb420ded45d7277a3e49a7f7597c6d4dd1862707e867dc8480a41a912ba6",
+      "size": 43186
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/evaluations.jsonl",
+      "sha256": "196d773526ba4771d1dbbd6bcbef512c0cd934067850ba375d9b883be0322363",
+      "size": 36359
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/initial_policy.pt",
+      "sha256": "0832022d74eaa0fd150794c0a2035c15d1e092e448dc933bd8a3065c826c8303",
+      "size": 575475
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/live.json",
+      "sha256": "e67bc80fa24029f9210fece442583502506d419b4f7fed63f95144d3b44b85d6",
+      "size": 4571
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/meta.json",
+      "sha256": "4e67be7bed0b1b8b104173d205b2f56cbdf5d8d80f89ab55e19eaa6054c2d7cf",
+      "size": 2484
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/meta_final.json",
+      "sha256": "e44075f0319d3c35bcbbfd795c1789f5df1806ef59968cdcf4550937ec0d14a1",
+      "size": 2485
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/model.pt",
+      "sha256": "0832022d74eaa0fd150794c0a2035c15d1e092e448dc933bd8a3065c826c8303",
+      "size": 575475
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/model_final.pt",
+      "sha256": "19ad2197b8993b69811b53a7418f3132a93eaa8794b34715c8a6e1db681f5678",
+      "size": 575475
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/resume.pt",
+      "sha256": "9cc3441e71d689c3c47180f6316b1743a53ce0e862766cb929a37ecd1fd1910c",
+      "size": 2906514
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train/training.jsonl",
+      "sha256": "550bf8ab4e6007a9a34e0323365f9567bca90b3e0484db3c1ab2a97471200ef5",
+      "size": 15121
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_020836/train.log",
+      "sha256": "e8cd20473c1310fab195d308a4968c28582fa2b05e5ec706985232a03057c9cd",
+      "size": 456
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/backup.log",
+      "sha256": "d88a09d41f384c52a51960a20709c6f520ced721851dfe810e47752c1e841084",
+      "size": 8123
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/exit.json",
+      "sha256": "cb08588418ab3ff7c9ec2498479c8b5e2bd64deedd25356dec98c258f33c867c",
+      "size": 62
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/anchor_0.pt",
+      "sha256": "afe9a4232c63a0df003c59cfe0972c40353770db511e30df88795e0814e13434",
+      "size": 292757
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/anchor_1.pt",
+      "sha256": "23a979393ad21fa8cbcefd0023eaf87f517db8da2f31533cb5c0d6bb633be9eb",
+      "size": 292757
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/origin.pt",
+      "sha256": "abc8b46418ed57179bc5da6d2649a5c93bf2122b6888e1de6278f99329fb69cb",
+      "size": 575078
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/origin_meta.json",
+      "sha256": "996bf24f1b89022563668ced69af9e8bd22e4a43803f26029d3ba2a3d4efac20",
+      "size": 2211
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/analyze_ckpts.py",
+      "sha256": "7acb9cb15839c321c27a23e2168b4dd79d88550ba4739d4b9ae76b1902f36ce7",
+      "size": 2406
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/backup_training.py",
+      "sha256": "fc847e6cf2a2d725f2b574d6b8e0edf27da598b1667c62c74cafb76db0666cea",
+      "size": 2173
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/benchmark_cpu.py",
+      "sha256": "d7c7b68936a5ed0a53287673e309b3a7bac0df6f8f9265f3134de74aa0bcfeb3",
+      "size": 5026
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/bot.py",
+      "sha256": "244431795d1781c8e6f8393008beba7e2ca3e3bf39d8b5a4530579f3628a0c61",
+      "size": 5062
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/diagnose_poc_game.py",
+      "sha256": "6d8f2d1121711ee24187cfe75afad1b5295c029b9d2eb3373b877ccb0aea2941",
+      "size": 4389
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/environment.py",
+      "sha256": "a05130774049c0c3c4eac2ee0e7d111135d2e1d576ce0ba9b5414a87f28009a1",
+      "size": 6392
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/eval.py",
+      "sha256": "4747eaf9f9587c16f616ae3432c73835b6449ac747853c4815f769f5bc963dc4",
+      "size": 3764
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/eval_corner_scenarios.py",
+      "sha256": "2d58474c104ec28438fedffa01d1cc3a8efab72b161683f653b6a1319f19e104",
+      "size": 6877
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/finalize_training.py",
+      "sha256": "384b0ce97848b5ea6dba347b786581b2e9abef4a796d75cb2843ece2abcfb5f8",
+      "size": 8699
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/gradient_metrics.py",
+      "sha256": "a4ad7043804758227712400c0797b65e2f5b4edba01dce1252776011ee38811b",
+      "size": 1101
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/inspect_policy.py",
+      "sha256": "09cd82091a6cedf584431fd844c677a9b721fa5a7e4a7f691cd241f036e09539",
+      "size": 6091
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/live_evaluation.py",
+      "sha256": "93b8c6674a7104ff98c85c44edcacaa733fe4ba34284e7b4b20be8f5d4d6a6d3",
+      "size": 4727
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/model.py",
+      "sha256": "98c2d6d372b6f00225cdedd2b40777a687046daf9538345f2cf62af0e080edbd",
+      "size": 7716
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/opponents.py",
+      "sha256": "f9b5f4cb57ad9bf49fdcbdeeae67a9aa30344c2e1d77ca9159442cf980775bfc",
+      "size": 2609
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/poc_reward.py",
+      "sha256": "83c5e66f0593ada8f4f7e5cf84881fdff613dd1a5bbef8009067139e7ab84f15",
+      "size": 10594
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/ppo_returns.py",
+      "sha256": "801bcd63edb5709a9b877a273ea8eb04c4ea65687565d0b35b5e4c500972bc5a",
+      "size": 1199
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/repair_bot.py",
+      "sha256": "c67558d02b9e1f371db0a42ff7ddb2c1b07897930c989e7a9fc67285223961fe",
+      "size": 6904
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/replay.py",
+      "sha256": "72ae39b996e3a82a379e906cee218f66dd8cbe29e49a0fc61adb568ccf1cde23",
+      "size": 4148
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/reward_sweep.py",
+      "sha256": "df2f0b3de7c518633af907f0d26d89d0015e90109cc688019f980f0f76240dbc",
+      "size": 3542
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/select_checkpoint.py",
+      "sha256": "ea3eb80d2d4db73ab3fd9371de9a538271c9a88edb052e9cd820d577c0a23311",
+      "size": 4846
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/telemetry.py",
+      "sha256": "04660c31c536c78b249f347367f19c619cb8bf7024fca9ad2922ccfb60b4313a",
+      "size": 3403
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/train.py",
+      "sha256": "989688afeba2061a7337c37cb190201307371a65933bd495b2c6df1619f1b4d4",
+      "size": 40604
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/src/training_checkpoint.py",
+      "sha256": "4618b9359ec186f7fab0610250b42738b8075090c8d3aa1208c5026a9cedea3c",
+      "size": 1342
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/frozen/stadium.hbs",
+      "sha256": "cfe662aab4556a310e5cab00ced83226a7216f2b877cb28554830bcca745588b",
+      "size": 7871
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/launch.json",
+      "sha256": "159a5a377c825cc895218a1afae0e10f71e4657ab9df770a12350dda635ec5d2",
+      "size": 4665
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it1000.pt",
+      "sha256": "d213ed1bda45a91c81d4780b504d806794e8b09e19b5f2c1b6bde92d3dbff2a2",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it2000.pt",
+      "sha256": "2f7e893f23d5fcec5fd8e1c3f048d645bb5ae5d9205256a80284e46445c4d401",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it3000.pt",
+      "sha256": "85df603affd343c1f19519c233449146f155a0309f54dde1aaa3b15cc87bd855",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it4000.pt",
+      "sha256": "66e04beaf11deceb26729a2f535f3257b00aa9c785148006f89a44bd07ea4dcd",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it5000.pt",
+      "sha256": "63e6d0d1b28684ce6376fb3115f44048c60d2cd30b321fe332a718324f3ceb19",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it6000.pt",
+      "sha256": "667ccf0d15be17aafe87d65fe32ba490a749980203707b6892682adc7dc1934d",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it7000.pt",
+      "sha256": "c29e6e21a8a68b9ff6a0297311daca7a9525793dd160168b9a8c6cf031f112bc",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/ckpts/it8000.pt",
+      "sha256": "ca73b57e44ad255bafed554791ea1eedd2e355d3e231b4daacfaf25f09e0512e",
+      "size": 575859
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/config.json",
+      "sha256": "79d0562c8157b918dc5310808551283b26cce641211a0f82b277e59628e1420c",
+      "size": 2469
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/evaluation_cases.jsonl",
+      "sha256": "868e1bcaf19af670b28df2fea0829d72f7ca694ab1013871d5beaf7c0d1c9322",
+      "size": 7176533
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/evaluations.jsonl",
+      "sha256": "67b0b0fc1a5afb03e1e6d58e3aff39705f6664d7deaff886534fc4a5dc287248",
+      "size": 6035834
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/initial_policy.pt",
+      "sha256": "0832022d74eaa0fd150794c0a2035c15d1e092e448dc933bd8a3065c826c8303",
+      "size": 575475
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/live.json",
+      "sha256": "ba335bfb093658c618dfd39c41acdf1114802230399529d2c0c1393062cec470",
+      "size": 4680
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/meta.json",
+      "sha256": "c578edd3804177d2261e878b6ed500472cc3733d822ae737cc464f4084a9e5dc",
+      "size": 2521
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/meta_final.json",
+      "sha256": "28852d4ae92cda3ff4cf02c81844508e5fc3124b6d526395b78ea442de5fe30b",
+      "size": 2507
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/model.pt",
+      "sha256": "106fdacec134123ddde688648f6711892153f75f86590fda99b5ab7c4ab126be",
+      "size": 575475
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/model_final.pt",
+      "sha256": "f39ef916fe2489bb874078d5ed9dc1e42612434671d7e2157c599f983d28d6a1",
+      "size": 575475
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/resume.pt",
+      "sha256": "1d7b8893b83b1866ee8314a76c7282fffc097db35419e460cb9015353163acae",
+      "size": 14866369
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train/training.jsonl",
+      "sha256": "76f1f9d9a2a1022b43b9505b32327a9930d765a038cd683fbe6eab9f9a0a89f3",
+      "size": 14117716
+    },
+    {
+      "path": "runs/continued_warmstart_20261016_021328/train.log",
+      "sha256": "6f24d1776f69ec4dfe87782c61818d39638356dc00876aab5e8b1288b806841c",
+      "size": 10311
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/config.json",
+      "sha256": "f9641b7e3e7c58c81e25ac54463dc86df4faa301c2c438232c9ee180a4b3da33",
+      "size": 2011
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/evaluation_cases.jsonl",
+      "sha256": "d8bbceb53d8cb816951d51737358d39fe0431653a2e42ae262d340f0fb45bcfb",
+      "size": 57472
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/evaluations.jsonl",
+      "sha256": "f733b871024db86b4f6fd103d0e1c387f8488e48bff5c2be0237aba5b882c8b3",
+      "size": 47810
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/initial_policy.pt",
+      "sha256": "0832022d74eaa0fd150794c0a2035c15d1e092e448dc933bd8a3065c826c8303",
+      "size": 575475
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/live.json",
+      "sha256": "275b29da05d84ddb164be8f99ff00ece8fb6cb7d549e35379b79ebb82d1cc2ea",
+      "size": 4125
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/log.txt",
+      "sha256": "bda3314b7a63cdc2a3542d6b118c7f2079ec8ba3badefd7048ee306d74af3be6",
+      "size": 362
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/meta.json",
+      "sha256": "76828b75cb12ffd035eb7074e5dc5fab743baa5d516d55881059e26c53f30a30",
+      "size": 2046
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/meta_final.json",
+      "sha256": "6b956ca8bd903e9f6391bc3992e1772b16f80b924db2279c3578f8e6dbe699e0",
+      "size": 2046
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/model.pt",
+      "sha256": "0832022d74eaa0fd150794c0a2035c15d1e092e448dc933bd8a3065c826c8303",
+      "size": 575475
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/model_final.pt",
+      "sha256": "c001770864bbb5b9b87b60561f836c0018a6d482ffcae60592769e27cf51b79f",
+      "size": 575475
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/resume.pt",
+      "sha256": "2bbffb17aaf967b96e2c1d3694004b8588184b30c159e0e92568967db4ab002a",
+      "size": 2907829
+    },
+    {
+      "path": "runs/continuous_cutoff_check_20261016/training.jsonl",
+      "sha256": "17560a7623a78a36a9bea980c67c4ddffc7a38e94d4e09bc67bb40f3e28707bf",
+      "size": 6605
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/config.json",
+      "sha256": "7d0bf8c3243af9860242c9d1ca6f1d67fb67c7c4948007301fb672379749d673",
+      "size": 1970
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/evaluation_cases.jsonl",
+      "sha256": "969d9f076e86c5782a5d3d35d68e60551ec93cd2b978950d97db7991a198110e",
+      "size": 28736
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/evaluations.jsonl",
+      "sha256": "494fde15c50564a66bd908f7060040c939547c360736e920de14203376eedc63",
+      "size": 23905
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/initial_policy.pt",
+      "sha256": "c1c51dff517c11be01b368a035fe595333408ed395cadb60132c8cf08102f0a2",
+      "size": 575859
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/live.json",
+      "sha256": "ca1cfb3aac2487f720771799ce96a2b6d54e5a1e0ad15403c1b2a9814749acfd",
+      "size": 4067
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/log.txt",
+      "sha256": "6a4f1e58e81c5d623fdae3ae24dcbf6302cd7a6b582b9e88640ca9fa4087d535",
+      "size": 239
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/meta.json",
+      "sha256": "b29b3d91b69b0dfc81cfcb443ac2fe04368a4fab4b18c4d7c0033ccfd6049317",
+      "size": 2005
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/meta_final.json",
+      "sha256": "aa033af364ef32d1b329e04720a14c8cf38dd76681326d8badbe87709727e8db",
+      "size": 2005
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/model.pt",
+      "sha256": "0832022d74eaa0fd150794c0a2035c15d1e092e448dc933bd8a3065c826c8303",
+      "size": 575475
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/model_final.pt",
+      "sha256": "03881ca90cb37cefdb1627e310ca6e7fe53a75a01da38c91c88cc426b8951401",
+      "size": 575475
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/resume.pt",
+      "sha256": "c704576d4af3ee462dcfcd67c91ae105e23e7c076461f9f2dc44c986ca12945d",
+      "size": 2907765
+    },
+    {
+      "path": "runs/continuous_resume_check_20261016/training.jsonl",
+      "sha256": "3986d4d7a996371e6eb0d6b388081288f2d4349ef35d37cbec8c1fcb36f8835d",
+      "size": 3327
+    },
+    {
+      "path": "runs/dashboard_server.log",
+      "sha256": "18627b68a9837e13ea5403fd3b5fe4da2fb1d6214040fbd5ab09d7e484b4aa9f",
+      "size": 66
+    },
+    {
+      "path": "runs/local_warmstart_supervisor.log",
+      "sha256": "577e0725084084b1e03be01706dbcf601cfe03c31f0aaa7bf1b465fa955d344a",
+      "size": 839
+    }
+  ],
+  "parts": [
+    {
+      "path": "continuation.tar.gz.part000",
+      "size": 4194304,
+      "sha256": "a2a8ef5caf86f7050c62ff0b6c08593ea7c6d55ef890cdc570a1f08a41a5b802"
+    },
+    {
+      "path": "continuation.tar.gz.part001",
+      "size": 4194304,
+      "sha256": "68314e86b9f562af3fc5e851a661c421b53b7e9570d4a46934440bcf853a7ca1"
+    },
+    {
+      "path": "continuation.tar.gz.part002",
+      "size": 4194304,
+      "sha256": "479b438788c3f6844173fb1660a9ac0f7f81e3683f389096a45a42627c5049f8"
+    },
+    {
+      "path": "continuation.tar.gz.part003",
+      "size": 4194304,
+      "sha256": "a9df0fcf9133e050b3671bec876eeaa8e71bc96fb80d46ace74f2a8d739d8491"
+    },
+    {
+      "path": "continuation.tar.gz.part004",
+      "size": 4194304,
+      "sha256": "fa2a24b0271bd743c02fdf2a74f184efed6de607eeb1a9f1df797d8f099e8ea3"
+    },
+    {
+      "path": "continuation.tar.gz.part005",
+      "size": 4194304,
+      "sha256": "5cb480ebd426a99c90fcf20cc83308f2880c52f432bcdba748c1c7c52d996ae8"
+    },
+    {
+      "path": "continuation.tar.gz.part006",
+      "size": 4194304,
+      "sha256": "b6d32f4931a4b298738250da216e270c085c3ef60cef87aee09317300e281ba7"
+    },
+    {
+      "path": "continuation.tar.gz.part007",
+      "size": 4194304,
+      "sha256": "e2d9dfc9cc59995b23f41aac764520c000104e3b6455e0ee1cde26d27f4305b3"
+    },
+    {
+      "path": "continuation.tar.gz.part008",
+      "size": 4194304,
+      "sha256": "a1d188a76075b5e6b4b2dc17f9c19a9626e8092b9d8f988b596c652ef9a4835b"
+    },
+    {
+      "path": "continuation.tar.gz.part009",
+      "size": 920415,
+      "sha256": "fdac66e69cabf7510fa08a25246d2ca8db9f268d3c5e28eb0428e38e4f7fc411"
+    }
+  ],
+  "archive_sha256": "d0cee1dec6e8a83fbea24917acbbfe9625d5015834fb467b4bf89dbed7b02a37",
+  "excluded": [
+    "runs/active_human_room.txt",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/bot.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/environment.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/gradient_metrics.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/live_evaluation.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/model.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/opponents.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/ppo_returns.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/replay.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/telemetry.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/train.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_020836/frozen/src/__pycache__/training_checkpoint.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/bot.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/environment.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/gradient_metrics.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/live_evaluation.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/model.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/opponents.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/ppo_returns.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/replay.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/telemetry.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/train.cpython-312.pyc",
+    "runs/continued_warmstart_20261016_021328/frozen/src/__pycache__/training_checkpoint.cpython-312.pyc",
+    "runs/gpu_room_20261015/contained_policy.json",
+    "runs/gpu_room_20261015/contained_room.log",
+    "runs/gpu_room_20261015/contained_room_process.json",
+    "runs/gpu_room_20261015/fixture.json",
+    "runs/gpu_room_20261015/process.json",
+    "runs/gpu_room_20261015/room.log",
+    "runs/human_room_20261015.json",
+    "runs/human_room_20261015.log",
+    "runs/human_room_20261016_120041/launch.json",
+    "runs/human_room_20261016_120041/model/backup.json",
+    "runs/human_room_20261016_120041/model/latest.pt",
+    "runs/human_room_20261016_120041/model/meta.json",
+    "runs/human_room_20261016_120041/model/meta_latest.json",
+    "runs/human_room_20261016_120041/model/model.pt",
+    "runs/human_room_20261016_120041/model/resume.pt",
+    "runs/human_room_20261016_120041/model/stadium.hbs",
+    "runs/human_room_20261016_120041/policy.json",
+    "runs/human_room_20261016_120041/room.log",
+    "runs/live_room.log",
+    "runs/live_room_process.json",
+    "runs/sprint1_3000_room.log",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/bot.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/environment.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/gradient_metrics.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/live_evaluation.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/model.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/ppo_returns.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/replay.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/telemetry.cpython-312.pyc",
+    "runs/sprint1_overnight_model_20261014/source/__pycache__/train.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/bot.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/environment.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/gradient_metrics.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/live_evaluation.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/model.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/opponents.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/ppo_returns.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/replay.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/telemetry.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/train.cpython-312.pyc",
+    "runs/sprint1_structural_ablation_20261014/source/__pycache__/training_checkpoint.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/bot.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/environment.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/gradient_metrics.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/live_evaluation.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/model.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/opponents.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/ppo_returns.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/replay.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/telemetry.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/train.cpython-312.pyc",
+    "runs/sprint1_structural_main_20261014/source/__pycache__/training_checkpoint.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/bot.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/environment.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/gradient_metrics.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/live_evaluation.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/model.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/ppo_returns.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/replay.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/telemetry.cpython-312.pyc",
+    "runs/sprint1_timeout_full_20261014/source/__pycache__/train.cpython-312.pyc"
+  ]
+}

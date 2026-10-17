@@ -1,0 +1,3207 @@
+==> AGENTS.md <==
+# Arquitetura dos agentes
+
+Este documento descreve o código atual. A prioridade é o 1v1; comportamento cooperativo em equipes ainda precisa de validação.
+
+## Política e observações
+
+`src/model.py` implementa `Policy`: MLP com duas camadas de 256 unidades e Tanh, três cabeças categóricas independentes (X, Y, chute) e uma cabeça de valor. Usa a inicialização padrão de `torch.nn.Linear`; não há inicialização ortogonal explícita.
+
+O ambiente usa `DefaultObs(pos_coef="auto")`, de HaxballGym. O mapa padrão é `maps/futsal_1v1.hbs`, uma cópia local de futsal-classic com paredes sem bias e damping explícito. Os checkpoints 1v1 disponíveis têm 16 entradas. A dimensão e o formato das observações dependem do builder e do número de jogadores; a definição exata está na dependência instalada.
+
+As ações são bins `[0, 1, 2]` para movimento (−1, 0, +1) e `[0, 1]` para chute (soltar, pressionar). `RepeatKickAction` converte pressão em input 2 do engine, rearmando dentro da janela de ticks; as cabeças da política continuam com duas opções. O exportador grava `repeat_kick`, e a sala rearma entre decisões quando esse campo está ativo. O ambiente converte o eixo X do time azul para o referencial da política.
+
+`NeuralBot` carrega `model.pt` e `meta.json`, com ações greedy por padrão. Treinamento, avaliação interna e torneio amostram ações; essa diferença deve ser considerada na validação.
+
+## Baselines
+
+- `ChaseBot`: persegue a posição atual da bola, adiciona ruído angular (`jiggle=0.25`) e pressiona chute quando a distância é menor que 34. Não prevê interceptação. Uma seed fixa torna a sequência de ruído reproduzível.
+- `RandomBot`: ações uniformes, útil como controle básico.
+
+## Self-play
+
+A política controla todos os jogadores vermelhos com compartilhamento de parâmetros. O azul usa uma política congelada. A cada rollout de 64 decisões, escolhe-se um único adversário para todos os ambientes: snapshot aleatório com probabilidade 0.5 quando o pool existe; caso contrário, cópia atual do learner.
+
+Um snapshot é adicionado a cada 20 iterações; o pool contém no máximo 40. A escolha não ocorre por episódio e pode mudar durante uma partida. O pool reduz a exposição exclusiva ao adversário mais recente, mas não garante progresso monotônico nem elimina ciclos.
+
+## Equipes: etapa futura
+
+A coleta já compartilha parâmetros entre jogadores vermelhos, mas o `KickoffSetter` atual só posiciona explicitamente dois jogadores. Observações, resets, recompensas e exportação devem ser validados antes de treinar 2v2/3v3. O gol recebe peso 25 no treinamento atual; não há garantia de que passes, cobertura ou papéis surjam.
+
+Após consolidar o 1v1, comparar treinamento do zero com transferência parcial/fine-tuning. Mudanças na dimensão da observação podem impedir o carregamento direto dos pesos.
+
+==> CONTEXT.md <==
+# Contexto do projeto
+
+## Histórico registrado
+
+A documentação anterior descreve uma versão em Python com throughput limitado, tentativas de behavioral cloning e recompensas densas exploradas sem produzir gols. Esses relatos motivaram a migração para HaxballGym e PPO self-play. Não foram revalidados nesta revisão.
+
+## Estado atual
+
+O código usa o simulador de HaxballGym, PyTorch e uma política pequena em CPU por padrão. Os registros disponíveis mostram aproximadamente 13–14 mil amostras de jogador por segundo numa execução; esse valor depende da máquina, configuração e custo de avaliação. Não há aqui uma certificação de equivalência bit a bit com o jogo oficial.
+
+`training_stats.json`, `models/meta.json`, `models/meta_final.json` e `poc_results.json` contêm resultados de origens/configurações que não estão identificadas de forma consistente. Não devem ser combinados numa única curva ou tomados como prova de convergência. Metadados também podem mudar durante execuções e seleção.
+
+O experimento registrado em `poc_results.json` apresenta forte queda de gols e de atividade ofensiva ao longo de 75 iterações. Sem configuração completa e replicações, isso é um alerta para investigar a recompensa, não uma conclusão causal.
+
+Não se presume que haja treinamento ativo a partir desses arquivos. O status de execução deve ser consultado no processo ou log correspondente.
+
+## Direção acordada
+
+Consolidar o 1v1 primeiro: várias seeds, adversários diversos, avaliação nos dois lados, inspeção de comportamento e comparação controlada de recompensas. Depois, investigar equipes e transferência/fine-tuning, validando mudanças de observação e resets. Implementação atual e propostas estão separadas em `PROTOCOL.md` e `TODO.md`.
+
+## Trabalho na branch gpt
+
+As mudanças anteriores foram salvas na main em 063a4e5. A branch gpt corrige mapa, sinais de deslocamento, rearmamento do chute e avaliação, e promove um candidato após validação independente no simulador. O relatório atual é `experiments/gpt_repair_reset_value/REPORT.md`. O desempenho melhorou no kickoff, mas a variação entre seeds e a defesa em posições aleatórias ainda exigem trabalho. Sala real não foi testada.
+
+==> PROTOCOL.md <==
+# Protocolo de treinamento e avaliação
+
+Valores conferidos em `src/train.py`. Este documento distingue implementação atual de experimentos propostos.
+
+## Correções na branch gpt
+
+O treino usa por padrão `maps/futsal_1v1.hbs`. Removemos o bias das paredes do mapa original após reproduzir escape da bola para cantos externos; testes verificam rebote nas duas laterais. Isso altera o estádio: uma política exportada deve carregar o mesmo mapa. A equivalência com física oficial não foi certificada.
+
+A tabela mantém os pesos desejados (gol ±25, aproximação 0,6, progresso 0,08), mas usa deslocamento efetivo:
+
+- `MotionPlayerToBall`: projeta o deslocamento do jogador na direção anterior da bola. Jogador preso sem mudar de posição recebe zero, mesmo que o engine reporte velocidade.
+- `MotionBallToGoal`: redução assinada da distância da bola ao segmento finito do gol adversário. Um percurso de ida/volta fechado cancela sem desconto.
+- Ambos dividem pelo deslocamento livre máximo esperado em uma decisão: acceleration × damping / (1 − damping) × tick_skip. No mapa atual, 21,12 unidades por decisão, em vez do player_max_speed ≈0,119 informado pela dependência.
+
+A ação de pressionar chute agora rearma repetidamente no simulador. A exportação inclui `repeat_kick`; bot.js executa a mesma intenção entre decisões quando esse campo é true. Checkpoints antigos sem esse campo preservam seu comportamento anterior na sala.
+
+`src/repair_bot.py` faz fine-tuning contra Chase e avaliação nos dois lados, com kickoff e resets aleatórios, ações greedy/amostradas, múltiplas seeds de avaliação, vitórias/empates/derrotas por episódio e fração de decisões com bola parada. O treino principal continua com PPO self-play; este experimento curto não comprova convergência. As seeds de seleção não substituem validação independente.
+
+As tabelas `simple`, `simple_progress1` e `previous` permanecem para reproduzir recompensas anteriores. São sinais diferentes da tabela corrigida: pesos iguais não implicam magnitude igual.
+
+## PPO atual
+
+| Parâmetro | Valor padrão |
+|---|---|
+| Ambientes / jogadores | 512 / 1v1 |
+| Rollout / épocas / minibatches | 64 / 6 / 4 |
+| Amostras por iteração em 1v1 | 32.768 |
+| Tick skip | 8 (~7,5 decisões/s a 60 ticks/s) |
+| Discount | meia-vida de 12 s; gamma ≈ 0,99233 |
+| GAE lambda / clip | 0,95 / 0,20 |
+| Learning rate | 3e−4 → 1e−4, linear |
+| Entropia | 0,02 → 0,01, linear |
+| Coeficiente de valor / norma máxima de gradiente | 0,5 / 0,5 |
+| Limite de episódio | 2.000 ticks = 250 decisões com tick skip 8 |
+| Resets de treino | 40% kickoff, 60% estado aleatório (`ball_speed=3`) |
+
+A perda de valor já inclui fator 0,5 antes de receber `VF_COEF`. O GAE trata tanto término quanto truncamento como fim sem bootstrap; revisar essa escolha para timeouts. `--warm-start` reinicia otimizador, schedules e contador. Por padrão, carrega a política e zera a cabeça de valor para adaptar a escala corrigida de recompensa. `--keep-critic` preserva a cabeça de valor quando apropriado. Essa reinicialização não altera os logits iniciais de ação.
+
+## Tabela atual de recompensas
+
+Antes da branch gpt, a tabela padrão era `build_reward("simple")`: gol ±25, aproximação com peso 0,6 e progresso com peso 0,08. Agora o padrão é `corrected`, descrito acima. Os dois termos de velocidade preservam sinais positivos e negativos. Treino e avaliação interna compartilham essa fábrica.
+
+A tabela anterior permanece disponível como `build_reward("previous")` para comparação controlada:
+
+### Tabela anterior
+
+Treino e avaliação interna usam a mesma composição. O multiplicador interno se combina com o peso de `CombinedReward`:
+
+| Termo | Peso externo | Fator interno | Contribuição efetiva |
+|---|---:|---:|---|
+| `VelocityPlayerToBall` | 0,7 | — | 0,7 × velocidade projetada, normalizada por `player_max_speed` |
+| `VelocityBallToGoal` | 1,0 | — | velocidade projetada para a linha do gol adversário / `player_max_speed` |
+| `TangentialGoalShotReward` | 3,0 | 3,0 | 9 × deslocamento da bola por decisão, quando os filtros passam |
+| `DeltaBreakawayReward` | 2,0 | 2,0 | 4 × max(phi atual − phi anterior, 0) |
+| `PenaltyTackleLostReward` | 1,0 | −0,5 | −0,5 quando o evento definido na função ocorre |
+| `GoalReward` | 20,0 | ±1 | +20 ao marcar, −20 ao sofrer |
+
+O chute usa deslocamento, não velocidade normalizada: sua escala depende do tick skip. O filtro aceita trajetória projetada na boca do gol **ou** bola já na faixa |y| ≤ 65, e usa proximidade <36 como contato. Não identifica necessariamente um chute efetivo.
+
+A ultrapassagem define posse como ser o jogador mais próximo da bola, sem distância máxima. Só recompensa aumentos da vantagem: perder e recuperar vantagem pode gerar pagamentos repetidos. Não é shaping baseado em potencial com preservação garantida do objetivo.
+
+Não está demonstrado que o gol domine a soma dos termos densos. Medir contribuições acumuladas por episódio e sua relação com gols antes de ajustar pesos. `ShotVelocityToGoal` está definido no arquivo, mas não participa da composição atual.
+
+### Experimento proposto: simplificar
+
+Comparar a tabela atual com uma base de três termos: gol, aproximação do jogador e progresso da bola. Remover inicialmente chute tangencial, ultrapassagem e penalidade de desarme na variante experimental. Calibrar os dois pesos densos usando suas contribuições acumuladas e comparar com orçamento igual de amostras e várias seeds. A variante de três termos foi aplicada ao treinamento. O POC compara as duas variantes.
+
+## Avaliação implementada
+
+- `eval_vs_chase`: a cada 50 iterações e no fim, 128 ambientes × 350 decisões, learner vermelho com ações amostradas, Chase azul com seed 0 e resets de kickoff. Saldo de gols seleciona `model.pt`.
+- `src/eval.py`: padrão de 256 ambientes × 600 decisões, NeuralBot greedy; benchmark contra Chase e Random. O indicador chamado “winrate estimada” é proporção dos gols, não taxa de vitória por partida.
+- `src/select.py`: torneio de checkpoints em `models/ckpts/` e modelo final; cada par joga nos dois lados, com ações amostradas. Ranking por proporção de gols, desempate por saldo. Não usa TrueSkill nem matriz de vitórias. Promove o vencedor sobrescrevendo `model.pt`; metadados herdados do modelo final podem não descrever a iteração do vencedor.
+
+Esses caminhos usam configurações de ambiente distintas: treino/avaliação interna criam o ambiente explicitamente; benchmark/torneio usam `make_default_env`. Alinhar condições para comparações reproduzíveis.
+
+## Avaliação planejada para consolidar o 1v1
+
+1. Fixar configuração e registrar seeds de treino, cenário e ações; começar com pelo menos três seeds de treino e cinco de avaliação.
+2. Avaliar nos dois lados contra Random, Chase sem ruído, Chase com ruído, um defensor e um bot com interceptação, além de snapshots históricos. Os dois últimos bots ainda precisam ser implementados.
+3. Reportar gols pró/contra, saldo, vitórias/empates/derrotas por partida, duração e dispersão entre seeds. Identificar explicitamente resultados greedy e amostrados.
+4. Comparar variantes de recompensa com orçamento igual; reservar adversários/cenários para validação final.
+5. Inspecionar replays e partidas reais para confirmar finalização, defesa e ausência de exploração da recompensa.
+
+Definir duração e limiar de aprovação antes dos experimentos. Um único saldo contra Chase não estabelece consolidação.
+
+## POC curto reproduzível
+
+```bash
+uv run src/poc_reward.py --out experiments/minha_comparacao --iters 30 --envs 64 --seeds 0 1 2 --eval-seeds 10 11
+```
+
+O POC usa o mesmo checkpoint inicial, seed e orçamento para cada variante; faz fine-tuning contra Chase (não self-play) e avaliação greedy nos dois lados contra Chase com/sem ruído e Random. Grava configuração, hash do checkpoint, contribuições dos termos, cenários controlados e resultados em pasta nova. Não sobrescreve os modelos principais. Os cenários incluem sinais positivos/negativos, gols e trajetórias no simulador com defensor dentro/fora da linha do chute.
+
+Trinta iterações servem para detectar regressões rápidas; não demonstram convergência nem permitem declarar uma tabela vencedora definitiva.
+
+### Alerta encontrado no POC
+
+No ambiente instalado, `futsal-classic` fornece `player_max_speed ≈ 0,11865`. A função de progresso divide por esse valor: um chute livre controlado acumulou aproximadamente 385 de shaping em 13 decisões, além do gol +25. A tabela simples ainda precisa de verificação/correção da normalização antes de treinos longos. Consulte `experiments/reward_simple_poc_20261013/REPORT.md`; o POC curto não demonstrou melhoria da variante simples.
+
+### Variante com progresso 0,08
+
+A tabela padrão passa a gol ±25, aproximação 0,6 e progresso 0,08. `simple_progress1` preserva a variante de progresso 1,0 para comparação pareada no POC.
+
+```bash
+uv run src/poc_reward.py --out experiments/comparacao_008 --tables simple_progress1 simple
+```
+
+Na trajetória controlada de chute livre, a contribuição ponderada de progresso cai de +385,33 para +30,83. Com defensor na linha, cai de −6,60 para −0,53. Essas são somas sem desconto só do termo de progresso; aproximação e gol são parcelas separadas. Uma decisão com velocidade projetada 3 gera aproximadamente ±2,02 com peso 0,08.
+
+Os geradores de reset de treino agora recebem `--seed` explicitamente. A comparação anterior não controlava esses geradores; a repetição corrigida está em `experiments/reward_progress008_seeded_poc_20261013/`.
+
+Diagnóstico posterior: o saldo 0 × 448 corresponde à mesma derrota de kickoff repetida deterministicamente. O checkpoint 0,08 evita essa sequência, mas leva a bola ao canto e termina por timeout, sem consolidar ataque ou defesa. Veja `experiments/reward_progress008_seeded_poc_20261013/diagnosis_long/REPORT.md`.
+
+## Telemetria do self-play monitorado
+
+O treinador grava `training.jsonl` (uma linha por iteração), `evaluation_cases.jsonl` (cada caso), `evaluations.jsonl` (painel completo) e `live.json` (heartbeat/estado). Configuração, revisão Git e hash do warm-start ficam em `config.json`. `initial_policy.pt` congela o adversário neural de referência.
+
+Avaliação padrão: 16 ambientes × 400 decisões, seeds 1701/1702, ambos os lados, kickoff e estados aleatórios, cinco adversários, learner greedy. Cada caso recebe peso igual na pontuação de seleção. Na ausência de episódios completos a pontuação é desconhecida, não zero. Avaliação inicial e a cada 50 iterações; snapshots de self-play continuam a cada 20 iterações. A avaliação preserva o estado RNG do PyTorch do treino.
+
+Métricas PPO: perdas de política/valor, entropia somada das três cabeças, KL aproximada, fração de clipping e variância explicada calculada com valores do rollout. Métricas de jogo: gols, episódios completos, bola parada (deslocamento <0,01 por decisão), contato e pressão de chute dentro de 24,8 unidades. A frequência de bola parada inclui kickoffs normais e não mede sozinha travamento. A pontuação não classifica quem deu o último toque de cada gol.
+
+Dashboard: stream de eventos a cada segundo, histórico da execução selecionada, cenário selecionável e linhas por adversário. Detecta perda de conexão, interrupção de processo e heartbeat atrasado. O servidor local é somente leitura e não inicia POCs.
+
+## Comparação controlada após 1.000 iterações
+
+`src/reward_sweep.py` executa seis treinos de self-play: aproximação 0,60 / 0,15 / 0,05, seeds 0 e 1, 300 iterações × 256 ambientes × 64 decisões por treino (4.915.200 amostras). Todos partem do mesmo checkpoint it650, mantêm gol ±25 e progresso 0,08 e reiniciam o critic. A ordem dos pesos é invertida na segunda seed. O runtime de simulação usa quatro threads e PyTorch duas para compartilhar CPU com a sala real.
+
+Cada execução mantém a mesma avaliação por adversário e grava inspeção de comportamento do checkpoint final. Comparar endpoints e cenários aleatórios; registrar melhor checkpoint separadamente. Os seis treinos são uma triagem, não prova de convergência robusta nem extrapolação para 20 mil iterações. O dashboard acompanha a execução ativa; os históricos anteriores permanecem em suas pastas.
+
+A inspeção registra distância da bola, intenção de chute durante proximidade, alinhamento aproximado com o gol, posição defensiva e períodos com bola parada. Essas métricas não identificam com certeza chutes efetivos nem autoria de gols. As parcelas absolutas de recompensa passam a ser gravadas para evitar confundir cancelamento do saldo de gols com ausência de sinal de gol.
+
+==> README.md <==
+# Haxball RL
+
+Agentes de reinforcement learning para Haxball, treinados com PPO e self-play sobre HaxballGym. A prioridade atual é consolidar o 1v1 em `futsal-classic`, com avaliação reproduzível, antes de experimentar equipes e fine-tuning.
+
+## Uso
+
+Python >=3.12, uv e PyTorch CPU conforme `pyproject.toml` e `uv.lock`:
+
+```bash
+uv sync
+uv run src/train.py --stadium maps/futsal_1v1.hbs --red 1 --blue 1 --envs 512 --iters 1500 --out models/run_1v1_seed0 --seed 0
+```
+
+Use uma pasta por execução. O treinamento grava pesos e metadados, mas ainda não salva a configuração completa, estado do otimizador ou pool de adversários. `--warm-start` carrega pesos, zerando a cabeça de valor por padrão; `--keep-critic` preserva essa cabeça.
+
+Os comandos abaixo leem os modelos da pasta padrão `models/`:
+
+```bash
+uv run src/eval.py --benchmark --stadium futsal-classic
+uv run src/select.py --stadium futsal-classic
+```
+
+`select.py` promove o vencedor para `models/model.pt` e atualiza `meta.json`. Os scripts antigos usam gols agregados. `src/repair_bot.py` oferece uma avaliação mais completa com seeds, cenários variados e resultados por episódio.
+
+## Experimento de correção 1v1
+
+```bash
+uv run src/repair_bot.py --out experiments/nova_correcao --iters 100 --seeds 0 1 2
+uv run python -m unittest discover -s tests -v
+```
+
+O experimento salva os pesos em pasta separada. Usa mapa com paredes corrigidas, recompensas por deslocamento e chute rearmado.
+
+## Sala real
+
+Execute a partir da raiz do repositório:
+
+```bash
+uv run headless-bot/export_policy.py models/model.pt
+cd headless-bot
+npm install
+HEADLESS_TOKEN="<token>" node bot.js
+```
+
+O exportador atual aceita observações de 16 dimensões e uma rede de duas camadas, para 1v1. A transferência para a sala precisa ser validada em partidas reais; equivalência de física, observações e latência não é certificada por este repositório. Veja `headless-bot/README.md`.
+
+## Organização
+
+- `src/model.py`, `src/bot.py`: política e bots de referência.
+- `src/train.py`: PPO, recompensas e self-play.
+- `src/eval.py`, `src/select.py`: benchmark e torneio de checkpoints.
+- `src/replay.py`: utilitários de replay.
+- `maps/`: estádios; `models/`: pesos e metadados.
+- Scripts `inspect_*` e `test_*` na raiz: diagnósticos e experimentos, sem uma suíte unificada.
+
+`AGENTS.md` descreve a arquitetura implementada; `PROTOCOL.md`, os parâmetros e recompensas; `TODO.md`, as próximas etapas; `CONTEXT.md`, o histórico e as limitações dos resultados disponíveis.
+
+## Self-play monitorado
+
+```bash
+uv run src/train.py --envs 512 --iters 1000 --threads 2 --warm-start models/model.pt --keep-critic --out runs/minha_execucao --save-every 50 --eval-every 50
+uv run live_stats_server.py --port 8085
+```
+
+O dashboard em `http://127.0.0.1:8085` lê a execução apontada por `runs/active.json` (`{"path":"/caminho/absoluto/da/execucao"}`). O treinador grava estado atômico, registros por iteração e avaliações por adversário. Há uma avaliação inicial na iteração zero; durante avaliações o treino pausa e o painel mostra essa fase. A velocidade de treino exclui avaliações; a estimativa restante é só do treino.
+
+Os adversários são Chase com/sem ruído, atacante posicional, goleiro e a política inicial congelada. Cenários e seeds de avaliação permanecem fixos. O modelo principal é preservado: pesos finais e melhor checkpoint por pontuação equilibrada ficam na pasta da execução. A pontuação conta vitória como 1, empate como 0,5 e derrota como 0; não confundir com proporção dos gols. Kickoffs determinísticos continuam sendo trajetórias correlacionadas, e autoria de gols contra não é classificada.
+
+==> TODO.md <==
+# Roadmap
+
+## Prioridade: consolidar 1v1 em futsal-classic
+
+- [ ] Separar execuções por pasta e salvar configuração completa, seeds, versão do código e dependências.
+- [ ] Unificar condições de benchmark, torneio e avaliação interna.
+- [ ] Avaliar nos dois lados e com várias seeds; distinguir proporção de gols de taxa de vitória.
+- [ ] Expandir adversários: Chase determinístico, Chase com ruído, defensor, interceptador e snapshots.
+- [ ] Medir contribuições de recompensa por episódio.
+- [x] Implementar tabela de três termos (gol ±25, aproximação 0,6, progresso assinado 0,08) e POC pareado.
+- [ ] Ampliar comparação com orçamento maior e self-play após o POC curto.
+- [ ] Comparar execução greedy e amostrada e inspecionar replays.
+- [ ] Definir critérios de aprovação e validar o checkpoint selecionado em sala real.
+- [ ] Corrigir rastreabilidade dos metadados após seleção de checkpoint.
+
+## Depois: equipes e fine-tuning
+
+- [ ] Corrigir resets para múltiplos jogadores e validar observações/recompensas.
+- [ ] Comparar treino do zero com transferência parcial/fine-tuning do agente 1v1.
+- [ ] Começar com 2v2 e avaliar coordenação antes de avançar para 3v3.
+- [ ] Adaptar exportador e observações da sala, hoje restritos ao 1v1.
+
+## Manutenção
+
+- [ ] Organizar scripts exploratórios e selecionar verificações reutilizáveis.
+- [ ] Salvar estado de otimização e pool se retomada exata de treino for necessária.
+
+A duração de uma execução ou o número de iterações, isoladamente, não é critério de conclusão.
+
+## Correção em gpt
+
+- [x] Reproduzir falha de kickoff e estagnação no canto.
+- [x] Corrigir paredes num estádio local e testar colisões.
+- [x] Substituir sinais de velocidade por deslocamento real, mantendo pesos ±25 / 0,6 / 0,08.
+- [x] Alinhar rearmamento de chute no simulador e na exportação.
+- [x] Implementar avaliação com cenários variados, modos greedy/amostrado e bola parada.
+- [x] Validar candidato em seeds separadas no simulador e exportar.
+- [ ] Melhorar consistência entre seeds e desempenho em posições aleatórias.
+- [ ] Validar transferência para sala real.
+
+==> pyproject.toml <==
+[project]
+name = "wazbot"
+version = "1.0.0"
+description = "A solid starting bot for HaxballGym."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Wazarr" }]
+dependencies = [
+    "haxballgym>=1.0.1",   # the env + the native haxball_core engine (pulled transitively)
+    "torch>=2.2",          # the policy network (loads the shipped model)
+]
+
+[tool.uv]
+package = false            # a folder of scripts, not an installable distribution
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 110
+
+==> models/meta.json <==
+{
+  "obs_dim": 16,
+  "n_acts": [
+    3,
+    3,
+    2
+  ],
+  "hidden": 256,
+  "depth": 2,
+  "n_red": 1,
+  "n_blue": 1,
+  "stadium": "maps/futsal_1v1.hbs",
+  "reward_table": "corrected",
+  "reward_weights": {
+    "goal": 25,
+    "approach": 0.6,
+    "progress": 0.08
+  },
+  "repeat_kick": true,
+  "seed": 0,
+  "fine_tune_iters": 100,
+  "value_reset": true,
+  "selected": "experiments/gpt_repair_reset_value/corrected_seed0.pt",
+  "validation": {
+    "seeds": [
+      200,
+      201
+    ],
+    "episode_score_before": 0.5691544611977782,
+    "episode_score_after": 0.654746332286849,
+    "limitation": "Gain concentrated at kickoff; random-position performance declined."
+  }
+}
+
+==> src/analyze_ckpts.py <==
+"""Behavioural analysis of checkpoints vs ChaseBot (goals for/against, kick rate, touches, freezing)."""
+import sys
+import numpy as np
+import torch
+from bot import ChaseBot
+from haxballgym import BLUE, RED, DefaultObs, DiscreteAction, Env, GoalCondition, TimeoutCondition, TransitionEngine
+from model import Policy
+from train import KickoffSetter
+from haxballgym import CombinedReward, GoalReward
+
+
+def analyze(path, n=128, steps=600):
+    eng = TransitionEngine(n, 1, 1, step_limit=2000, tick_skip=8, stadium="futsal-classic")
+    env = Env(engine=eng, obs_builder=DefaultObs(pos_coef="auto"), action_parser=DiscreteAction(kick_values=2),
+              reward_fn=CombinedReward((GoalReward(), 1.0)), termination_cond=GoalCondition(),
+              truncation_cond=TimeoutCondition(2000), state_mutator=KickoffSetter())
+    m = Policy(env.obs_dim, env.action_space)
+    m.load_state_dict(torch.load(path, map_location="cpu"))
+    chase = ChaseBot(seed=0)
+    obs = env.reset()
+    gf = ga = contacts = kicks = far = idle = touch_steps = 0
+    kick_steps = 0
+    own_half = 0
+    tot = 0
+    with torch.no_grad():
+        for _ in range(steps):
+            s = env.prev_state
+            d = np.linalg.norm(s.player_pos[:, 0] - s.ball_pos, axis=-1)
+            sp = np.linalg.norm(s.player_vel[:, 0], axis=-1)
+            act = m.act(torch.as_tensor(obs[:, 0], dtype=torch.float32)).cpu().numpy()
+            c = d < 34
+            contacts += int(c.sum()); kicks += int((c & (act[:, 2] == 1)).sum())
+            kick_steps += int((act[:, 2] == 1).sum())
+            f = d > 250
+            far += int(f.sum()); idle += int((f & (sp < 0.2)).sum())
+            own_half += int((s.ball_pos[:, 0] < 0).sum()); tot += n
+            full = np.zeros((n, 2, 3), dtype=np.int64)
+            full[:, 0] = act
+            full[:, 1] = chase.act(s, np.array([1]), n_red=1).reshape(n, 3)
+            obs, _, _, _ = env.step(full)
+            sc = env.prev_state.scored
+            gf += int((sc == BLUE).sum()); ga += int((sc == RED).sum())
+    return dict(gf=gf, ga=ga, kick_on_contact=round(100 * kicks / max(1, contacts), 1),
+                contact_frac=round(100 * contacts / tot, 1), kick_press=round(100 * kick_steps / tot, 1),
+                idle_far=round(100 * idle / max(1, far), 1), ball_own_half=round(100 * own_half / tot, 1))
+
+
+if __name__ == "__main__":
+    for p in sys.argv[1:]:
+        print(p, analyze(p), flush=True)
+
+==> src/benchmark_cpu.py <==
+"""Benchmark complete self-play PPO iterations in isolated CPU worker processes."""
+import argparse
+import json
+import math
+import os
+from pathlib import Path
+import resource
+import subprocess
+import sys
+import time
+import numpy as np
+import torch
+from environment import STADIUM
+from model import Policy
+from train import (create_training_env,T,EPOCHS,N_MB,CLIP,VF_COEF,MAX_GRAD,LAM,LR,HALF_LIFE_S,ENT0)
+
+
+def worker(envs, threads, iterations):
+    torch.set_num_threads(threads)
+    torch.manual_seed(42);np.random.seed(42)
+    env=create_training_env(envs,1,1,STADIUM,8,seed=42)
+    model=Policy(env.obs_dim,env.action_space);opp=Policy(env.obs_dim,env.action_space)
+    opt=torch.optim.Adam(model.parameters(),lr=LR)
+    obs=env.reset()
+    so=torch.zeros(T,envs,env.obs_dim)
+    sa=torch.zeros(T,envs,3,dtype=torch.long)
+    sl=torch.zeros(T,envs);sv=torch.zeros(T,envs);sr=torch.zeros(T,envs);sd=torch.zeros(T,envs)
+    gamma=math.exp(math.log(.5)/(7.5*HALF_LIFE_S))
+    rows=[]
+    for iteration in range(iterations+2):
+        start=time.perf_counter();opp.load_state_dict(model.state_dict())
+        for t in range(T):
+            o=torch.as_tensor(obs,dtype=torch.float32)
+            with torch.no_grad():
+                action,logp,value=model.act_train(o[:,0])
+                other=opp.act(o[:,1])
+            so[t],sa[t],sl[t],sv[t]=o[:,0],action,logp,value
+            full=np.stack([action.numpy(),other.numpy()],axis=1)
+            obs,rew,term,trunc=env.step(full)
+            sr[t]=torch.as_tensor(rew[:,0]);sd[t]=torch.as_tensor((term|trunc).astype(np.float32))
+        rollout_end=time.perf_counter()
+        with torch.no_grad():last=model._logits(torch.as_tensor(obs[:,0],dtype=torch.float32))[1]
+        adv=torch.zeros_like(sr);gae=torch.zeros(envs)
+        for t in reversed(range(T)):
+            mask=1-sd[t];nv=last if t==T-1 else sv[t+1]
+            delta=sr[t]+gamma*nv*mask-sv[t]
+            gae=delta+gamma*LAM*mask*gae;adv[t]=gae
+        ret=(adv+sv).flatten();a=adv.flatten();a=(a-a.mean())/(a.std()+1e-8)
+        bo,ba,bl=so.reshape(-1,env.obs_dim),sa.reshape(-1,3),sl.flatten()
+        idx=np.arange(T*envs);mb=len(idx)//N_MB
+        gae_end=time.perf_counter()
+        for _ in range(EPOCHS):
+            np.random.shuffle(idx)
+            for offset in range(0,len(idx),mb):
+                mi=torch.as_tensor(idx[offset:offset+mb])
+                logp,ent,val=model.evaluate(bo[mi],ba[mi])
+                ratio=(logp-bl[mi]).exp()
+                loss=-torch.minimum(ratio*a[mi],ratio.clamp(1-CLIP,1+CLIP)*a[mi]).mean()
+                loss+=VF_COEF*.5*(val-ret[mi]).square().mean()-ENT0*ent.mean()
+                opt.zero_grad();loss.backward();torch.nn.utils.clip_grad_norm_(model.parameters(),MAX_GRAD);opt.step()
+        end=time.perf_counter()
+        if iteration>=2:rows.append(dict(rollout_s=rollout_end-start,gae_s=gae_end-rollout_end,update_s=end-gae_end,total_s=end-start))
+    total=sum(r['total_s'] for r in rows)
+    return dict(envs=envs,torch_threads=threads,rayon_threads=os.environ.get('RAYON_NUM_THREADS','default'),
+      measured_iterations=iterations,warmup_iterations=2,samples_per_iteration=T*envs,
+      samples_per_second=T*envs*iterations/total,median_iteration_s=float(np.median([r['total_s'] for r in rows])),
+      mean_rollout_s=float(np.mean([r['rollout_s'] for r in rows])),mean_update_s=float(np.mean([r['update_s'] for r in rows])),
+      max_rss_mib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,iterations=rows)
+
+
+def main():
+    ap=argparse.ArgumentParser();ap.add_argument('--worker',action='store_true');ap.add_argument('--envs',type=int,default=512)
+    ap.add_argument('--threads',type=int,default=2);ap.add_argument('--iterations',type=int,default=6)
+    ap.add_argument('--out',type=Path,default=Path('experiments/gpt_cpu_benchmark'))
+    args=ap.parse_args()
+    if args.worker:
+        print(json.dumps(worker(args.envs,args.threads,args.iterations)));return
+    args.out.mkdir(parents=True,exist_ok=True)
+    report={'cpu':'AMD Ryzen 7 5700U, 8 cores / 16 logical CPUs','method':'Full PPO iteration, 64 steps, 6 epochs, 4 minibatches, neural self-play, corrected map. Two warmups; checkpoints/evaluation excluded. Desktop applications remained running.','runs':[]}
+    # Reverse env order in the second pass reduces order/thermal bias.
+    settings=[(128,2),(256,2),(512,2),(512,4),(512,8),(512,2),(256,2),(128,2)]
+    for n,threads in settings:
+        command=[sys.executable,__file__,'--worker','--envs',str(n),'--threads',str(threads),'--iterations',str(args.iterations)]
+        output=subprocess.run(command,check=True,capture_output=True,text=True)
+        result=json.loads(output.stdout);report['runs'].append(result)
+        (args.out/'results.json').write_text(json.dumps(report,indent=2))
+        print(f'{n} envs / {threads} torch threads: {result["samples_per_second"]:.0f} samples/s, {result["median_iteration_s"]:.3f} s/iteration, {result["max_rss_mib"]:.0f} MiB',flush=True)
+
+if __name__=='__main__':main()
+
+==> src/bot.py <==
+"""Two bots over a HaxballGym env.
+
+- `ChaseBot`  — scripted baseline: run at the ball, kick when close. It reads the raw
+  game **state** (`ball_pos` / `player_pos`), so there are no magic observation indices.
+- `NeuralBot` — loads the trained policy (`models/model.pt` + `meta.json`).
+
+`ChaseBot.act(state, players)` takes a `GameState` and the player columns to control.
+`NeuralBot.act(obs)` takes an egocentric observation block (what the policy is trained on).
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+
+class ChaseBot:
+    """Heuristic: steer toward the ball (with a little angular jiggle so it isn't on rails),
+    kick when within `kick_dist`. Reads positions from the state — map/obs agnostic."""
+
+    def __init__(self, kick_dist: float = 34.0, jiggle: float = 0.25, seed: int | None = None):
+        self.kick_dist = kick_dist
+        self.jiggle = jiggle
+        self.rng = np.random.default_rng(seed)
+
+    def act(self, state, players, n_red: int = 1) -> np.ndarray:
+        """state: GameState; players: index array of columns to control -> bins (N, K, 3)."""
+        ball = state.ball_pos[:, None, :]  # (N, 1, 2)
+        pos = state.player_pos[:, players, :]  # (N, K, 2)
+        d = ball - pos
+        dist = np.hypot(d[..., 0], d[..., 1])
+        ang = np.arctan2(d[..., 1], d[..., 0]) + self.rng.normal(0.0, self.jiggle, dist.shape)
+        dx, dy = np.cos(ang), np.sin(ang)
+        # In HaxballGym, actions are in policy frame (un-mirrored by env.step for blue).
+        # For Blue players, forward (towards ball/goal on the left) is bin 2 (+1 in policy frame).
+        p_arr = np.asarray(players)
+        is_blue = p_arr >= n_red
+        if np.any(is_blue):
+            dx[..., is_blue] = -dx[..., is_blue]
+        bx = np.where(dx > 0.33, 2, np.where(dx < -0.33, 0, 1))
+        by = np.where(dy > 0.33, 2, np.where(dy < -0.33, 0, 1))
+        kick = (dist < self.kick_dist).astype(np.int64)
+        return np.stack([bx, by, kick], -1).astype(np.int64)
+
+
+class NeuralBot:
+    """The trained WazBot. Greedy (deterministic) by default; `greedy=False` samples."""
+
+    def __init__(self, model_dir: str | Path | None = None, greedy: bool = True):
+        import torch  # local import so ChaseBot stays torch-free
+
+        from model import Policy
+
+        model_dir = Path(model_dir) if model_dir else Path(__file__).resolve().parent.parent / "models"
+        meta = json.loads((model_dir / "meta.json").read_text())
+        self.greedy = greedy
+        self._torch = torch
+        self.model = Policy(meta["obs_dim"], meta["n_acts"], meta["hidden"], meta["depth"])
+        self.model.load_state_dict(torch.load(model_dir / "model.pt", map_location="cpu"))
+        self.model.eval()
+
+    def act(self, obs: np.ndarray) -> np.ndarray:
+        """obs (..., obs_dim) -> bins (M, len(n_acts))."""
+        o = self._torch.as_tensor(obs.reshape(-1, obs.shape[-1]), dtype=self._torch.float32)
+        return self.model.act(o, greedy=self.greedy).numpy().astype(np.int64)
+
+
+class RandomBot:
+    """Samples uniform random actions across movement and kick heads."""
+
+    def __init__(self, seed: int | None = None):
+        self.rng = np.random.default_rng(seed)
+
+    def act(self, obs: np.ndarray) -> np.ndarray:
+        shape = obs.shape[:-1] if obs.ndim > 1 else (1,)
+        m_x = self.rng.integers(0, 3, size=(*shape, 1))
+        m_y = self.rng.integers(0, 3, size=(*shape, 1))
+        kick = self.rng.integers(0, 2, size=(*shape, 1))
+        return np.concatenate([m_x, m_y, kick], axis=-1).astype(np.int64)
+
+
+
+class PositionBot:
+    """Position before kicking; avoid kicking toward the bot's own goal.
+
+    defender=True keeps a keeper near the own goal; otherwise approach from behind
+    the ball relative to the finite opponent goal mouth. Scripted evaluation only.
+    """
+    def __init__(self, defender=False):
+        self.defender = defender
+
+    def act(self, state, players, n_red=1):
+        players = np.asarray(players)
+        ball = state.ball_pos[:, None, :]
+        pos = state.player_pos[:, players]
+        goal = state.goal_center(attacked=True)[:, players]
+        toward = goal-ball
+        toward /= np.maximum(np.linalg.norm(toward, axis=-1, keepdims=True), 1e-9)
+        target = ball-toward*27.
+        if self.defender:
+            own = state.goal_center(attacked=False)[:, players]
+            target = own.copy()
+            target[..., 0] *= .88
+            target[..., 1] = np.clip(ball[..., 1], -55., 55.)
+        move = target-pos
+        delta = ball-pos
+        distance = np.linalg.norm(delta, axis=-1)
+        aligned = np.sum(delta*toward,axis=-1)>distance*.5
+        kick = ((distance<24.8)&aligned).astype(np.int64)
+        move[...,0] *= np.where(players>=n_red,-1,1)
+        bx=np.where(move[...,0]>3,2,np.where(move[...,0]<-3,0,1))
+        by=np.where(move[...,1]>3,2,np.where(move[...,1]<-3,0,1))
+        return np.stack([bx,by,kick],axis=-1).astype(np.int64)
+
+==> src/diagnose_poc_game.py <==
+"""Reproduce the deterministic POC failure and inspect pre-autoreset trajectories."""
+import argparse
+import json
+from pathlib import Path
+import numpy as np
+import torch
+from bot import ChaseBot
+from model import Policy
+from train import create_eval_env, create_training_env, build_reward
+from haxballgym import RED, BLUE
+
+
+def trace(checkpoint, *, steps=300, greedy=True, jitter=0., scenario='kickoff', force_kick=False, seed=10, rearm_blue=False):
+    torch.manual_seed(seed)
+    model=Policy(16)
+    model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
+    env=(create_training_env(1,1,1,'futsal-classic',8,seed=seed,repeat_kick=False) if scenario=='random' else create_eval_env(1,1,1,'futsal-classic',8,repeat_kick=False))
+    obs=env.reset()
+    if scenario=='offset':
+        st=env.prev_state
+        pp=st.player_pos.copy();pp[0,0,1]=10.
+        env.prev_state=env.engine.set_state(st.ball_pos,st.ball_vel,pp,st.player_vel)
+        obs=env.obs_builder.build_obs(env.prev_state)
+    chase=ChaseBot(seed=seed,jiggle=jitter)
+    captured=[]
+    terms=build_reward('simple_progress1').terms
+    class Capture:
+        def get_rewards(self,st,prev,term,trunc):
+            captured.append(st)
+            return sum(fn.get_rewards(st,prev,term,trunc)*w for fn,w in terms)
+    env.reward_fn=Capture()
+    rows=[]; goals=[]; contributions=np.zeros(3)
+    for i in range(steps):
+        pre=env.prev_state
+        with torch.no_grad():
+            act=model.act(torch.as_tensor(obs[:,0],dtype=torch.float32),greedy=greedy).numpy()
+        distance=float(np.linalg.norm(pre.ball_pos[0]-pre.player_pos[0,0]))
+        if force_kick and distance<24.8:act[0,2]=1
+        acts=np.stack([act,chase.act(pre,[1]).reshape(1,3)],axis=1)
+        if rearm_blue and i >= 60:
+            acts[0,1,2] = int(i % 2 == 0)
+        obs,_,term,trunc=env.step(acts)
+        post=captured.pop()
+        parts=[float(fn.get_rewards(post,pre,term,trunc)[0,0]*w) for fn,w in terms]
+        contributions+=parts
+        row=dict(decision=i,time_s=round((i+1)*8/60,4),ball=post.ball_pos[0].tolist(),
+          ball_vel=post.ball_vel[0].tolist(),players=post.player_pos[0].tolist(),
+          player_vel=post.player_vel[0].tolist(),actions=acts[0].tolist(),pre_distance=distance,
+          scored=int(post.scored[0]),rewards_progress1=parts,terminated=bool(term[0]),truncated=bool(trunc[0]))
+        rows.append(row)
+        if post.scored[0]!=-1:goals.append(dict(decision=i,conceding=int(post.scored[0]),ball=post.ball_pos[0].tolist()))
+    return dict(checkpoint=str(checkpoint),greedy=greedy,jitter=jitter,scenario=scenario,force_kick=force_kick,
+                rearm_blue=rearm_blue,gf=sum(g['conceding']==BLUE for g in goals),ga=sum(g['conceding']==RED for g in goals),
+                goal_events=goals,reward_sums_progress1=contributions.tolist(),rows=rows)
+
+
+def main():
+    ap=argparse.ArgumentParser();ap.add_argument('--out',type=Path,required=True);ap.add_argument('--steps',type=int,default=300);args=ap.parse_args()
+    args.out.mkdir(parents=True,exist_ok=True)
+    torch.set_num_threads(2)
+    root=Path('experiments/reward_progress008_seeded_poc_20261013')
+    bad=root/'simple_progress1_seed2.pt';low=root/'simple_seed2.pt'
+    cases={'failure_greedy':trace(bad,steps=args.steps),'low_greedy':trace(low,steps=args.steps),'failure_sampled':trace(bad,steps=args.steps,greedy=False),
+           'failure_noise':trace(bad,steps=args.steps,jitter=.25),'failure_offset':trace(bad,steps=args.steps,scenario='offset'),
+           'failure_random':trace(bad,steps=args.steps,scenario='random'),'low_sampled':trace(low,steps=args.steps,greedy=False),'low_noise':trace(low,steps=args.steps,jitter=.25),'low_random':trace(low,steps=args.steps,scenario='random'),'failure_force_kick':trace(bad,steps=args.steps,force_kick=True)}
+    (args.out/'traces.json').write_text(json.dumps(cases,indent=2))
+    for name,c in cases.items():print(name,c['gf'],c['ga'],'events',[g['decision'] for g in c['goal_events']],'reward sums',c['reward_sums_progress1'])
+    for name in ['failure_greedy','low_greedy']:
+        print('\n',name)
+        for r in cases[name]['rows'][:40]:
+            print(r['decision'],'a',r['actions'][0],'d',round(r['pre_distance'],1),'ball',np.round(r['ball'],1).tolist(),'players',np.round(r['players'],1).tolist(),'vx',round(r['ball_vel'][0],2))
+
+if __name__=='__main__':main()
+
+==> src/environment.py <==
+"""Validated 1v1 map, motion-based shaping and live-room kick semantics."""
+from pathlib import Path
+import json
+import numpy as np
+from haxballgym import DiscreteAction
+from haxballgym.reward import RewardFunction
+
+STADIUM = str(Path(__file__).resolve().parent.parent / 'maps' / 'futsal_1v1.hbs')
+
+
+def motion_scale(stadium: str | None, tick_skip: int) -> float:
+    """Maximum free player displacement per decision, using explicit map physics."""
+    from haxballgym.stadium import stadium_text
+    data = json.loads(stadium_text(stadium or 'classic'))
+    physics = data.get('playerPhysics', {})
+    acceleration = float(physics.get('acceleration', .1))
+    damping = float(physics.get('damping', .96))
+    if not 0 < damping < 1 or acceleration <= 0:
+        raise ValueError('Motion shaping requires positive acceleration and damping in (0,1).')
+    return acceleration * damping / (1-damping) * tick_skip
+
+
+class MotionPlayerToBall(RewardFunction):
+    """Signed actual player displacement toward the previous ball position.
+
+    A blocked player with nonzero reported velocity receives zero reward. The ball's
+    own motion does not penalize a good shot by increasing player-ball distance.
+    """
+    def __init__(self, scale):
+        self.scale = scale
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        if prev is None:
+            return np.zeros(state.player_pos.shape[:2], dtype=np.float32)
+        direction = prev.ball_pos[:, None, :] - prev.player_pos
+        direction /= np.maximum(np.linalg.norm(direction, axis=-1, keepdims=True), 1e-9)
+        displacement = state.player_pos - prev.player_pos
+        return (np.sum(displacement * direction, axis=-1) / self.scale).astype(np.float32)
+
+
+class MotionBallToGoal(RewardFunction):
+    """Signed decrease in distance to the opponent's finite goal mouth.
+
+    Return motion cancels previous progress on an undiscounted closed trajectory.
+    Measures movement, not reported instantaneous velocity or last toucher.
+    """
+    def __init__(self, scale):
+        self.scale = scale
+
+    @staticmethod
+    def distance(state):
+        p0, p1 = state.goal_line(attacked=True)
+        segment = p1 - p0
+        ball = state.ball_pos[:, None, :]
+        t = np.sum((ball-p0)*segment, axis=-1, keepdims=True)
+        t /= np.maximum(np.sum(segment*segment, axis=-1, keepdims=True), 1e-9)
+        target = p0 + np.clip(t, 0, 1)*segment
+        return np.linalg.norm(ball-target, axis=-1)
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        if prev is None:
+            return np.zeros(state.player_pos.shape[:2], dtype=np.float32)
+        return ((self.distance(prev)-self.distance(state))/self.scale).astype(np.float32)
+
+
+class RepeatKickAction(DiscreteAction):
+    """Policy still chooses release/press; press re-arms kicks inside the tick window.
+
+    The live bot already releases/represses each tick. Engine input 2 implements that
+    same behavior while keeping two policy bins and compatibility with old weights.
+    """
+    def __init__(self):
+        super().__init__(kick_values=2)
+
+    def parse_actions(self, actions):
+        parsed = super().parse_actions(actions)
+        parsed[..., 2] *= 2
+        return parsed
+
+==> src/eval_corner_scenarios.py <==
+"""Evaluate trained 1v1 policies in fixed wall-corner attacks against a still opponent."""
+from __future__ import annotations
+import argparse
+import json
+from pathlib import Path
+import numpy as np
+import torch
+from environment import STADIUM
+from model import Policy
+from train import create_eval_env
+from haxballgym import BLUE, RED
+
+
+def evaluate(checkpoint: Path, *, envs: int = 8, max_steps: int = 350):
+    model = Policy(16)
+    model.load_state_dict(torch.load(checkpoint, map_location="cpu", weights_only=True))
+    model.eval()
+    rows = []
+    for side in (0, 1):
+        for wall in (-1, 1):
+            env = create_eval_env(envs, 1, 1, STADIUM, 8)
+            env.reset()
+            initial = env.engine.snapshot()
+            goal_x = float(initial.goal_center(attacked=True)[0, side, 0])
+            attack_dir = 1.0 if goal_x > 0 else -1.0
+            offsets = np.linspace(-12., 12., envs)
+            # Approximate the supplied match image in map coordinates: the ball is
+            # within 10 units of the lower wall, with the bot above-left and the
+            # stationary player well behind it. Mirror for the other sides/wall.
+            ball = np.tile([attack_dir * 304., wall * 192.], (envs, 1))
+            ball_vel = np.zeros((envs, 2))
+            players = np.zeros((envs, 2, 2))
+            players[:, side, 0] = attack_dir * 284. + offsets
+            players[:, side, 1] = wall * 146.
+            players[:, 1-side, 0] = attack_dir * 115.
+            players[:, 1-side, 1] = wall * 115.
+            velocities = np.zeros((envs, 2, 2))
+            env.prev_state = env.engine.set_state(ball, ball_vel, players, velocities)
+            obs = env.obs_builder.build_obs(env.prev_state)
+            capture = []
+            original_reward = env.reward_fn
+
+            class CaptureState:
+                def get_rewards(self, state, previous, terminated, truncated):
+                    capture.append(state)
+                    return original_reward.get_rewards(state, previous, terminated, truncated)
+
+            env.reward_fn = CaptureState()
+            done = np.zeros(envs, dtype=bool)
+            first_contact = np.full(envs, -1, dtype=int)
+            near_steps = np.zeros(envs, dtype=int)
+            near_presses = np.zeros(envs, dtype=int)
+            aimed_impulses = np.zeros(envs, dtype=int)
+            goals_for = np.zeros(envs, dtype=int)
+            goals_against = np.zeros(envs, dtype=int)
+            ball_goal_delta = np.zeros(envs, dtype=float)
+            decisions = np.zeros(envs, dtype=int)
+            for step in range(max_steps):
+                previous = env.prev_state
+                action = model.act(torch.as_tensor(obs[:, side], dtype=torch.float32), greedy=True).numpy()
+                action[done] = [1, 1, 0]
+                delta = previous.ball_pos - previous.player_pos[:, side]
+                distance = np.linalg.norm(delta, axis=-1)
+                near = (distance < 24.8) & ~done
+                new_contact = near & (first_contact < 0)
+                first_contact[new_contact] = step
+                near_steps += near.astype(int)
+                pressed = (action[:, 2] == 1) & near
+                near_presses += pressed.astype(int)
+                opponent_action = np.zeros((envs, 3), dtype=np.int64)
+                opponent_action[:, 0:2] = 1
+                actions = np.empty((envs, 2, 3), dtype=np.int64)
+                actions[:, side] = action
+                actions[:, 1-side] = opponent_action
+                obs, _, terminated, truncated = env.step(actions)
+                post = capture.pop()
+                active = ~done
+                goals_for += ((post.scored == (BLUE if side == 0 else RED)) & active).astype(int)
+                goals_against += ((post.scored == (RED if side == 0 else BLUE)) & active).astype(int)
+                to_goal = previous.goal_center(attacked=True)[:, side] - previous.ball_pos
+                to_goal /= np.maximum(np.linalg.norm(to_goal, axis=-1, keepdims=True), 1e-9)
+                impulse = post.ball_vel - previous.ball_vel
+                toward = np.sum(impulse * to_goal, axis=-1) > .2
+                aimed_impulses += (pressed & toward).astype(int)
+                ball_goal_delta += (np.linalg.norm(previous.goal_center(attacked=True)[:, side] - previous.ball_pos, axis=-1)
+                    - np.linalg.norm(post.goal_center(attacked=True)[:, side] - post.ball_pos, axis=-1)) * active
+                newly_done = (terminated | truncated) & active
+                decisions[active] += 1
+                done |= newly_done
+                if done.all():
+                    break
+            rows.append({
+                "side": side,
+                "wall": "bottom" if wall > 0 else "top",
+                "start_ball": [float(ball[0, 0]), float(ball[0, 1])],
+                "start_player": [float(players[0, side, 0]), float(players[0, side, 1])],
+                "episodes": int(envs),
+                "completed": int(done.sum()),
+                "goals_for": int(goals_for.sum()),
+                "goals_against": int(goals_against.sum()),
+                "contact_fraction": float((first_contact >= 0).mean()),
+                "mean_first_contact_decisions": float(first_contact[first_contact >= 0].mean()) if (first_contact >= 0).any() else None,
+                "near_contact_decisions": int(near_steps.sum()),
+                "near_contact_presses": int(near_presses.sum()),
+                "press_with_goalward_impulse": int(aimed_impulses.sum()),
+                "mean_center_goal_distance_reduction": float(ball_goal_delta.sum() / max(1, decisions.sum())),
+                "mean_episode_decisions": float(decisions.mean()),
+            })
+    return {"checkpoint": str(checkpoint), "envs_per_case": envs, "max_steps": max_steps,
+            "opponent": "stationary (no movement, no kick)", "stadium": STADIUM, "rows": rows,
+            "limitation": "Fixed scripted states test this corner pattern only; a goalward impulse is not proof that the ball entered the goal."}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--policy", action="append", required=True, metavar="NAME=CHECKPOINT")
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--envs", type=int, default=8)
+    parser.add_argument("--steps", type=int, default=350)
+    args = parser.parse_args()
+    torch.set_num_threads(2)
+    results = []
+    for item in args.policy:
+        name, path = item.split("=", 1)
+        result = evaluate(Path(path), envs=args.envs, max_steps=args.steps)
+        result["name"] = name
+        results.append(result)
+        print(json.dumps({"name": name, "rows": result["rows"]}), flush=True)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps({"results": results}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
+
+==> src/eval.py <==
+"""Headless evaluation and benchmarking across multiple bots and stadiums.
+
+    uv run src/eval.py                              # Current NeuralBot vs ChaseBot
+    uv run src/eval.py --benchmark                  # Comprehensive benchmark: Random vs Chase, Neural vs Chase, Neural vs Random
+    uv run src/eval.py --stadium futsal-classic     # Custom stadium evaluation
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+
+from bot import ChaseBot, NeuralBot, RandomBot
+from haxballgym import BLUE, RED
+from train import create_eval_env
+from environment import STADIUM
+
+
+def play_matchup(red_bot, blue_bot, stadium: str | None, n_envs: int, steps: int):
+    env = create_eval_env(n_envs, 1, 1, stadium or STADIUM, 8)
+    obs = env.reset()
+    rg = bg = 0
+    for _ in range(steps):
+        # Red action
+        a_red = (red_bot.act(env.prev_state, [0]) if isinstance(red_bot, ChaseBot)
+                 else red_bot.act(obs[:, 0:1])).reshape(n_envs, 1, 3)
+
+        # Blue action
+        if isinstance(blue_bot, ChaseBot):
+            a_blue = blue_bot.act(env.prev_state, [1])
+        else:
+            a_blue = blue_bot.act(obs[:, 1:2]).reshape(n_envs, 1, 3)
+
+        obs, rew, term, trunc = env.step(np.concatenate([a_red, a_blue], axis=1))
+        sc = env.prev_state.scored
+        rg += int((sc == BLUE).sum())  # blue conceded -> red scored
+        bg += int((sc == RED).sum())  # red conceded -> blue scored
+    return rg, bg
+
+
+def main():
+    models_dir = Path(__file__).resolve().parent.parent / "models"
+    meta_path = models_dir / "meta.json"
+    default_stadium = None
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text())
+            default_stadium = meta.get("stadium")
+        except Exception:
+            pass
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=256, help="parallel games")
+    ap.add_argument("--steps", type=int, default=600, help="decisions per game")
+    ap.add_argument("--stadium", default=default_stadium, help="stadium name or .hbs path")
+    ap.add_argument("--benchmark", action="store_true", help="run full 3-way comparative benchmark")
+    ap.add_argument("--self", action="store_true", help="NeuralBot vs NeuralBot")
+    args = ap.parse_args()
+
+    stadium_name = args.stadium or STADIUM
+
+    if args.benchmark:
+        print(f"\n{'='*65}")
+        print(f"HAXBALL BENCHMARK — Arena: {stadium_name} ({args.n} games x {args.steps} steps)")
+        print(f"{'='*65}\n")
+
+        matchups = [
+            ("RandomBot", RandomBot(seed=42), "ChaseBot", ChaseBot(seed=0)),
+            ("NeuralBot (Trained)", NeuralBot(greedy=True), "ChaseBot", ChaseBot(seed=0)),
+            ("NeuralBot (Trained)", NeuralBot(greedy=True), "RandomBot", RandomBot(seed=123)),
+        ]
+
+        for r_name, r_bot, b_name, b_bot in matchups:
+            rg, bg = play_matchup(r_bot, b_bot, stadium=stadium_name, n_envs=args.n, steps=args.steps)
+            net = rg - bg
+            total = rg + bg
+            winrate = (rg / total * 100) if total > 0 else 50.0
+            print(f"[{r_name}] vs [{b_name}]:")
+            print(f"  Gols: {rg} - {bg} (Saldo: {net:+d}) | Proporção dos gols: {winrate:.1f}%\n")
+        print(f"{'='*65}\n")
+    else:
+        red_bot = NeuralBot(greedy=True)
+        blue_bot = NeuralBot(greedy=True) if args.self else ChaseBot(seed=0)
+        b_name = "NeuralBot (Self)" if args.self else "ChaseBot"
+        rg, bg = play_matchup(red_bot, blue_bot, stadium=stadium_name, n_envs=args.n, steps=args.steps)
+        print(f"NeuralBot {rg} - {bg} {b_name} | Saldo: {rg - bg:+d} (em {args.n} jogos x {args.steps} steps no {stadium_name})")
+
+
+if __name__ == "__main__":
+    main()
+
+==> src/inspect_policy.py <==
+"""Inspect policy motion and action intent, without claiming kick/goal attribution."""
+import argparse
+import json
+from pathlib import Path
+import numpy as np
+import torch
+from haxballgym import BLUE,RED
+from haxballgym.mutator import RandomStateMutator
+from bot import ChaseBot,PositionBot
+from model import Policy
+from train import create_eval_env
+from environment import STADIUM
+
+
+@torch.no_grad()
+def inspect(checkpoint,steps=1000,n=16):
+    model=Policy(16);model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
+    rows=[];traces={}
+    for scenario in ['kickoff','random']:
+        for opponent in ['chase_no_noise','striker','keeper']:
+            env=create_eval_env(n,1,1,STADIUM,8)
+            if scenario=='random':env.state_mutator=RandomStateMutator(ball_speed=3.,rng=2701)
+            obs=env.reset();bot=ChaseBot(jiggle=0,seed=2701) if opponent=='chase_no_noise' else PositionBot(defender=opponent=='keeper')
+            original=env.reward_fn;captured=[]
+            class Capture:
+                def get_rewards(self,st,prev,term,trunc):
+                    captured.append(st);return original.get_rewards(st,prev,term,trunc)
+            env.reward_fn=Capture()
+            gf=ga=contact=near_kicks=misaligned=far_kicks=stationary=own_half=covered=0
+            distance_sum=0.;streak=np.zeros(n,dtype=int);longest=0;trace=[]
+            for t in range(steps):
+                pre=env.prev_state
+                act=model.act(torch.as_tensor(obs[:,0],dtype=torch.float32),greedy=True).numpy()
+                delta=pre.ball_pos-pre.player_pos[:,0];distance=np.linalg.norm(delta,axis=-1)
+                toward=pre.goal_center(attacked=True)[:,0]-pre.ball_pos
+                cosine=np.sum(delta*toward,axis=-1)/np.maximum(distance*np.linalg.norm(toward,axis=-1),1e-9)
+                close=distance<24.8;pressed=act[:,2]==1
+                contact+=int(close.sum());near_kicks+=int((close&pressed).sum())
+                misaligned+=int((close&pressed&(cosine<0)).sum());far_kicks+=int((~close&pressed).sum())
+                defensive=pre.ball_pos[:,0]<0;own_half+=int(defensive.sum())
+                covered+=int((defensive&(pre.player_pos[:,0,0]<pre.ball_pos[:,0])).sum())
+                distance_sum+=float(distance.sum())
+                actions=np.stack([act,bot.act(pre,[1]).reshape(n,3)],axis=1)
+                obs,_,term,trunc=env.step(actions);post=captured.pop()
+                gf+=int((post.scored==BLUE).sum());ga+=int((post.scored==RED).sum())
+                stopped=np.linalg.norm(post.ball_pos-pre.ball_pos,axis=-1)<.01
+                stationary+=int(stopped.sum());streak=np.where(stopped,streak+1,0)
+                longest=max(longest,int(streak.max()));streak[term|trunc]=0
+                if t<300:trace.append(dict(decision=t,ball=post.ball_pos[0].round(3).tolist(),players=post.player_pos[0].round(3).tolist(),actions=actions[0].tolist(),scored=int(post.scored[0]),truncated=bool(trunc[0])))
+            rows.append(dict(scenario=scenario,opponent=opponent,gf=gf,ga=ga,mean_distance=distance_sum/(n*steps),
+                contact_fraction=contact/(n*steps),kick_contact_fraction=near_kicks/max(1,contact),
+                misaligned_near_press_fraction=misaligned/max(1,near_kicks),far_press_fraction=far_kicks/(n*steps),
+                defensive_goal_side_fraction=covered/max(1,own_half),stationary_fraction=stationary/(n*steps),
+                longest_stationary_s=longest*8/60))
+            traces[scenario+'_'+opponent]=trace
+    return dict(checkpoint=str(checkpoint),envs=n,decisions=steps,seed=2701,side='red',rows=rows,traces=traces,
+        limitation='Action intent metrics do not prove a successful kick or identify who last touched a goal. One side and one scenario seed only.')
+
+
+def main():
+    ap=argparse.ArgumentParser();ap.add_argument('checkpoint',type=Path);ap.add_argument('--out',type=Path,required=True);args=ap.parse_args()
+    torch.set_num_threads(2)
+    result=inspect(args.checkpoint);args.out.parent.mkdir(parents=True,exist_ok=True)
+    args.out.write_text(json.dumps(result,indent=2))
+    lines=['# Inspeção de comportamento', '', result['limitation'], '',
+      '| Cenário | Adversário | Pró × contra | Chute em proximidade | Pressão desalinhada | Bola parada |',
+      '|---|---|---:|---:|---:|---:|']
+    for row in result['rows']:
+        lines.append(f'| {row["scenario"]} | {row["opponent"]} | {row["gf"]} × {row["ga"]} | {100*row["kick_contact_fraction"]:.1f}% | {100*row["misaligned_near_press_fraction"]:.1f}% | {100*row["stationary_fraction"]:.1f}% |')
+    args.out.with_suffix('.md').write_text('\n'.join(lines)+'\n')
+    if args.out.parent.name.startswith('approach_'):
+        root=args.out.parent.parent
+        summary=['# Comparação de recompensa — resultados disponíveis', '',
+          'Execuções completas até esta atualização. Mesma política inicial e orçamento por trial; não extrapolar para 20 mil iterações.', '',
+          '| Aproximação | Seed | Pontuação aleatória inicial | Pontuação aleatória final | Variação |',
+          '|---|---:|---:|---:|---:|']
+        for directory in sorted(root.glob('approach_*')):
+            live_path=directory/'live.json'
+            if not live_path.exists():continue
+            live=json.loads(live_path.read_text())
+            if live.get('status')!='completed':continue
+            evaluations=[json.loads(line) for line in (directory/'evaluations.jsonl').read_text().splitlines()]
+            scores=[]
+            for evaluation in [evaluations[0],evaluations[-1]]:
+                values=[case['score'] for case in evaluation['cases'] if case['scenario']=='random' and case['score'] is not None]
+                scores.append(sum(values)/len(values)*100)
+            summary.append(f'| {live["config"]["approach_weight"]} | {live["config"]["seed"]} | {scores[0]:.1f}% | {scores[1]:.1f}% | {scores[1]-scores[0]:+.1f} pp |')
+        (root/'comparison.md').write_text('\n'.join(summary)+'\n')
+    for row in result['rows']:print(json.dumps(row),flush=True)
+
+if __name__=='__main__':main()
+
+==> src/live_evaluation.py <==
+"""Fixed evaluation panel; keep per-case metrics and explicit sample counts."""
+import numpy as np
+import torch
+from haxballgym import BLUE, RED
+from haxballgym.mutator import RandomStateMutator
+from bot import ChaseBot, PositionBot
+
+
+@torch.no_grad()
+def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400):
+    from train import create_eval_env
+    device = next(model.parameters()).device
+    rows=[]
+    opponent_names=['chase','chase_no_noise','striker','keeper','initial_policy']
+    total=len(opponent_names)*2*2*2
+    case=0
+    for scenario in ['random','kickoff']:
+        for opponent in opponent_names:
+            for eval_seed in [1701,1702]:
+                for side in [0,1]:
+                    # Isolate evaluation RNG from the training sampling sequence.
+                    with torch.random.fork_rng(devices=[]):
+                        torch.manual_seed(eval_seed)
+                        env=create_eval_env(n,1,1,stadium,8)
+                        if scenario=='random':
+                            env.state_mutator=RandomStateMutator(ball_speed=3.,rng=eval_seed)
+                        obs=env.reset()
+                        bot=(ChaseBot(seed=eval_seed,jiggle=0 if opponent=='chase_no_noise' else .25)
+                             if opponent.startswith('chase') else PositionBot(defender=opponent=='keeper'))
+                        gf=ga=wins=draws=losses=stationary=contacts=kick_contacts=0
+                        episode_return=np.zeros(n)
+                        last=env.reward_fn
+                        captured=[]
+                        class Capture:
+                            def get_rewards(self,state,prev,terminated,truncated):
+                                captured.append(state)
+                                return last.get_rewards(state,prev,terminated,truncated)
+                        env.reward_fn=Capture()
+                        for step in range(steps):
+                            pre=env.prev_state
+                            actions=np.empty((n,2,3),dtype=np.int64)
+                            actions[:,side]=model.act(torch.as_tensor(obs[:,side],device=device,dtype=torch.float32),greedy=True).cpu().numpy()
+                            other=1-side
+                            if opponent=='initial_policy':
+                                actions[:,other]=reference.act(torch.as_tensor(obs[:,other],device=device,dtype=torch.float32),greedy=True).cpu().numpy()
+                            else:actions[:,other]=bot.act(pre,[other]).reshape(n,3)
+                            contact=np.linalg.norm(pre.ball_pos-pre.player_pos[:,side],axis=-1)<24.8
+                            contacts+=int(contact.sum());kick_contacts+=int((contact&(actions[:,side,2]==1)).sum())
+                            obs,_,term,trunc=env.step(actions)
+                            state=captured.pop()
+                            good=state.scored==(BLUE if side==0 else RED)
+                            bad=state.scored==(RED if side==0 else BLUE)
+                            gf+=int(good.sum());ga+=int(bad.sum())
+                            episode_return+=good.astype(int)-bad.astype(int)
+                            done=term|trunc
+                            wins+=int(((episode_return>0)&done).sum());losses+=int(((episode_return<0)&done).sum())
+                            draws+=int(((episode_return==0)&done).sum());episode_return[done]=0
+                            stationary+=int((np.linalg.norm(state.ball_pos-pre.ball_pos,axis=-1)<.01).sum())
+                            if step%100==0:progress(case,total,opponent,scenario)
+                        completed=wins+draws+losses
+                        row=dict(opponent=opponent,scenario=scenario,seed=eval_seed,side=side,
+                          decisions=steps,envs=n,gf=gf,ga=ga,wins=wins,draws=draws,losses=losses,
+                          completed_episodes=completed,score=(wins+.5*draws)/completed if completed else None,
+                          stationary_fraction=stationary/(n*steps),contacts=contacts,
+                          kick_contact_fraction=kick_contacts/contacts if contacts else None)
+                        rows.append(row);case+=1;callback(row);progress(case,total,opponent,scenario)
+    return rows
+
+
+def balanced_score(rows):
+    values=[r['score'] for r in rows if r['score'] is not None]
+    return float(np.mean(values)) if values else None
+
+==> src/model.py <==
+"""The policy network — a small actor-critic MLP.
+
+Three categorical heads (dx, dy, kick) over a shared trunk, plus a value head. The head
+*sizes* come from the env's action space (`env.action_space` -> `(3, 3, kick_n)`), so
+nothing about the action layout is hardcoded — but the weight names (`trunk.0/2`,
+`head_x/y/k`) and depth-2 trunk match HaxballGym's `headless-bot` exporter, so a trained
+`model.pt` deploys to a real room with no extra work. `meta.json` records the shapes.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import torch
+import torch.nn as nn
+from torch.distributions import Categorical
+
+
+class Policy(nn.Module):
+    def __init__(
+        self,
+        obs_dim: int,
+        n_acts: Sequence[int] = (3, 3, 2),
+        hidden: int = 256,
+        depth: int = 2,
+    ):
+        super().__init__()
+        self.n_acts = tuple(n_acts)
+        nx, ny, nk = self.n_acts
+        layers, d = [], obs_dim
+        for _ in range(depth):
+            layers += [nn.Linear(d, hidden), nn.Tanh()]
+            d = hidden
+        self.trunk = nn.Sequential(*layers)
+        self.head_x = nn.Linear(hidden, nx)  # dx bin
+        self.head_y = nn.Linear(hidden, ny)  # dy bin
+        self.head_k = nn.Linear(hidden, nk)  # kick: 0/1 (release/hold) or 0/1/2 (+rocket)
+        self.value = nn.Linear(hidden, 1)
+
+    def _logits(self, obs):
+        h = self.trunk(obs)
+        return (self.head_x(h), self.head_y(h), self.head_k(h)), self.value(h).squeeze(-1)
+
+    def act_train(self, obs):
+        """Sample actions + return (actions, summed log-prob, value) for a rollout step."""
+        logits, v = self._logits(obs)
+        dists = [Categorical(logits=lg) for lg in logits]
+        a = torch.stack([d.sample() for d in dists], -1)
+        logp = sum(d.log_prob(a[:, i]) for i, d in enumerate(dists))
+        return a, logp, v
+
+    def evaluate(self, obs, acts):
+        """Log-prob + entropy of given actions under the current policy (PPO update)."""
+        logits, v = self._logits(obs)
+        dists = [Categorical(logits=lg) for lg in logits]
+        logp = sum(d.log_prob(acts[:, i]) for i, d in enumerate(dists))
+        ent = sum(d.entropy() for d in dists)
+        return logp, ent, v
+
+    @torch.no_grad()
+    def act(self, obs, greedy: bool = False):
+        """obs (M, obs_dim) float tensor -> action bins (M, 3) long tensor."""
+        logits, _ = self._logits(obs)
+        if greedy:
+            return torch.stack([lg.argmax(-1) for lg in logits], -1)
+        return torch.stack([Categorical(logits=lg).sample() for lg in logits], -1)
+
+==> src/poc_reward.py <==
+"""Paired short reward experiment; writes only to a dedicated output directory."""
+from __future__ import annotations
+import argparse
+from dataclasses import replace
+import hashlib
+import json
+import math
+from pathlib import Path
+import time
+import numpy as np
+import torch
+from bot import ChaseBot, RandomBot
+from haxballgym import BLUE, RED
+from model import Policy
+from environment import STADIUM
+from train import (build_reward, create_training_env, create_eval_env, T, EPOCHS,
+                   N_MB, CLIP, VF_COEF, MAX_GRAD, LAM, LR, ENT0, ENT1, HALF_LIFE_S)
+
+
+def seed_all(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+def controlled_checks():
+    env = create_eval_env(1, 1, 1, "futsal-classic", 8, table="simple")
+    env.reset()
+    state = env.engine.snapshot()
+    state = replace(state, ball_pos=np.array([[0., 0.]]),
+                    player_pos=np.array([[[-100., 0.], [100., 0.]]]),
+                    player_vel=np.zeros((1, 2, 2)), scored=np.array([-1]))
+    reward = build_reward("simple")
+    def value(vx=0., pv=0., scored=-1):
+        st = replace(state, ball_vel=np.array([[vx, 0.]]),
+                     player_vel=np.array([[[pv, 0.], [0., 0.]]]), scored=np.array([scored]))
+        return reward.get_rewards(st, state, np.array([scored != -1]), np.array([False]))[0].tolist()
+    forward, backward = value(3.), value(-3.)
+    assert forward[0] > 0 and backward[0] < 0
+    assert np.isclose(forward[0] + backward[0], 0)
+    assert value(scored=BLUE) == [25., -25.]
+    assert value(scored=RED) == [-25., 25.]
+    assert value(pv=1.)[0] > 0 and value(pv=-1.)[0] < 0
+    # Actual engine trajectories: equal initial kick, defender on/off the shot line.
+    shots = {}
+    for name, defender_y in (("blocked", 0.), ("open", 150.)):
+        env.reset()
+        env.engine.set_state(ball_pos=np.array([[0., 0.]]), ball_vel=np.zeros((1, 2)),
+            player_pos=np.array([[[-24., 0.], [80., defender_y]]]), player_vel=np.zeros((1, 2, 2)))
+        env.prev_state = env.engine.snapshot()
+        progress, goals, vx = 0., 0., []
+        for step in range(100):
+            act = np.array([[[1, 1, int(step == 0)], [1, 1, 1]]])
+            previous = env.prev_state
+            # Capture terminal state inside reward callback, before autoreset.
+            captured = []
+            original = env.reward_fn
+            class Capture:
+                def get_rewards(self, st, prev, term, trunc):
+                    captured.append(st)
+                    return original.get_rewards(st, prev, term, trunc)
+            env.reward_fn = Capture()
+            _, _, term, trunc = env.step(act)
+            env.reward_fn = original
+            st = captured[0]
+            progress += float(original.terms[1][0].get_rewards(st, previous, term, trunc)[0, 0]) * original.terms[1][1]
+            vx.append(float(st.ball_vel[0, 0]))
+            goals += int(st.scored[0] == BLUE)
+            if term[0] or trunc[0]:
+                break
+        shots[name] = dict(progress_sum=progress, red_goals=goals, min_vx=min(vx), max_vx=max(vx), decisions=len(vx))
+    assert shots["open"]["max_vx"] > 0
+    assert shots["blocked"]["min_vx"] < 0
+    assert shots["open"]["progress_sum"] > shots["blocked"]["progress_sum"]
+    return dict(player_max_speed=float(state.player_max_speed), forward=forward, backward=backward, undiscounted_roundtrip=forward[0]+backward[0],
+                scored=value(scored=BLUE), conceded=value(scored=RED), engine_shots=shots)
+
+
+@torch.no_grad()
+def evaluate(model, seeds, n, steps, stadium=STADIUM):
+    rows = []
+    for seed in seeds:
+        for opponent in ("chase", "chase_no_noise", "random"):
+            for side in (0, 1):
+                seed_all(seed)
+                env = create_eval_env(n, 1, 1, stadium, 8)
+                obs = env.reset()
+                bot = RandomBot(seed) if opponent == "random" else ChaseBot(seed=seed, jiggle=0. if opponent == "chase_no_noise" else .25)
+                gf = ga = 0
+                for _ in range(steps):
+                    actions = np.empty((n, 2, 3), dtype=np.int64)
+                    actions[:, side] = model.act(torch.as_tensor(obs[:, side], dtype=torch.float32), greedy=True).numpy()
+                    other = 1-side
+                    actions[:, other] = (bot.act(obs[:, other]) if opponent == "random" else bot.act(env.prev_state, [other])).reshape(n, 3)
+                    obs, _, _, _ = env.step(actions)
+                    scored = env.prev_state.scored
+                    gf += int((scored == (BLUE if side == 0 else RED)).sum())
+                    ga += int((scored == (RED if side == 0 else BLUE)).sum())
+                rows.append(dict(seed=seed, opponent=opponent, side=side, gf=gf, ga=ga, net=gf-ga))
+    return rows
+
+
+def train(table, seed, args, initial):
+    seed_all(seed)
+    env = create_training_env(args.envs, 1, 1, args.stadium, 8, seed=seed, table=table)
+    env.reward_fn = build_reward(table, args.stadium, 8)
+    model = Policy(env.obs_dim, env.action_space)
+    model.load_state_dict(initial)
+    if getattr(args, "reset_value", False):
+        torch.nn.init.zeros_(model.value.weight)
+        torch.nn.init.zeros_(model.value.bias)
+    opt = torch.optim.Adam(model.parameters(), lr=LR)
+    chase = ChaseBot(seed=seed)
+    obs = env.reset()
+    gamma = math.exp(math.log(.5) / (7.5 * HALF_LIFE_S))
+    totals = {type(fn).__name__: 0. for fn, _ in env.reward_fn.terms}
+    # Capture contributions before automatic episode resets.
+    original = env.reward_fn
+    class Meter:
+        def get_rewards(self, st, prev, term, trunc):
+            result = np.zeros((args.envs, 2), dtype=np.float32)
+            for fn, weight in original.terms:
+                part = fn.get_rewards(st, prev, term, trunc) * weight
+                totals[type(fn).__name__] += float(part[:, 0].sum())
+                result += part
+            return result
+    env.reward_fn = Meter()
+    for it in range(args.iters):
+        frac = it / max(1, args.iters-1)
+        for group in opt.param_groups:
+            group['lr'] = LR*(1-frac) + LR/3*frac
+        ent_coef = ENT0*(1-frac) + ENT1*frac
+        so, sa, sl, sv, sr, sd = [], [], [], [], [], []
+        for _ in range(T):
+            o = torch.as_tensor(obs[:, 0], dtype=torch.float32)
+            with torch.no_grad():
+                a, logp, v = model.act_train(o)
+            actions = np.empty((args.envs, 2, 3), dtype=np.int64)
+            actions[:, 0] = a.numpy()
+            actions[:, 1] = chase.act(env.prev_state, [1]).reshape(args.envs, 3)
+            obs, rew, term, trunc = env.step(actions)
+            so.append(o); sa.append(a); sl.append(logp); sv.append(v)
+            sr.append(torch.as_tensor(rew[:, 0])); sd.append(torch.as_tensor(term | trunc))
+        so, sa, sl, sv, sr, sd = map(torch.stack, (so, sa, sl, sv, sr, sd))
+        with torch.no_grad():
+            nextv = model._logits(torch.as_tensor(obs[:, 0], dtype=torch.float32))[1]
+        adv = torch.zeros_like(sr); gae = torch.zeros(args.envs)
+        for t in reversed(range(T)):
+            mask = (~sd[t]).float()
+            delta = sr[t] + gamma*nextv*mask - sv[t]
+            gae = delta + gamma*LAM*mask*gae
+            adv[t] = gae; nextv = sv[t]
+        ret = (adv+sv).flatten()
+        adv = adv.flatten(); adv = (adv-adv.mean())/(adv.std()+1e-8)
+        bo, ba, bl = so.reshape(-1, env.obs_dim), sa.reshape(-1, 3), sl.flatten()
+        for _ in range(EPOCHS):
+            for mi in torch.randperm(T*args.envs).chunk(N_MB):
+                logp, entropy, val = model.evaluate(bo[mi], ba[mi])
+                ratio = (logp-bl[mi]).exp()
+                loss = -torch.minimum(ratio*adv[mi], ratio.clamp(1-CLIP, 1+CLIP)*adv[mi]).mean()
+                loss += VF_COEF*.5*(val-ret[mi]).square().mean() - ent_coef*entropy.mean()
+                opt.zero_grad(); loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD); opt.step()
+        if (it+1) % 10 == 0:
+            print(f'{table} seed={seed} iteration={it+1}/{args.iters}', flush=True)
+    torch.save(model.state_dict(), args.out / f'{table}_seed{seed}.pt')
+    return dict(table=table, seed=seed, contributions=totals,
+                evaluation=evaluate(model, args.eval_seeds, args.eval_envs, args.eval_steps, args.stadium))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--iters', type=int, default=30)
+    ap.add_argument('--envs', type=int, default=64)
+    ap.add_argument('--seeds', type=int, nargs='+', default=[0, 1, 2])
+    ap.add_argument('--eval-seeds', type=int, nargs='+', default=[10, 11])
+    ap.add_argument('--eval-envs', type=int, default=16)
+    ap.add_argument('--eval-steps', type=int, default=300)
+    ap.add_argument('--warm-start', type=Path, default=Path('models/model.pt'))
+    ap.add_argument('--tables', nargs='+', choices=['previous', 'simple_progress1', 'simple', 'corrected'], default=['previous', 'simple'])
+    ap.add_argument('--stadium', default=STADIUM)
+    ap.add_argument('--out', type=Path, required=True)
+    args = ap.parse_args()
+    torch.set_num_threads(2)
+    if args.out.exists():
+        raise SystemExit('Output already exists; choose a new directory.')
+    if not args.warm_start.is_file():
+        raise SystemExit('Warm-start checkpoint does not exist.')
+    initial = torch.load(args.warm_start, map_location='cpu', weights_only=True)
+    args.out.mkdir(parents=True)
+    torch.save(initial, args.out / "initial.pt")
+    report = dict(config={k: str(v) if isinstance(v, Path) else v for k,v in vars(args).items()},
+                  reward_tables={table: {type(fn).__name__: weight for fn, weight in build_reward(table).terms} for table in args.tables},
+                  checkpoint_sha256=hashlib.sha256(args.warm_start.read_bytes()).hexdigest(),
+                  controlled=controlled_checks(),
+                  limitation='Short fine-tuning against Chase, not self-play convergence; greedy evaluation. Goals are aggregated over fixed windows, not match win rates.', runs=[])
+    baseline = Policy(16); baseline.load_state_dict(initial)
+    report['baseline'] = evaluate(baseline, args.eval_seeds, args.eval_envs, args.eval_steps, args.stadium)
+    start = time.perf_counter()
+    for seed in args.seeds:
+        for table in args.tables:
+            report['runs'].append(train(table, seed, args, initial))
+            report['elapsed_s'] = time.perf_counter()-start
+            (args.out/'results.json').write_text(json.dumps(report, indent=2))
+    print(f'Results: {args.out}/results.json', flush=True)
+
+if __name__ == '__main__':
+    main()
+
+==> src/repair_bot.py <==
+"""Fine-tune with corrected physics/rewards; compare on identical held-out matchups."""
+import argparse
+import json
+from pathlib import Path
+import numpy as np
+import torch
+from haxballgym import RED, BLUE
+from bot import ChaseBot, RandomBot
+from environment import STADIUM
+from model import Policy
+from train import create_training_env, create_eval_env, build_reward
+from poc_reward import train, seed_all
+
+
+@torch.no_grad()
+def evaluate_checkpoint(checkpoint, *, envs=16, steps=750, stadium=STADIUM, repeat_kick=True,
+                        greedy_modes=(True,False), opponents=("chase","chase_no_noise","random"), eval_seeds=(100,101)):
+    model=Policy(16)
+    model.load_state_dict(torch.load(checkpoint,map_location='cpu',weights_only=True))
+    rows=[]
+    for greedy in greedy_modes:
+        for scenario in ['kickoff','random']:
+            for opponent in opponents:
+                for seed in eval_seeds:
+                    for side in [0,1]:
+                        seed_all(seed)
+                        env=(create_eval_env(envs,1,1,stadium,8,repeat_kick=repeat_kick) if scenario=='kickoff' else create_training_env(envs,1,1,stadium,8,seed=seed,repeat_kick=repeat_kick))
+                        if scenario=='random':
+                            from haxballgym.mutator import RandomStateMutator
+                            env.state_mutator=RandomStateMutator(ball_speed=3.,rng=seed)
+                        obs=env.reset()
+                        bot=RandomBot(seed) if opponent=='random' else ChaseBot(seed=seed,jiggle=0. if opponent=='chase_no_noise' else .25)
+                        gf=ga=wins=losses=draws=stationary=0
+                        accumulated=np.zeros(envs)
+                        for _ in range(steps):
+                            pre=env.prev_state
+                            acts=np.empty((envs,2,3),dtype=np.int64)
+                            acts[:,side]=model.act(torch.as_tensor(obs[:,side],dtype=torch.float32),greedy=greedy).numpy()
+                            other=1-side
+                            acts[:,other]=(bot.act(obs[:,other]) if opponent=='random' else bot.act(pre,[other])).reshape(envs,3)
+                            obs,_,term,trunc=env.step(acts)
+                            scored=env.prev_state.scored
+                            good=scored==(BLUE if side==0 else RED)
+                            bad=scored==(RED if side==0 else BLUE)
+                            gf+=int(good.sum());ga+=int(bad.sum())
+                            accumulated += good.astype(int)-bad.astype(int)
+                            done=term|trunc
+                            wins+=int(((accumulated>0)&done).sum())
+                            losses+=int(((accumulated<0)&done).sum())
+                            draws+=int(((accumulated==0)&done).sum())
+                            accumulated[done]=0
+                            # Skip reset transitions when measuring motion.
+                            movement=np.linalg.norm(env.prev_state.ball_pos-pre.ball_pos,axis=-1)
+                            stationary+=int(((movement<.01)&~done).sum())
+                        rows.append(dict(greedy=greedy,scenario=scenario,opponent=opponent,seed=seed,side=side,
+                          gf=gf,ga=ga,net=gf-ga,wins=wins,losses=losses,draws=draws,
+                          stationary_fraction=stationary/(envs*steps)))
+    return rows
+
+
+def selection_score(rows):
+    """Equal weight per held-out condition, using the deployment (greedy) mode."""
+    scores=[]
+    for row in rows:
+        if row['opponent']=='random' or not row['greedy']:
+            continue
+        completed=row['wins']+row['draws']+row['losses']
+        if completed:
+            scores.append((row['wins']+.5*row['draws'])/completed)
+    return float(np.mean(scores)) if scores else 0.
+
+
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument('--out',type=Path,required=True)
+    ap.add_argument('--warm-start',type=Path,default=Path('experiments/reward_progress008_seeded_poc_20261013/initial.pt'))
+    ap.add_argument('--keep-critic',action='store_true',help='Keep old value predictions despite changing reward scale')
+    ap.add_argument('--baseline-report',type=Path)
+    ap.add_argument('--iters',type=int,default=100)
+    ap.add_argument('--envs',type=int,default=64)
+    ap.add_argument('--seeds',nargs='+',type=int,default=[0,1,2])
+    args=ap.parse_args();torch.set_num_threads(2)
+    if args.out.exists():raise SystemExit('Use a new output directory.')
+    initial=torch.load(args.warm_start,map_location='cpu',weights_only=True)
+    args.out.mkdir(parents=True)
+    torch.save(initial,args.out/'initial.pt')
+    args.reset_value=not args.keep_critic
+    args.stadium=STADIUM;args.eval_seeds=[10,11];args.eval_envs=16;args.eval_steps=300
+    report=dict(config={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items()},
+       reward_weights={'goal':25,'approach':.6,'progress':.08},
+       limitations='Training versus Chase; held-out seeds 100/101 used for selection, not independent final validation.',runs=[])
+    if args.baseline_report:
+        old = json.loads(args.baseline_report.read_text())
+        old_initial = torch.load(args.baseline_report.parent/'initial.pt',weights_only=True)
+        if not all(torch.equal(initial[k], old_initial[k]) for k in initial):
+            raise ValueError('Baseline checkpoint mismatch')
+        if old['config']['stadium'] != STADIUM:
+            raise ValueError('Baseline stadium mismatch')
+        report['before'] = old['before']
+    else:
+        report['before']=evaluate_checkpoint(args.out/'initial.pt')
+    (args.out/'results.json').write_text(json.dumps(report,indent=2))
+    for seed in args.seeds:
+        run=train('corrected',seed,args,initial)
+        run['evaluation']=evaluate_checkpoint(args.out/f'corrected_seed{seed}.pt')
+        report['runs'].append(run)
+        (args.out/'results.json').write_text(json.dumps(report,indent=2))
+        print(f'Full evaluation completed for seed {seed}',flush=True)
+    # Equal-weight episode outcomes avoid letting a repeated kickoff dominate selection.
+    best=max(report['runs'],key=lambda r:selection_score(r['evaluation']))
+    report['selected_seed']=best['seed']
+    report['before_chase_net']=sum(r['net'] for r in report['before'] if r['opponent']!='random')
+    report['selected_chase_net']=sum(r['net'] for r in best['evaluation'] if r['opponent']!='random')
+    report['before_score']=selection_score(report['before'])
+    report['selected_score']=selection_score(best['evaluation'])
+    report['selection']='Mean episode score across greedy Chase conditions; each side, seed, scenario and opponent has equal weight.'
+    (args.out/'results.json').write_text(json.dumps(report,indent=2))
+    print('Selection:',report['selected_seed'],'before',report['before_chase_net'],'after',report['selected_chase_net'],flush=True)
+
+if __name__=='__main__':main()
+
+==> src/replay.py <==
+"""Dump a self-play game as a watchable `.hbr2` so you can SEE how training is going.
+
+`train.py --replay-every N` calls this every N iters. We play one game in the Rust core and
+record each player's per-decision input mask; then (if Node + HaxballGym's `record_replay.js`
+are available) we replay those inputs in an offline node-haxball sandbox to write a real `.hbr2`
+loadable in any Haxball replay viewer. Without Node we still write the `.trace.json` and tell you
+how to convert it. The `.hbr2` step needs Node because node-haxball is the actual game recorder.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+
+import numpy as np
+import torch
+
+from haxballgym import DefaultObs, KickoffMutator, TransitionEngine, stadium_text
+
+
+def bins_to_mask(dx: int, dy: int, kick: int) -> int:
+    """World-frame action bins {-1,0,1} -> Haxball 5-bit input mask (UP1 DOWN2 LEFT4 RIGHT8 KICK16)."""
+    m = 0
+    m |= 8 if dx > 0 else 4 if dx < 0 else 0  # RIGHT / LEFT
+    m |= 1 if dy > 0 else 2 if dy < 0 else 0  # UP / DOWN
+    m |= 16 if kick else 0
+    return m
+
+
+@torch.no_grad()
+def dump_trace(model, *, stadium, n_red, n_blue, tick_skip, n_decisions=300, device="cpu"):
+    """Play one self-play game (model controls every player) and return the input-trace dict."""
+    P = n_red + n_blue
+    stad = stadium or "classic"
+    eng = TransitionEngine(1, n_red, n_blue, stadium=stadium, tick_skip=tick_skip)
+    obs_builder = DefaultObs(pos_coef="auto") if stadium else DefaultObs()
+    state = KickoffMutator().reset_all(eng)
+    obs_builder.reset(state)
+    spawns = np.asarray(state.player_pos)[0].tolist()  # record_replay.js maps haxball players by spawn
+    decisions = []
+    for _ in range(n_decisions):
+        o = np.asarray(obs_builder.build_obs(state))
+        flat = torch.as_tensor(o.reshape(-1, o.shape[-1]), dtype=torch.float32, device=device)
+        bins = model.act(flat).cpu().numpy().reshape(P, 3)
+        masks, eng_acts = [], np.zeros((1, P, 3), np.int64)
+        for p in range(P):
+            dx, dy, kick = int(bins[p, 0]) - 1, int(bins[p, 1]) - 1, int(bins[p, 2])
+            wdx = dx if p < n_red else -dx  # blue un-mirrors dx (matches Env._mirror_x / training)
+            eng_acts[0, p] = (wdx, dy, kick)
+            masks.append(bins_to_mask(wdx, dy, kick))
+        decisions.append(masks)
+        state = eng.step(eng_acts)
+    return {
+        "hbs": stadium_text(stad),
+        "n_red": n_red,
+        "n_blue": n_blue,
+        "tick_skip": tick_skip,
+        "spawns": spawns,
+        "decisions": decisions,
+    }
+
+
+def dump_replay(
+    model,
+    out_hbr2,
+    *,
+    stadium,
+    n_red,
+    n_blue,
+    tick_skip,
+    record_js,
+    n_decisions=300,
+    device="cpu",
+    background=False,
+):
+    """Write `out_hbr2` (or just the trace if no Node/record_replay.js). Best-effort: never raises.
+    `background=True` launches the Node recorder fire-and-forget (don't block the training loop)."""
+    out_hbr2 = Path(out_hbr2)
+    trace_path = out_hbr2.with_suffix(".trace.json")
+    trace_path.write_text(
+        json.dumps(
+            dump_trace(
+                model,
+                stadium=stadium,
+                n_red=n_red,
+                n_blue=n_blue,
+                tick_skip=tick_skip,
+                n_decisions=n_decisions,
+                device=device,
+            )
+        )
+    )
+    if not record_js or not Path(record_js).exists():
+        return False, f"trace at {trace_path} (set --record-js <path/to/record_replay.js> for .hbr2)"
+    cmd = ["node", str(record_js), str(trace_path), str(out_hbr2)]
+    try:
+        if background:  # fire-and-forget: node reads the trace async; don't stall training
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True, "(recording in background)"
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            return False, (r.stderr or r.stdout)[-300:]
+        trace_path.unlink()
+        return True, str(out_hbr2)
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+
+==> src/reward_sweep.py <==
+"""Sequential matched self-play reward trials; keep the live-room policy unchanged."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+from telemetry import atomic_json
+
+
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument('--out',type=Path,required=True)
+    ap.add_argument('--checkpoint',type=Path,required=True)
+    ap.add_argument('--iters',type=int,default=300)
+    ap.add_argument('--envs',type=int,default=256)
+    ap.add_argument('--weights',type=float,nargs='+',default=[.6,.15,.05])
+    ap.add_argument('--seeds',type=int,nargs='+',default=[0,1])
+    args=ap.parse_args()
+    if args.out.exists():raise SystemExit('Output already exists.')
+    if not args.checkpoint.is_file():raise SystemExit('Checkpoint missing.')
+    args.out.mkdir(parents=True)
+    status=dict(pid=os.getpid(),status='running',config={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items()},trials=[])
+    atomic_json(args.out/'sweep.json',status)
+    for seed in args.seeds:
+        # Reverse ordering for the second seed to avoid confounding weight with wall time.
+        weights=args.weights if seed==args.seeds[0] else list(reversed(args.weights))
+        for weight in weights:
+            run=(args.out/f'approach_{weight:.2f}_seed{seed}').resolve()
+            run.mkdir()
+            command=[sys.executable,'-u','src/train.py','--envs',str(args.envs),'--iters',str(args.iters),
+                '--seed',str(seed),'--threads','2','--warm-start',str(args.checkpoint.resolve()),
+                '--approach-weight',str(weight),'--save-every','50','--eval-every','100','--out',str(run)]
+            child_env=os.environ.copy();child_env['RAYON_NUM_THREADS']='4'
+            with (run/'training.log').open('w') as log:
+                child=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,env=child_env)
+            atomic_json(Path('runs/active.json'),{'path':str(run),'pid':child.pid})
+            status['active']=dict(seed=seed,weight=weight,path=str(run),pid=child.pid)
+            atomic_json(args.out/'sweep.json',status)
+            code=child.wait()
+            result=dict(seed=seed,weight=weight,path=str(run),exit_code=code)
+            status['trials'].append(result)
+            if code:
+                status['status']='failed';atomic_json(args.out/'sweep.json',status)
+                raise SystemExit(f'Trial failed; inspect {run}/training.log')
+            rows=[json.loads(s) for s in (run/'evaluations.jsonl').read_text().splitlines()]
+            # Evaluate endpoints; report best separately to avoid hiding regressions.
+            for label,row in [('initial',rows[0]),('final',rows[-1])]:
+                values=[c['score'] for c in row['cases'] if c['scenario']=='random' and c['score'] is not None]
+                result[label+'_random_score']=sum(values)/len(values) if values else None
+            inspection=run/'behavior_final.json'
+            with (run/'inspection.log').open('w') as log:
+                inspected=subprocess.run([sys.executable,'src/inspect_policy.py',str(run/'model_final.pt'),'--out',str(inspection)],stdout=log,stderr=subprocess.STDOUT,env=child_env)
+            result['inspection_exit_code']=inspected.returncode
+            result['inspection']=str(inspection)
+            atomic_json(args.out/'sweep.json',status)
+            print(json.dumps(result),flush=True)
+    status['status']='completed';status.pop('active',None)
+    atomic_json(args.out/'sweep.json',status)
+
+if __name__=='__main__':main()
+
+==> src/select.py <==
+"""Pick the strongest checkpoint from a training run via Round-Robin tournament.
+
+    uv run src/select.py            # round-robin models/ckpts/*.pt (+ model_final.pt), winner -> model.pt
+
+Plays every saved checkpoint against every other (head-to-head, both colors; goals counted
+from `state.scored`, so it's reward-independent) and copies the one with the best overall
+goal share to `models/model.pt` (+ `meta.json`).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+import torch
+
+from haxballgym import BLUE, RED
+from train import create_eval_env
+from environment import STADIUM
+from model import Policy
+
+MODELS = Path(__file__).resolve().parent.parent / "models"
+
+
+def load(path: Path):
+    """Rebuild a Policy from a checkpoint, inferring the architecture from the weights."""
+    sd = torch.load(path, map_location="cpu")
+    obs_dim = sd["trunk.0.weight"].shape[1]
+    hidden = sd["trunk.0.weight"].shape[0]
+    depth = sum(1 for k in sd if k.startswith("trunk.") and k.endswith(".weight"))
+    nk = sd["head_k.weight"].shape[0]
+    m = Policy(obs_dim, (3, 3, nk), hidden, depth)
+    m.load_state_dict(sd)
+    m.eval()
+    return m
+
+
+@torch.no_grad()
+def h2h(a, b, stadium: str | None = None, n_envs: int = 128, steps: int = 350):
+    """Goals (a, b) with `a`=red, `b`=blue over one set of games."""
+    env = create_eval_env(n_envs, 1, 1, stadium or STADIUM, 8)
+    obs = env.reset()
+    od = obs.shape[-1]
+    ag = bg = 0
+    for _ in range(steps):
+        ra = a.act(torch.as_tensor(obs[:, 0:1].reshape(-1, od), dtype=torch.float32)).numpy()
+        rb = b.act(torch.as_tensor(obs[:, 1:2].reshape(-1, od), dtype=torch.float32)).numpy()
+        obs, rew, term, trunc = env.step(np.stack([ra, rb], axis=1).reshape(n_envs, 2, 3))
+        sc = env.prev_state.scored
+        ag += int((sc == BLUE).sum())  # blue conceded -> a (red) scored
+        bg += int((sc == RED).sum())
+    return ag, bg
+
+
+def main():
+    meta_path = MODELS / "meta.json"
+    default_stadium = STADIUM
+    if meta_path.exists():
+        try:
+            default_stadium = json.loads(meta_path.read_text()).get("stadium", default_stadium)
+        except Exception:
+            pass
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--stadium", default=default_stadium, help="stadium name or .hbs path")
+    ap.add_argument("--envs", type=int, default=128, help="parallel tournament games")
+    ap.add_argument("--steps", type=int, default=300, help="steps per match")
+    args = ap.parse_args()
+
+    paths = sorted((MODELS / "ckpts").glob("it*.pt"), key=lambda p: int(p.stem[2:]))
+    if (MODELS / "model_final.pt").exists() and (MODELS / "model_final.pt") not in paths:
+        paths.append(MODELS / "model_final.pt")
+
+    if len(paths) < 2:
+        print("need >=2 checkpoints in models/ckpts/ (train with --save-every)")
+        return
+
+    print(f"\n{'='*70}")
+    print(f"TOURNAMENT SELECTION — {len(paths)} Checkpoints on {args.stadium}")
+    print(f"{'='*70}\n")
+
+    nets = {p.stem: load(p) for p in paths}
+    gf = dict.fromkeys(nets, 0)
+    ga = dict.fromkeys(nets, 0)
+    names = list(nets)
+
+    # Round-robin, each pair once with color swap
+    total_pairs = len(names) * (len(names) - 1) // 2
+    pair_count = 0
+    for i, x in enumerate(names):
+        for y in names[i + 1 :]:
+            pair_count += 1
+            xr, yb = h2h(nets[x], nets[y], stadium=args.stadium, n_envs=args.envs, steps=args.steps)
+            yr, xb = h2h(nets[y], nets[x], stadium=args.stadium, n_envs=args.envs, steps=args.steps)
+            gf[x] += xr + xb
+            ga[x] += yb + yr
+            gf[y] += yr + yb
+            ga[y] += xb + xr
+
+    ranked = sorted(names, key=lambda k: (gf[k] / max(gf[k] + ga[k], 1), gf[k] - ga[k]), reverse=True)
+    print(f"{'RANK':<5} {'CHECKPOINT':<18} {'GOAL SHARE':<12} {'GOLS PRO':<10} {'GOLS CONTRA':<12} {'SALDO':<8}")
+    print("-" * 70)
+    for rank, k in enumerate(ranked, 1):
+        share = gf[k] / max(gf[k] + ga[k], 1)
+        net_diff = gf[k] - ga[k]
+        print(f"{rank:<5} {k:<18} {share:<12.3f} {gf[k]:<10} {ga[k]:<12} {net_diff:+<8d}")
+    print("-" * 70)
+
+    win = ranked[0]
+    torch.save(nets[win].state_dict(), MODELS / "model.pt")
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+    else:
+        meta = {}
+    meta.update(obs_dim=nets[win].trunk[0].in_features, hidden=nets[win].trunk[0].out_features,
+                depth=len(nets[win].trunk)//2, n_acts=list(nets[win].n_acts),
+                n_red=1, n_blue=1, stadium=args.stadium, repeat_kick=True)
+    meta.pop("it", None)
+    meta.pop("net_vs_chase", None)
+    meta["selected"] = win
+    (MODELS / "meta.json").write_text(json.dumps(meta))
+    print(f"\n🏆 Campeão Absoluto: [{win}] -> copiado para models/model.pt e models/meta.json\n")
+
+
+if __name__ == "__main__":
+    main()
+
+==> src/telemetry.py <==
+"""Atomic run state and append-only telemetry shared by trainer and local dashboard."""
+import json
+import os
+from pathlib import Path
+import time
+from datetime import datetime, timezone
+import numpy as np
+
+
+def atomic_json(path, value):
+    path = Path(path)
+    temporary = path.with_name(path.name + '.tmp')
+    temporary.write_text(json.dumps(value, allow_nan=False))
+    os.replace(temporary, path)
+
+
+class Telemetry:
+    def __init__(self, out, config):
+        self.out = Path(out)
+        self.start = time.monotonic()
+        self.state = dict(schema_version=1, pid=os.getpid(), status='running', phase='starting',
+                          iteration=0, completed_iterations=0, rollout_step=0, config=config)
+        atomic_json(self.out/'config.json', config)
+        self.update()
+
+    def update(self, **fields):
+        self.state.update(fields)
+        self.state['updated_at'] = datetime.now(timezone.utc).isoformat()
+        self.state['elapsed_s'] = time.monotonic()-self.start
+        atomic_json(self.out/'live.json', self.state)
+
+    def append(self, filename, record):
+        record = dict(record, timestamp=datetime.now(timezone.utc).isoformat())
+        with (self.out/filename).open('a') as handle:
+            handle.write(json.dumps(record, allow_nan=False)+'\n')
+
+
+class RewardMeter:
+    def __init__(self, reward):
+        self.reward = reward
+        self.clear()
+
+    def clear(self):
+        self.sums = {type(fn).__name__: 0. for fn, _ in self.reward.terms}
+        self.absolute_sums = dict.fromkeys(self.sums, 0.)
+        self.gf = self.ga = self.finished = self.stationary = self.transitions = 0
+
+    def reset(self, state):
+        self.reward.reset(state)
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        from haxballgym import BLUE, RED
+        result = np.zeros(state.player_pos.shape[:2], dtype=np.float32)
+        for fn, weight in self.reward.terms:
+            part = fn.get_rewards(state, prev, terminated, truncated)*weight
+            result += part
+            self.sums[type(fn).__name__] += float(part[:, 0].sum())
+            self.absolute_sums[type(fn).__name__] += float(np.abs(part[:,0]).sum())
+        self.gf += int((state.scored==BLUE).sum())
+        self.ga += int((state.scored==RED).sum())
+        self.finished += int((terminated|truncated).sum())
+        if prev is not None:
+            self.stationary += int((np.linalg.norm(state.ball_pos-prev.ball_pos,axis=-1)<.01).sum())
+        self.transitions += state.n_envs
+        return result
+
+==> src/train.py <==
+"""Train a WazBot by self-play PPO — calibrated with longer temporal horizons
+and rich randomized in-game scenarios.
+
+    uv run src/train.py --stadium futsal-classic --iters 1500 --save-every 250
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import time
+import os
+import hashlib
+import subprocess
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn as nn
+
+from bot import ChaseBot
+from haxballgym import (
+    BLUE,
+    RED,
+    CombinedReward,
+    DefaultObs,
+    DiscreteAction,
+    Env,
+    GoalCondition,
+    GoalReward,
+    TimeoutCondition,
+    TouchVelocityToGoal,
+    TransitionEngine,
+    VelocityBallToGoal,
+    VelocityPlayerToBall,
+)
+from haxballgym.mutator import MultiSetter, RandomStateMutator, StateSetterMutator
+from model import Policy
+from environment import STADIUM, motion_scale, MotionPlayerToBall, MotionBallToGoal, RepeatKickAction
+from telemetry import Telemetry, RewardMeter
+from live_evaluation import panel, balanced_score
+from replay import dump_replay
+
+# PPO / GAE hyperparameters
+T, EPOCHS, N_MB = 64, 6, 4  # rollout length, 6 update epochs, 4 minibatches per epoch
+CLIP, VF_COEF, MAX_GRAD, LAM = 0.2, 0.5, 0.5, 0.95
+LR, ENT0, ENT1 = 3e-4, 0.02, 0.01  # annealing exploration entropy
+HALF_LIFE_S = 12.0  # discount: 12 seconds half-life (allows long counter-attacks and build-up)
+SNAPSHOT_EVERY, POOL_SIZE, POOL_PROB = 20, 40, 0.5
+
+
+class KickoffSetter(StateSetterMutator):
+    """Standard Haxball kickoff positions (spawns + motionless ball)."""
+
+    def sample(self, engine: TransitionEngine, n: int):
+        bp = np.zeros((n, 2))
+        bv = np.zeros((n, 2))
+        pp = np.zeros((n, engine.n_players, 2))
+        pp[:, 0] = [-200.0, 0.0]  # Red
+        if engine.n_players > 1:
+            pp[:, 1] = [200.0, 0.0]  # Blue
+        pv = np.zeros((n, engine.n_players, 2))
+        return bp, bv, pp, pv
+
+
+from haxballgym.reward import RewardFunction, VelocityBallToGoal
+
+
+class DeltaBreakawayReward(RewardFunction):
+    """Rewards overcoming/dribbling past the defender:
+    Gives positive reward ONLY at the moment when the ball-carrier gains a goal-side
+    advantage over the defender (i.e. breaks past the defender line towards goal)."""
+
+    def __init__(self, scale: float = 250.0, mult: float = 3.0):
+        self.scale = scale
+        self.mult = mult
+
+    def _phi(self, state):
+        d_ball = np.linalg.norm(state.ball_pos[:, None, :] - state.player_pos, axis=-1)
+        has_ball = d_ball == d_ball.min(axis=-1, keepdims=True)
+        attacked = state.goal_center(attacked=True)
+        my_d = np.linalg.norm(state.player_pos - attacked, axis=-1)
+        diff = state.player_pos[:, None, :, :] - attacked[:, :, None, :]
+        d_o = np.linalg.norm(diff, axis=-1)
+        opp = state.team[:, None, :] != state.team[:, :, None]
+        def_d = np.where(opp, d_o, np.inf).min(axis=-1)
+        ahead = np.minimum(np.maximum(def_d - my_d, 0.0) / self.scale, 1.0)
+        return (has_ball * ahead).astype(np.float32)
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        curr_phi = self._phi(state)
+        prev_phi = self._phi(prev) if prev is not None else curr_phi
+        delta = np.maximum(curr_phi - prev_phi, 0.0)
+        return (delta * self.mult).astype(np.float32)
+
+
+class ShotVelocityToGoal(RewardFunction):
+    """Event-style reward: credits ball speed toward opponent goal on touches and kicks.
+    Robust to discrete tick-skips (34px range evaluated across previous and current tick)."""
+
+    def __init__(self, contact_dist: float = 34.0, scale: float = 2.0):
+        self.contact_dist = contact_dist
+        self.vbg = VelocityBallToGoal(attacked=True)
+        self.scale = scale
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        curr_d = np.linalg.norm(state.ball_pos[:, None, :] - state.player_pos, axis=-1)
+        touch_curr = curr_d < self.contact_dist
+        touch_prev = False
+        if prev is not None:
+            prev_d = np.linalg.norm(prev.ball_pos[:, None, :] - prev.player_pos, axis=-1)
+            touch_prev = prev_d < self.contact_dist
+        touching = touch_curr | touch_prev
+        v = self.vbg.get_rewards(state, prev, terminated, truncated)
+        return (np.maximum(v, 0.0) * touching * self.scale).astype(np.float32)
+
+
+class TangentialGoalShotReward(RewardFunction):
+    """Rewards accelerating the ball towards the opponent's goal mouth (between the posts),
+    NOT into corners/walls."""
+    def __init__(self, post_y_limit: float = 65.0, scale: float = 3.0):
+        self.post_y_limit = post_y_limit
+        self.scale = scale
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        if prev is None:
+            return np.zeros((state.ball_pos.shape[0], state.player_pos.shape[1]), dtype=np.float32)
+        target = state.goal_center(attacked=True)
+        goal_x = target[:, :, 0]
+        ball_disp = state.ball_pos - prev.ball_pos
+        dx = ball_disp[:, 0:1]
+        dy = ball_disp[:, 1:2]
+        is_toward_goal = np.sign(dx) == np.sign(goal_x)
+        dist_x = np.maximum(np.abs(goal_x - state.ball_pos[:, 0:1]), 1.0)
+        proj_y = state.ball_pos[:, 1:2] + dy * (dist_x / (np.abs(dx) + 1e-4))
+        in_mouth = (np.abs(proj_y) <= self.post_y_limit) | (np.abs(state.ball_pos[:, 1:2]) <= self.post_y_limit)
+        speed = np.linalg.norm(ball_disp, axis=-1, keepdims=True)
+        d_ball = np.linalg.norm(state.player_pos - state.ball_pos[:, None, :], axis=-1)
+        touch = d_ball < 36.0
+        shot_val = is_toward_goal * in_mouth * speed * touch * self.scale
+        return shot_val.astype(np.float32)
+
+
+class PenaltyTackleLostReward(RewardFunction):
+    """Discrete penalty when player had breakaway advantage but lost ball directly to defender."""
+    def __init__(self, penalty: float = -0.5):
+        self.penalty = penalty
+        self.breakaway = DeltaBreakawayReward()
+
+    def get_rewards(self, state, prev, terminated, truncated):
+        if prev is None:
+            return np.zeros((state.ball_pos.shape[0], state.player_pos.shape[1]), dtype=np.float32)
+        prev_phi = self.breakaway._phi(prev)
+        d_ball = np.linalg.norm(state.ball_pos[:, None, :] - state.player_pos, axis=-1)
+        has_ball = d_ball == d_ball.min(axis=-1, keepdims=True)
+        had_adv = prev_phi > 0.2
+        lost = ~has_ball
+        opp_contact = d_ball.min(axis=-1, keepdims=True) < 34.0
+        tackle = had_adv & lost & opp_contact
+        return (tackle * self.penalty).astype(np.float32)
+
+
+def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.15):
+    """Signed shaping; retain the previous table for controlled POC comparisons."""
+    if table == "corrected":
+        scale = motion_scale(stadium, tick_skip)
+        return CombinedReward(
+            (MotionPlayerToBall(scale), approach_weight),
+            (MotionBallToGoal(scale), 0.08),
+            (GoalReward(), 25.0),
+        )
+    if table in ("simple", "simple_progress1"):
+        return CombinedReward(
+            (VelocityPlayerToBall(), 0.6),
+            (VelocityBallToGoal(attacked=True), 0.08 if table == "simple" else 1.0),
+            (GoalReward(), 25.0),
+        )
+    if table == "previous":
+        return CombinedReward(
+            (VelocityPlayerToBall(), 0.7),
+            (VelocityBallToGoal(attacked=True), 1.0),
+            (TangentialGoalShotReward(post_y_limit=65.0, scale=3.0), 3.0),
+            (DeltaBreakawayReward(mult=2.0), 2.0),
+            (PenaltyTackleLostReward(penalty=-0.5), 1.0),
+            (GoalReward(), 20.0),
+        )
+    raise ValueError(f"Unknown reward table: {table}")
+
+
+def create_training_env(
+    n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
+    seed: int | None = None, table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.15,
+):
+    """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
+    engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
+    obs_builder = DefaultObs(pos_coef="auto")
+    mutator = MultiSetter(
+        [KickoffSetter(), RandomStateMutator(ball_speed=3.0, rng=seed)],
+        weights=[0.4, 0.6],
+        rng=seed,
+    )
+    return Env(
+        engine=engine,
+        obs_builder=obs_builder,
+        action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight),
+        termination_cond=GoalCondition(),
+        truncation_cond=TimeoutCondition(2000),
+        state_mutator=mutator,
+    )
+
+
+def create_eval_env(
+    n_envs: int, n_red: int, n_blue: int, stadium: str | None, tick_skip: int,
+    table: str = "corrected", repeat_kick: bool = True, approach_weight: float = 0.15,
+):
+    """Creates evaluation environment with standard kickoff resets."""
+    engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
+    obs_builder = DefaultObs(pos_coef="auto")
+    mutator = KickoffSetter()
+    return Env(
+        engine=engine,
+        obs_builder=obs_builder,
+        action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight),
+        termination_cond=GoalCondition(),
+        truncation_cond=TimeoutCondition(2000),
+        state_mutator=mutator,
+    )
+
+
+@torch.no_grad()
+def eval_vs_chase(eval_env, model, dev, n_red, n_blue, steps=350):
+    """Net goals of model (red) vs ChaseBot (blue) over persistent eval_env."""
+    obs = eval_env.reset()
+    chase = ChaseBot(seed=0)
+    P, od = n_red + n_blue, obs.shape[-1]
+    n_envs = eval_env.engine.n_envs
+    red_i, blue_i = np.arange(n_red), np.arange(n_red, P)
+    rg = bg = 0
+    for _ in range(steps):
+        red = model.act(torch.as_tensor(obs[:, red_i].reshape(-1, od), dtype=torch.float32, device=dev))
+        full = np.empty((n_envs, P, 3), dtype=np.int64)
+        full[:, red_i] = red.cpu().numpy().reshape(n_envs, n_red, 3)
+        full[:, blue_i] = chase.act(eval_env.prev_state, blue_i, n_red=n_red)
+        obs, rew, term, trunc = eval_env.step(full)
+        sc = eval_env.prev_state.scored
+        rg += int((sc == BLUE).sum())  # blue conceded -> red scored
+        bg += int((sc == RED).sum())
+    return rg - bg
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--iters", type=int, default=1500)
+    ap.add_argument("--envs", type=int, default=512, help="parallel games")
+    ap.add_argument("--red", type=int, default=1)
+    ap.add_argument("--blue", type=int, default=1)
+    ap.add_argument("--stadium", default=STADIUM, help="bundled name or .hbs path")
+    ap.add_argument("--tick-skip", type=int, default=8)
+    ap.add_argument("--device", default="cpu", help="cpu | cuda | mps")
+    ap.add_argument("--threads", type=int, default=2, help="PyTorch CPU threads")
+    ap.add_argument("--seed", type=int, default=0, help="RNG seed")
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "models"))
+    ap.add_argument("--save-every", type=int, default=250, help="snapshot ckpts/it{N}.pt every N iters")
+    ap.add_argument("--replay-every", type=int, default=0, help="dump replay every N iters (0=off)")
+    ap.add_argument("--record-js", default=None)
+    ap.add_argument("--warm-start", default=None, help="path to existing .pt checkpoint to continue training")
+    ap.add_argument("--approach-weight", type=float, default=0.15)
+    ap.add_argument("--eval-every", type=int, default=50)
+    ap.add_argument("--eval-envs", type=int, default=16)
+    ap.add_argument("--eval-steps", type=int, default=400)
+    ap.add_argument("--keep-critic", action="store_true", help="keep old value head on warm-start")
+    args = ap.parse_args()
+
+    dev = torch.device(args.device)
+    if dev.type == "cpu":
+        torch.set_num_threads(args.threads)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    rng = np.random.default_rng(args.seed)
+
+    env = create_training_env(args.envs, args.red, args.blue, args.stadium, args.tick_skip, seed=args.seed, approach_weight=args.approach_weight)
+    eval_env = create_eval_env(128, args.red, args.blue, args.stadium, args.tick_skip)
+
+    P = args.red + args.blue
+    obs_dim = env.obs_dim
+    n_acts = env.action_space
+    gamma = math.exp(math.log(0.5) / ((60 / args.tick_skip) * HALF_LIFE_S))
+
+    slots = np.arange(args.envs * P).reshape(args.envs, P)
+    learner_idx = slots[:, : args.red].reshape(-1)
+    opp_idx = slots[:, args.red :].reshape(-1)
+    learner_t = torch.as_tensor(learner_idx, device=dev)
+    opp_t = torch.as_tensor(opp_idx, device=dev)
+    B = learner_idx.size
+
+    model = Policy(obs_dim, n_acts).to(dev)
+    if args.warm_start:
+        ws_path = Path(args.warm_start)
+        if not ws_path.is_file():
+            raise FileNotFoundError(f"Warm-start checkpoint not found: {ws_path}")
+        if ws_path.exists():
+            print(f"Warm-starting policy weights from {ws_path}")
+            model.load_state_dict(torch.load(ws_path, map_location=dev))
+            if not args.keep_critic:
+                nn.init.zeros_(model.value.weight)
+                nn.init.zeros_(model.value.bias)
+    opp = Policy(obs_dim, n_acts).to(dev)
+    opp.eval()
+    opt = torch.optim.Adam(model.parameters(), lr=LR)
+    pool: list[dict] = []
+    if args.warm_start and Path(args.warm_start).exists():
+        pool.append({k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
+
+    def snapshot():
+        return {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+
+    print(
+        f"self-play PPO (snapshot pool) | {args.red}v{args.blue} {args.stadium or 'classic'} | "
+        f"obs_dim={obs_dim} n_acts={n_acts} train_slots={B} gamma={gamma:.4f} device={dev} iters={args.iters}"
+    )
+
+    S_obs = torch.zeros(T, B, obs_dim, device=dev)
+    S_act = torch.zeros(T, B, 3, dtype=torch.long, device=dev)
+    S_logp = torch.zeros(T, B, device=dev)
+    S_val = torch.zeros(T, B, device=dev)
+    S_rew = torch.zeros(T, B, device=dev)
+    S_done = torch.zeros(T, B, device=dev)
+
+    obs = env.reset().reshape(args.envs * P, obs_dim)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    best = -1.0
+    t0 = time.perf_counter()
+    config = dict(vars(args), obs_dim=obs_dim, n_acts=list(n_acts), hidden=256, depth=2,
+                  rollout_steps=T, epochs=EPOCHS, minibatches=N_MB, gamma=gamma,
+                  reward_weights={"goal":25,"approach":args.approach_weight,"progress":0.08},
+                  repeat_kick=True, samples_per_iteration=T*B,
+                  revision=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip())
+    config['warm_start_sha256'] = hashlib.sha256(Path(args.warm_start).read_bytes()).hexdigest() if args.warm_start else None
+    telemetry = Telemetry(out, config)
+    meter = RewardMeter(env.reward_fn)
+    env.reward_fn = meter
+    reference = Policy(obs_dim,n_acts).to(dev)
+    reference.load_state_dict(model.state_dict()); reference.eval()
+    torch.save(snapshot(), out/'initial_policy.pt')
+    train_seconds=0.
+
+    def evaluate(iteration):
+        telemetry.update(phase='evaluating', evaluation_iteration=iteration, evaluation_completed=0)
+        rows=panel(model, reference, args.stadium, args.seed,
+          lambda row:telemetry.append('evaluation_cases.jsonl',dict(iteration=iteration,**row)),
+          lambda case,total,bot,scenario:telemetry.update(phase='evaluating',evaluation_completed=case,
+            evaluation_total=total,evaluation_opponent=bot,evaluation_scenario=scenario),
+          n=args.eval_envs,steps=args.eval_steps)
+        score=balanced_score(rows)
+        telemetry.append('evaluations.jsonl',dict(iteration=iteration,score=score,cases=rows))
+        return score
+
+    try:
+        baseline_score=evaluate(0)
+        best=baseline_score if baseline_score is not None else -1.
+        torch.save(snapshot(),out/'model.pt')
+        (out/'meta.json').write_text(json.dumps(dict(config, it=0, evaluation_score=baseline_score)))
+
+        for it in range(1, args.iters + 1):
+            iteration_start=time.perf_counter()
+            meter.clear()
+            telemetry.update(phase="rollout",iteration=it,rollout_step=0)
+            frac = (it - 1) / max(1, args.iters - 1)
+            for g in opt.param_groups:
+                g["lr"] = LR * (1 - frac) + (LR / 3) * frac
+            ent_coef = ENT0 * (1 - frac) + ENT1 * frac
+
+            # pick frozen opponent: current copy or past snapshot
+            opp.load_state_dict(
+                pool[rng.integers(len(pool))] if (pool and rng.random() < POOL_PROB) else snapshot()
+            )
+
+            # --- rollout ---
+            for t in range(T):
+                o = torch.as_tensor(obs, dtype=torch.float32, device=dev)
+                with torch.no_grad():
+                    act, logp, val = model.act_train(o[learner_t])
+                    o_act = opp.act(o[opp_t])
+                S_obs[t], S_act[t], S_logp[t], S_val[t] = o[learner_t], act, logp, val
+                full = np.empty((args.envs * P, 3), dtype=np.int64)
+                full[learner_idx] = act.cpu().numpy()
+                full[opp_idx] = o_act.cpu().numpy()
+                nobs, rew, term, trunc = env.step(full.reshape(args.envs, P, 3))
+                obs = nobs.reshape(args.envs * P, obs_dim)
+                done = np.repeat((term | trunc).astype(np.float32), P)
+                S_rew[t] = torch.as_tensor(rew.reshape(-1)[learner_idx], dtype=torch.float32, device=dev)
+                S_done[t] = torch.as_tensor(done[learner_idx], device=dev)
+                if (t+1)%8==0:
+                    telemetry.update(phase='rollout',rollout_step=t+1)
+
+            rollout_seconds=time.perf_counter()-iteration_start
+            telemetry.update(phase="updating")
+            # --- GAE advantages ---
+            with torch.no_grad():
+                last_val = model._logits(torch.as_tensor(obs, dtype=torch.float32, device=dev)[learner_t])[1]
+            adv = torch.zeros(T, B, device=dev)
+            gae = torch.zeros(B, device=dev)
+            for t in reversed(range(T)):
+                nonterm = 1.0 - S_done[t]
+                nextval = last_val if t == T - 1 else S_val[t + 1]
+                delta = S_rew[t] + gamma * nextval * nonterm - S_val[t]
+                gae = delta + gamma * LAM * nonterm * gae
+                adv[t] = gae
+            ret = adv + S_val
+
+            # --- PPO update ---
+            bo, ba, bl = S_obs.reshape(-1, obs_dim), S_act.reshape(-1, 3), S_logp.reshape(-1)
+            badv, bret = adv.reshape(-1), ret.reshape(-1)
+            badv = (badv - badv.mean()) / (badv.std() + 1e-8)
+            idx = np.arange(T * B)
+            mb = len(idx) // N_MB
+            ppo_metrics=[]
+            for _ in range(EPOCHS):
+                np.random.shuffle(idx)
+                for s in range(0, len(idx), mb):
+                    mi = torch.as_tensor(idx[s : s + mb], device=dev)
+                    logp, ent, val = model.evaluate(bo[mi], ba[mi])
+                    ratio = (logp - bl[mi]).exp()
+                    a = badv[mi]
+                    pl = -torch.min(ratio * a, torch.clamp(ratio, 1 - CLIP, 1 + CLIP) * a).mean()
+                    vl = 0.5 * (val - bret[mi]).pow(2).mean()
+                    loss = pl + VF_COEF * vl - ent_coef * ent.mean()
+                    opt.zero_grad()
+                    loss.backward()
+                    nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD)
+                    opt.step()
+                    with torch.no_grad():
+                        lr_delta=logp-bl[mi]
+                        kl=((lr_delta.exp()-1)-lr_delta).mean()
+                        clipped=((ratio-1).abs()>CLIP).float().mean()
+                        ppo_metrics.append([float(pl),float(vl),float(ent.mean()),float(kl),float(clipped)])
+
+            iteration_seconds=time.perf_counter()-iteration_start
+            train_seconds+=iteration_seconds
+            means=np.mean(ppo_metrics,axis=0)
+            yvar=float(bret.var(unbiased=False))
+            explained=1-float((bret-S_val.reshape(-1)).var(unbiased=False))/yvar if yvar>1e-9 else None
+            record=dict(iteration=it,samples=it*T*B,iteration_seconds=iteration_seconds,
+               rollout_seconds=rollout_seconds,update_seconds=iteration_seconds-rollout_seconds,
+               samples_per_second=T*B/iteration_seconds,training_samples_per_second=it*T*B/train_seconds,
+               wall_samples_per_second=it*T*B/(time.perf_counter()-t0),
+               reward_mean=float(S_rew.mean()),reward_terms_per_sample={k:v/(T*B) for k,v in meter.sums.items()},
+               reward_terms_absolute_per_sample={k:v/(T*B) for k,v in meter.absolute_sums.items()},
+               goals_for=meter.gf,goals_against=meter.ga,completed_episodes=meter.finished,
+               stationary_fraction=meter.stationary/max(1,meter.transitions),
+               policy_loss=float(means[0]),value_loss=float(means[1]),entropy=float(means[2]),
+               approximate_kl=float(means[3]),clip_fraction=float(means[4]),explained_variance=explained,
+               learning_rate=opt.param_groups[0]['lr'],snapshot_pool=len(pool))
+            telemetry.append('training.jsonl',record)
+            telemetry.update(completed_iterations=it,samples=it*T*B,phase='checkpoint',last_training=record)
+
+            if it % SNAPSHOT_EVERY == 0:
+                pool.append(snapshot())
+                if len(pool) > POOL_SIZE:
+                    pool.pop(0)
+
+            if args.save_every and it % args.save_every == 0:
+                (out / "ckpts").mkdir(exist_ok=True)
+                torch.save(model.state_dict(), out / "ckpts" / f"it{it}.pt")
+
+            if it % args.eval_every == 0 or it == args.iters:
+                score=evaluate(it)
+                meta=dict(config,it=it,evaluation_score=score)
+                torch.save(snapshot(),out/'model_final.pt')
+                (out/'meta_final.json').write_text(json.dumps(meta))
+                tag=''
+                if score is not None and score>best:
+                    best=score
+                    torch.save(snapshot(),out/'model.pt')
+                    (out/'meta.json').write_text(json.dumps(meta));tag=' <- saved best'
+                score_label=f'{score:.3f}' if score is not None else 'n/a'
+                print(f'it {it:4d} | {record["samples_per_second"]/1000:.1f}k samples/s | balanced eval {score_label} (best {best:.3f}){tag}',flush=True)
+
+        telemetry.update(status="completed",phase="completed",completed_iterations=args.iters)
+        print(f"done. balanced score {best:.3f} -> {out / 'model.pt'}",flush=True)
+    except BaseException as error:
+        telemetry.update(status='failed',phase='failed',error=repr(error))
+        raise
+
+
+if __name__ == "__main__":
+    main()
+
+==> headless-bot/export_policy.py <==
+"""Export a trained PPO policy to policy.json so the Node bot can run the forward pass
+without torch.
+
+  uv run headless-bot/export_policy.py                         # default (rl/checkpoints/model.pt)
+  uv run headless-bot/export_policy.py my_run                  # a run dir (uses model_final.pt)
+  uv run headless-bot/export_policy.py path/x.pt --stadium futsal-classic
+
+policy.json is self-describing: besides the weights it carries the obs normalization
+(pos_coef, goal_x) and — for non-classic maps — the stadium itself, so swapping the file
+switches the bot, its observation, AND the room's map together. bot.js falls back to the
+classic defaults when those fields are absent.
+
+Only the 256×2, obs_dim-16 DefaultObs arch is supported by bot.js (trunk.0/trunk.2)."""
+
+import argparse
+import json
+from pathlib import Path
+
+import torch
+
+HERE = Path(__file__).parent
+CKPT = HERE.parent / "models"
+
+
+def resolve(arg: str | None) -> tuple[Path, dict]:
+    """Return (state_dict_path, meta). `arg` may be None (default), a run-dir name, or a .pt."""
+    if arg is None:
+        meta_path = CKPT / "meta.json"  # optional — obs_dim/depth are inferred from the weights
+        meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+        return CKPT / "model.pt", meta
+    p = Path(arg)
+    if p.suffix == ".pt":  # explicit checkpoint file
+        sd_path = p if p.is_absolute() else (HERE.parent / p)
+        meta_path = sd_path.parent / "meta.json"
+    else:  # a run-dir name under checkpoints/ — prefer the deploy weights (model_final.pt)
+        run = CKPT / arg
+        sd_path = run / "model_final.pt"
+        if not sd_path.exists():
+            sd_path = run / "model.pt"
+        meta_path = run / "meta.json"
+    if not meta_path.exists() and sd_path.parent.name == "ckpts":
+        meta_path = sd_path.parent.parent / "config.json"
+    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    return sd_path, meta
+
+
+def stadium_obs_params(stadium: str) -> tuple[list[float], float, str | None]:
+    """Map-aware obs scaling for bot.js: (pos_coef [px,py], goal_x, stadium_hbs|None).
+    Mirrors haxballgym's DefaultObs(pos_coef='auto') so the room obs matches training."""
+    from haxballgym.obs import DefaultObs
+    from haxballgym.stadium import stadium_text
+
+    from haxballgym import TransitionEngine
+
+    is_classic = stadium in ("", "classic")
+    eng = TransitionEngine(1, 1, 1, stadium=None if is_classic else stadium)
+    ob = DefaultObs(pos_coef="auto")
+    ob.reset(eng.snapshot())
+    goal_x = float(max(abs(eng._goal_p0[:, 0]).max(), abs(eng._goal_p1[:, 0]).max()))
+    hbs = None if is_classic else stadium_text(stadium)
+    return [float(ob.pos_coef[0]), float(ob.pos_coef[1])], goal_x, hbs
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("ckpt", nargs="?", default=None)
+    ap.add_argument("--stadium", default=None, help="override; else meta.stadium, else classic")
+    args = ap.parse_args()
+
+    sd_path, meta = resolve(args.ckpt)
+    sd = torch.load(sd_path, map_location="cpu")
+    obs_dim = meta.get("obs_dim") or sd["trunk.0.weight"].shape[1]
+    depth = sum(1 for k in sd if k.startswith("trunk.") and k.endswith(".weight"))
+    if obs_dim != 16 or depth != 2:
+        raise SystemExit(
+            f"refusing to export: bot.js's buildObs produces the 16-dim DefaultObs (1v1, depth-2 MLP) "
+            f"only, but this checkpoint is obs_dim={obs_dim}, depth={depth}. Deploying it would feed a "
+            f"truncated obs into the policy (silently wrong forward pass). Extend bot.js's buildObs to "
+            f"match this obs (PredictObs/GeoObs/SharedObs/action_stack/team size) before exporting."
+        )
+
+    stadium = args.stadium or meta.get("stadium") or "classic"
+    pos_coef, goal_x, hbs = stadium_obs_params(stadium)
+
+    def mat(key):  # weight (out, in) and bias (out,) as plain nested lists
+        return {"w": sd[f"{key}.weight"].tolist(), "b": sd[f"{key}.bias"].tolist()}
+
+    name = sd_path.parent.name if sd_path.name == "model_final.pt" else sd_path.stem
+    if name in ("checkpoints", ""):
+        name = sd_path.stem
+    policy = {
+        "obs_dim": obs_dim,
+        "repeat_kick": bool(meta.get("repeat_kick", False)),
+        "name": name,
+        "stadium_name": stadium,
+        "pos_coef": pos_coef,  # [px, py] obs position scale — map-aware (DefaultObs 'auto')
+        "goal_x": goal_x,  # goal-line x for target/own-goal-rel obs terms
+        "stadium_hbs": hbs,  # .hbs text for non-classic maps -> bot.js setCustomStadium; null on classic
+        "trunk0": mat("trunk.0"),
+        "trunk2": mat("trunk.2"),
+        "head_x": mat("head_x"),
+        "head_y": mat("head_y"),
+        "head_k": mat("head_k"),
+    }
+    out = HERE / "policy.json"
+    out.write_text(json.dumps(policy))
+    print(
+        f"wrote {out.name} from {sd_path.relative_to(HERE.parent)} | obs_dim={obs_dim} "
+        f"stadium={stadium} pos_coef={[round(c, 5) for c in pos_coef]} goal_x={goal_x:.0f}"
+    )
+
+
+if __name__ == "__main__":
+    main()
+
+==> headless-bot/play.py <==
+"""One command: export a checkpoint and host a Haxball room with it.
+
+    HEADLESS_TOKEN=<token> uv run headless-bot/play.py path/to/model.pt
+    HEADLESS_TOKEN=<token> uv run headless-bot/play.py my_run --stadium big
+
+Equivalent to running `export_policy.py` then `node bot.js`, but in a single step — point it
+at any checkpoint (a `.pt`, or a run-dir name under `checkpoints/`) and it hosts a private room
+you can join from the official client. Get a token at https://www.haxball.com/headlesstoken.
+"""
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+import export_policy
+
+HERE = Path(__file__).parent
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("ckpt", nargs="?", default=None, help="a .pt file or a checkpoints/<run> name")
+    ap.add_argument("--stadium", default=None, help="override the map (else the checkpoint's)")
+    args = ap.parse_args()
+
+    # 1. export the policy to policy.json (reuse export_policy's CLI)
+    sys.argv = ["export_policy", *([args.ckpt] if args.ckpt else [])]
+    if args.stadium:
+        sys.argv += ["--stadium", args.stadium]
+    export_policy.main()
+
+    # 2. host the room (install node deps once, then launch the loader)
+    if not (HERE / "node_modules").exists():
+        subprocess.run(["npm", "install"], cwd=HERE, check=True)
+    subprocess.run(["node", "bot.js"], cwd=HERE, check=True)
+
+
+if __name__ == "__main__":
+    main()
+
+==> headless-bot/bot.js <==
+// Host a private Haxball room and play against our RL bot.
+//
+//   HEADLESS_TOKEN=<token from https://www.haxball.com/headlesstoken> node bot.js
+//
+// Optional env: ROOM_NAME, ROOM_PASS (default "bot"), TICK_SKIP (8), FLIP_Y (0/1).
+//
+// node-haxball is used only as a thin loader for the official Haxball engine. All the
+// bot logic (obs + policy) is ours and mirrors the training code; because the Rust
+// core is a bit-faithful port, the sim-trained policy transfers to a real room.
+const fs = require("fs");
+const path = require("path");
+const { Room, Utils, OperationType } = require("node-haxball")();
+
+// Load a local .env (gitignored) so `node bot.js` finds HEADLESS_TOKEN without exporting it.
+// Existing env vars win, so `HEADLESS_TOKEN=… node bot.js` still overrides the file.
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m || process.env[m[1]] !== undefined) continue;
+    let val = m[2];
+    // strip one matching pair of surrounding quotes: HEADLESS_TOKEN="abc" -> abc (else the
+    // quotes become part of the token and auth fails with a confusing "invalid token").
+    if (val.length >= 2 && (val[0] === '"' || val[0] === "'") && val[val.length - 1] === val[0]) {
+      val = val.slice(1, -1);
+    }
+    process.env[m[1]] = val;
+  }
+} catch { /* no .env — fall back to the real environment */ }
+
+const TOKEN = process.env.HEADLESS_TOKEN;
+if (!TOKEN) {
+  console.error("Set HEADLESS_TOKEN (get one at https://www.haxball.com/headlesstoken).");
+  process.exit(1);
+}
+
+const CONFIG = {
+  roomName: process.env.ROOM_NAME || "RL Bot — private",
+  password: process.env.ROOM_PASS || "bot",
+  tickSkip: parseInt(process.env.TICK_SKIP || "8", 10), // decisions every N physics ticks
+  flipY: process.env.FLIP_Y === "1", // flip if the bot moves up/down the wrong way
+};
+const BOT_ID = 65535;
+const RED = 1, BLUE = 2, SPEC = 0;
+
+// ── Policy (the trained MLP; weights from export_policy.py) ───────────────────
+const VS = 1 / 10;
+// Obs normalization is map-aware and travels in policy.json (pos_coef/goal_x), so the room
+// obs matches what the bot trained on (futsal's bigger field needs a different scale than
+// classic). Absent fields fall back to the classic defaults. `let` so a reload updates them.
+let PX, PY, GOAL_X;
+const POLICY_PATH = path.join(__dirname, "policy.json");
+// `let` so we can HOT-RELOAD new weights live (the `!reload` command / file-watch) without
+// restarting the room — re-export policy.json, the running bot picks it up, same link.
+let P = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
+let roomRef = null; // set in onOpen; lets the file-watch announce the new bot in-room
+function applyObsParams() {
+  PX = P.pos_coef ? P.pos_coef[0] : 1 / 420;
+  PY = P.pos_coef ? P.pos_coef[1] : 1 / 200;
+  GOAL_X = P.goal_x != null ? P.goal_x : 370;
+}
+applyObsParams();
+function reloadPolicy() {
+  P = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
+  applyObsParams(); // pick up the new bot's obs scaling too (not just weights)
+  return P.obs_dim;
+}
+// auto-reload whenever policy.json changes on disk (so a fresh export swaps the bot instantly)
+try {
+  fs.watchFile(POLICY_PATH, { interval: 1000 }, () => {
+    try {
+      reloadPolicy();
+      console.log(`policy.json changed -> reloaded "${P.name || "bot"}"`);
+      if (roomRef) roomRef.sendAnnouncement(`▶ Now playing: "${P.name || "bot"}".`, null, 0x88ccff);
+    } catch (e) { console.log("reload failed:", e.message); }
+  });
+} catch { /* watch unsupported; !reload still works */ }
+
+function linear(x, layer) {
+  const out = new Array(layer.b.length);
+  for (let i = 0; i < out.length; i++) {
+    let sum = layer.b[i];
+    const row = layer.w[i];
+    for (let j = 0; j < x.length; j++) sum += row[j] * x[j];
+    out[i] = sum;
+  }
+  return out;
+}
+const tanh = (a) => a.map(Math.tanh);
+const argmax = (a) => a.reduce((best, v, i, arr) => (v > arr[best] ? i : best), 0);
+
+function act(obs) {
+  let h = tanh(linear(obs, P.trunk0));
+  h = tanh(linear(h, P.trunk2));
+  const kickVal = argmax(linear(h, P.head_k)); // 0=release, 1=hold, 2=rocket (3-way heads only)
+  return {
+    dx: argmax(linear(h, P.head_x)) - 1, // {0,1,2} -> {-1,0,1}
+    dy: argmax(linear(h, P.head_y)) - 1,
+    kick: kickVal >= 1,
+    rocket: kickVal === 2, // rapid-fire: re-kick every tick
+  };
+}
+
+// Goal-relative, side-aware observation — identical to haxballgym DefaultObs.
+// CRITICAL: DefaultObs MIRRORS the x-axis for blue (so both teams see "attacking +x" and one
+// net plays both sides). We must apply the SAME mirror here — `sx = -1` for blue negates every
+// x-component — or a blue bot gets left/right inverted and runs the wrong way. The action's dx
+// is un-mirrored by the same `sx` in controlBot (matches env.py `engine_actions[...,0]*=mirror`).
+function buildObs(self, ball, opp, team) {
+  const fy = CONFIG.flipY ? -1 : 1;
+  const sx = team === RED ? 1 : -1; // blue x-mirror, matching DefaultObs (out[...,0::2] *= sx)
+  const targetX = team === RED ? GOAL_X : -GOAL_X; // attacked goal in WORLD: red +x, blue -x
+  return [
+    sx * self.pos.x * PX, self.pos.y * fy * PY,
+    sx * self.speed.x * VS, self.speed.y * fy * VS,
+    sx * (ball.pos.x - self.pos.x) * PX, (ball.pos.y - self.pos.y) * fy * PY,
+    sx * ball.speed.x * VS, ball.speed.y * fy * VS,
+    sx * (targetX - self.pos.x) * PX, -self.pos.y * fy * PY,
+    sx * (-targetX - self.pos.x) * PX, -self.pos.y * fy * PY,
+    sx * (opp.pos.x - self.pos.x) * PX, (opp.pos.y - self.pos.y) * fy * PY,
+    sx * opp.speed.x * VS, opp.speed.y * fy * VS,
+  ];
+}
+
+// ── Room ──────────────────────────────────────────────────────────────────────
+let tick = 0, lastKey = -1, decisions = 0;
+const DEBUG = process.env.DEBUG === "1";
+const announce = (room, msg, to = null, color = 0x88ccff) =>
+  Utils.runAfterGameTick(() => room.sendAnnouncement(msg, to, color, "normal", 0));
+const after = (fn) => Utils.runAfterGameTick(fn);
+
+function humans(room) {
+  return room.players.filter((p) => p.id !== BOT_ID);
+}
+
+function startIfReady(room) {
+  const blue = humans(room).find((p) => p.team?.id === BLUE);
+  if (blue && !room.gameState) after(() => room.startGame());
+}
+
+function controlBot(room) {
+  if (++tick % CONFIG.tickSkip !== 0) {
+    if (P.repeat_kick && lastKey >= 0 && (lastKey & 16)) {
+      after(() => {
+        room.fakeSendPlayerInput(lastKey & ~16, BOT_ID);
+        room.fakeSendPlayerInput(lastKey, BOT_ID);
+      });
+    }
+    return;
+  }
+  room.extrapolate();
+  const me = room.getPlayer(BOT_ID);
+  const self = me?.disc?.ext;
+  const ball = room.gameState?.physicsState?.discs?.[0];
+  const opp = humans(room).find((p) => p.team?.id && p.team.id !== SPEC)?.disc?.ext;
+  if (!self || !ball || !opp) return;
+
+  const { dx, dy, kick, rocket } = act(buildObs(self, ball, opp, me.team.id));
+  // un-mirror dx for blue (the obs was x-mirrored): world dx = sx·dx, matching env.py.
+  const sx = me.team.id === RED ? 1 : -1;
+  if (DEBUG && tick % (CONFIG.tickSkip * 15) === 0) {
+    const wdx = sx * dx, wdy = CONFIG.flipY ? -dy : dy;
+    const tbx = Math.sign(ball.pos.x - self.pos.x), tby = Math.sign(ball.pos.y - self.pos.y);
+    const d = Math.hypot(ball.pos.x - self.pos.x, ball.pos.y - self.pos.y);
+    console.log(
+      `bot(${me.team.id})@(${self.pos.x.toFixed(0)},${self.pos.y.toFixed(0)}) ` +
+      `ball@(${ball.pos.x.toFixed(0)},${ball.pos.y.toFixed(0)}) v(${ball.speed.x.toFixed(1)},${ball.speed.y.toFixed(1)}) ` +
+      `dist=${d.toFixed(0)} move(${wdx},${wdy}) kick=${kick} toBall(${tbx},${tby}) ` +
+      (wdx === tbx && wdy === tby ? "TOWARD" : "off")
+    );
+  }
+  const key = Utils.keyState(sx * dx, CONFIG.flipY ? -dy : dy, kick);
+  after(() => {
+    if (kick) {
+      // Re-arm on decisions; repeat_kick policies also re-arm between decisions.
+      room.fakeSendPlayerInput(key & ~16, BOT_ID);
+      room.fakeSendPlayerInput(key, BOT_ID);
+      lastKey = key;
+    } else {
+      room.fakeSendPlayerInput(key, BOT_ID);
+      lastKey = key;
+    }
+  });
+}
+
+function handleCommand(room, player, text) {
+  const [cmd] = text.slice(1).toLowerCase().split(/\s+/);
+  switch (cmd) {
+    case "restart": after(() => { room.stopGame(); room.startGame(); }); break;
+    case "start": after(() => room.startGame()); break;
+    case "stop": after(() => room.stopGame()); break;
+    case "swap": // swap the bot and you between teams
+      after(() => {
+        const me = humans(room)[0];
+        const botTeam = room.getPlayer(BOT_ID).team.id;
+        room.setPlayerTeam(BOT_ID, botTeam === RED ? BLUE : RED);
+        if (me) room.setPlayerTeam(me.id, botTeam === RED ? RED : BLUE);
+      });
+      break;
+    case "reload": // hot-swap the bot's weights from policy.json — no room restart
+      try {
+        reloadPolicy();
+        announce(room, `▶ Now playing: "${P.name || "bot"}" (obs_dim ${P.obs_dim}).`);
+      } catch (e) {
+        announce(room, `Reload failed: ${e.message}`, player.id, 0xff8888);
+      }
+      break;
+    case "who": // which bot is loaded?
+      announce(room, `▶ Current bot: "${P.name || "bot"}".`, player.id);
+      break;
+    case "help":
+      announce(room, "Commands: !restart  !start  !stop  !swap  !reload  !who  (UI buttons work too)", player.id);
+      break;
+    default:
+      announce(room, `Unknown command: !${cmd}`, player.id, 0xff8888);
+  }
+}
+
+Room.create(
+  {
+    name: CONFIG.roomName,
+    password: CONFIG.password,
+    showInRoomList: false,
+    maxPlayerCount: 10,
+    token: TOKEN,
+    noPlayer: true,
+  },
+  {
+    storage: { player_name: "RL-Host" },
+    onOpen: (room) => {
+      roomRef = room; // for file-watch in-room announcements
+      // non-classic maps ship in policy.json; load the right pitch (futsal etc.) before play
+      if (P.stadium_hbs) {
+        try {
+          room.setCurrentStadium(Utils.parseStadium(P.stadium_hbs), 0);  // byId 0 = host/system
+          console.log(`stadium -> ${P.stadium_name || "custom"}`);
+        } catch (e) { console.log("stadium load failed:", e.message); }
+      }
+      room.fakePlayerJoin(BOT_ID, `🤖 RL · ${P.name || "bot"}`, "tr", "🤖", "fake-conn", "fake-auth");
+      after(() => room.setPlayerTeam(BOT_ID, RED));
+
+      room.onRoomLink = (link) =>
+        console.log(`\n  >>> JOIN: ${link}\n  >>> password: ${CONFIG.password}\n`);
+
+      room.onPlayerJoin = (player) => {
+        console.log(`+ ${player.name} (id ${player.id})`);
+        after(() => {
+          room.setPlayerAdmin(player.id, true); // you control the room (restart, teams, …)
+          const blueTaken = humans(room).some((p) => p.id !== player.id && p.team?.id === BLUE);
+          room.setPlayerTeam(player.id, blueTaken ? SPEC : BLUE);
+        });
+        announce(room, `You're admin. Bot on red, playing "${P.name || "bot"}". Type !help.`, player.id);
+        startIfReady(room);
+      };
+
+      room.onPlayerLeave = () => {
+        if (!humans(room).some((p) => p.team?.id === BLUE) && room.gameState) after(() => room.stopGame());
+      };
+
+      // chat commands (suppress them from the public chat)
+      room.onBeforeOperationReceived = (type, msg) => {
+        if (type === OperationType.SendChat && msg.byId !== 0 && msg.text?.startsWith("!")) {
+          handleCommand(room, room.getPlayer(msg.byId), msg.text);
+          return false;
+        }
+        return true;
+      };
+
+      // keep playing: restart shortly after a goal-limit victory
+      room.onGameEnd = () => setTimeout(() => startIfReady(room), 3000);
+      room.onTeamGoal = () => startIfReady(room);
+
+      room.onGameStart = () => { tick = 0; lastKey = -1; decisions = 0; };
+      room.onGameTick = () => controlBot(room);
+    },
+    onClose: (msg) => {
+      console.error("Room closed:", msg?.code ?? msg ?? "(unknown)");
+      process.exit(1);
+    },
+  }
+);
+
+==> headless-bot/chase_room.js <==
+// Host a private Haxball room with ChaseBot as the opponent.
+const fs = require("fs");
+const path = require("path");
+const { Room, Utils } = require("node-haxball")();
+
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m || process.env[m[1]] !== undefined) continue;
+    let val = m[2];
+    if (val.length >= 2 && (val[0] === '"' || val[0] === "'") && val[val.length - 1] === val[0]) {
+      val = val.slice(1, -1);
+    }
+    process.env[m[1]] = val;
+  }
+} catch {}
+
+const TOKEN = process.env.HEADLESS_TOKEN;
+if (!TOKEN) {
+  console.error("Set HEADLESS_TOKEN.");
+  process.exit(1);
+}
+
+const CONFIG = {
+  roomName: process.env.ROOM_NAME || "Humano vs ChaseBot — Baseline",
+  password: process.env.ROOM_PASS || "bot",
+  tickSkip: parseInt(process.env.TICK_SKIP || "8", 10),
+};
+
+const BOT_ID = 65535;
+const RED = 1, BLUE = 2, SPEC = 0;
+const KICK_DIST = 34.0;
+
+let tick = 0;
+const after = (fn) => Utils.runAfterGameTick(fn);
+
+function controlChase(room) {
+  if (++tick % CONFIG.tickSkip !== 0) return;
+  room.extrapolate();
+
+  const me = room.getPlayer(BOT_ID);
+  const self = me?.disc?.ext;
+  const ball = room.gameState?.physicsState?.discs?.[0];
+  if (!self || !ball) return;
+
+  const dx = ball.pos.x - self.pos.x;
+  const dy = ball.pos.y - self.pos.y;
+  const dist = Math.hypot(dx, dy);
+
+  const moveX = dx > 15 ? 1 : (dx < -15 ? -1 : 0);
+  const moveY = dy > 15 ? 1 : (dy < -15 ? -1 : 0);
+  const kick = dist <= KICK_DIST ? 1 : 0;
+
+  const key = Utils.keyState(moveX, moveY, kick);
+  after(() => {
+    if (kick) {
+      room.fakeSendPlayerInput(key & ~16, BOT_ID);
+      room.fakeSendPlayerInput(key, BOT_ID);
+    } else {
+      room.fakeSendPlayerInput(key, BOT_ID);
+    }
+  });
+}
+
+Room.create(
+  {
+    name: CONFIG.roomName,
+    password: CONFIG.password,
+    showInRoomList: false,
+    maxPlayerCount: 5,
+    token: TOKEN,
+    noPlayer: true,
+  },
+  {
+    storage: { player_name: "Chase-Host" },
+    onOpen: (room) => {
+      // Load futsal-classic if available in policy.json
+      try {
+        const P = JSON.parse(fs.readFileSync(path.join(__dirname, "policy.json"), "utf8"));
+        if (P.stadium_hbs) {
+          room.setCurrentStadium(Utils.parseStadium(P.stadium_hbs), 0);
+        }
+      } catch (e) {}
+
+      room.fakePlayerJoin(BOT_ID, "🎯 ChaseBot (Scripted)", "ch", "🎯", "fake-c", "fake-a");
+      after(() => room.setPlayerTeam(BOT_ID, RED));
+
+      room.onRoomLink = (link) => {
+        console.log(`\n  >>> JOIN CHASEBOT: ${link}\n  >>> password: ${CONFIG.password}\n`);
+      };
+
+      room.onPlayerJoin = (player) => {
+        console.log(`+ ${player.name} entrou para enfrentar o ChaseBot`);
+        after(() => {
+          room.setPlayerAdmin(player.id, true);
+          room.setPlayerTeam(player.id, BLUE);
+          if (!room.gameState) setTimeout(() => room.startGame(), 1000);
+        });
+      };
+
+      room.onGameTick = () => controlChase(room);
+    }
+  }
+);
+
+==> headless-bot/nh_oracle.js <==
+// Ground-truth trajectory generator using node-haxball (the REAL Haxball engine).
+// Produces fixtures to validate the Rust port against game-min.js (not Ursinaxball).
+// Usage: node nh_oracle.js > fixture.json
+const { Room, Utils } = require("node-haxball")();
+const NAMES = { classic: "Classic", big: "Big", rounded: "Rounded", hockey: "Hockey", huge: "Huge" };
+// scenarios: ball-only physics (no player input), players left at spawn. Velocities are
+// upward-dominant so the ball bounces off walls/segments/curves WITHOUT scoring (a goal would
+// trigger the engine's re-kickoff and diverge the comparison).
+const SCENARIOS = [
+  { stadium: "classic", n_red: 1, n_blue: 1, ball_vel: [8, 55], ticks: 180 },
+  { stadium: "classic", n_red: 1, n_blue: 1, ball_vel: [-30, 45], ticks: 180 },
+  { stadium: "classic", n_red: 3, n_blue: 3, ball_vel: [40, 50], ticks: 180 },
+  { stadium: "big", n_red: 3, n_blue: 3, ball_vel: [12, 60], ticks: 180 },
+  { stadium: "big", n_red: 1, n_blue: 1, ball_vel: [-55, 40], ticks: 180 },
+  { stadium: "rounded", n_red: 1, n_blue: 1, ball_vel: [45, 45], ticks: 180 },
+  { stadium: "hockey", n_red: 1, n_blue: 1, ball_vel: [25, 52], ticks: 180 },
+];
+function run(sc) {
+  const stad = Utils.getDefaultStadiums().find(s => JSON.parse(Utils.exportStadium(s)).name === NAMES[sc.stadium]);
+  const room = Room.sandbox({}, {});
+  room.setCurrentStadium(stad, 0);
+  let id = 1;
+  for (let i = 0; i < sc.n_red; i++) { room.playerJoin(id, "r"+id, "tr", "", "", ""); room.setPlayerTeam(id, 1, 0); id++; }
+  for (let i = 0; i < sc.n_blue; i++) { room.playerJoin(id, "b"+id, "tr", "", "", ""); room.setPlayerTeam(id, 2, 0); id++; }
+  room.startGame(0);
+  const gs = room.gameState.copy();
+  const ball = gs.physicsState.discs[0];
+  ball.I.x = sc.ball_vel[0]; ball.I.y = sc.ball_vel[1];
+  const traj = [];
+  for (let t = 0; t < sc.ticks; t++) {
+    gs.runSteps(1);
+    const b = gs.physicsState.discs[0];
+    traj.push([b.pos.x, b.pos.y]);
+  }
+  // also capture the spawn layout (disc positions at t=0 before stepping)
+  return { ...sc, ball_traj: traj };
+}
+console.log(JSON.stringify(SCENARIOS.map(run)));
+process.exit(0);
+
+==> headless-bot/two_bots.js <==
+// Host a private Haxball room with TWO bots playing each other (1v1 Spectator Arena).
+// Bot 1 (Red) and Bot 2 (Blue) battle each other while you watch as spectator!
+const fs = require("fs");
+const path = require("path");
+const { Room, Utils } = require("node-haxball")();
+
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, ".env"), "utf8").split("\n")) {
+    const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m || process.env[m[1]] !== undefined) continue;
+    let val = m[2];
+    if (val.length >= 2 && (val[0] === '"' || val[0] === "'") && val[val.length - 1] === val[0]) {
+      val = val.slice(1, -1);
+    }
+    process.env[m[1]] = val;
+  }
+} catch {}
+
+const TOKEN = process.env.HEADLESS_TOKEN;
+if (!TOKEN) {
+  console.error("Set HEADLESS_TOKEN.");
+  process.exit(1);
+}
+
+const CONFIG = {
+  roomName: process.env.ROOM_NAME || "Arena Bot vs Bot — 1v1",
+  password: process.env.ROOM_PASS || "bot",
+  tickSkip: parseInt(process.env.TICK_SKIP || "8", 10),
+  flipY: process.env.FLIP_Y === "1",
+};
+
+const BOT_RED_ID = 65534;
+const BOT_BLUE_ID = 65535;
+const RED = 1, BLUE = 2, SPEC = 0;
+
+const VS = 1 / 10;
+let PX, PY, GOAL_X;
+const POLICY_PATH = path.join(__dirname, "policy.json");
+let P = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
+
+function applyObsParams() {
+  PX = P.pos_coef ? P.pos_coef[0] : 1 / 420;
+  PY = P.pos_coef ? P.pos_coef[1] : 1 / 200;
+  GOAL_X = P.goal_x != null ? P.goal_x : 370;
+}
+applyObsParams();
+
+function linear(x, layer) {
+  const out = new Array(layer.b.length);
+  for (let i = 0; i < out.length; i++) {
+    let sum = layer.b[i];
+    const row = layer.w[i];
+    for (let j = 0; j < x.length; j++) sum += row[j] * x[j];
+    out[i] = sum;
+  }
+  return out;
+}
+const tanh = (a) => a.map(Math.tanh);
+const argmax = (a) => a.reduce((best, v, i, arr) => (v > arr[best] ? i : best), 0);
+
+function act(obs) {
+  let h = tanh(linear(obs, P.trunk0));
+  h = tanh(linear(h, P.trunk2));
+  const kickVal = argmax(linear(h, P.head_k));
+  return {
+    dx: argmax(linear(h, P.head_x)) - 1,
+    dy: argmax(linear(h, P.head_y)) - 1,
+    kick: kickVal >= 1,
+  };
+}
+
+function buildObs(self, ball, opp, teamId) {
+  const sx = teamId === RED ? 1 : -1;
+  const fy = CONFIG.flipY ? -1 : 1;
+  return [
+    sx * self.pos.x * PX, self.pos.y * fy * PY,
+    sx * self.speed.x * VS, self.speed.y * fy * VS,
+    sx * ball.pos.x * PX, ball.pos.y * fy * PY,
+    sx * ball.speed.x * VS, ball.speed.y * fy * VS,
+    sx * (ball.pos.x - self.pos.x) * PX, (ball.pos.y - self.pos.y) * fy * PY,
+    Math.hypot(ball.pos.x - self.pos.x, ball.pos.y - self.pos.y) * PX,
+    (GOAL_X - sx * self.pos.x) * PX,
+    sx * opp.pos.x * PX, opp.pos.y * fy * PY,
+    sx * opp.speed.x * VS, opp.speed.y * fy * VS,
+  ];
+}
+
+let tick = 0;
+const after = (fn) => Utils.runAfterGameTick(fn);
+
+function controlBothBots(room) {
+  if (++tick % CONFIG.tickSkip !== 0) return;
+  room.extrapolate();
+
+  const meRed = room.getPlayer(BOT_RED_ID);
+  const meBlue = room.getPlayer(BOT_BLUE_ID);
+  const discRed = meRed?.disc?.ext;
+  const discBlue = meBlue?.disc?.ext;
+  const ball = room.gameState?.physicsState?.discs?.[0];
+
+  if (!discRed || !discBlue || !ball) return;
+
+  // Control RED bot
+  {
+    const { dx, dy, kick } = act(buildObs(discRed, ball, discBlue, RED));
+    const key = Utils.keyState(dx, CONFIG.flipY ? -dy : dy, kick);
+    after(() => {
+      if (kick) {
+        room.fakeSendPlayerInput(key & ~16, BOT_RED_ID);
+        room.fakeSendPlayerInput(key, BOT_RED_ID);
+      } else {
+        room.fakeSendPlayerInput(key, BOT_RED_ID);
+      }
+    });
+  }
+
+  // Control BLUE bot
+  {
+    const { dx, dy, kick } = act(buildObs(discBlue, ball, discRed, BLUE));
+    const key = Utils.keyState(-dx, CONFIG.flipY ? -dy : dy, kick);
+    after(() => {
+      if (kick) {
+        room.fakeSendPlayerInput(key & ~16, BOT_BLUE_ID);
+        room.fakeSendPlayerInput(key, BOT_BLUE_ID);
+      } else {
+        room.fakeSendPlayerInput(key, BOT_BLUE_ID);
+      }
+    });
+  }
+}
+
+Room.create(
+  {
+    name: CONFIG.roomName,
+    password: CONFIG.password,
+    showInRoomList: false,
+    maxPlayerCount: 10,
+    token: TOKEN,
+    noPlayer: true,
+  },
+  {
+    storage: { player_name: "RL-Host" },
+    onOpen: (room) => {
+      if (P.stadium_hbs) {
+        try {
+          room.setCurrentStadium(Utils.parseStadium(P.stadium_hbs), 0);
+          console.log(`stadium -> ${P.stadium_name || "custom"}`);
+        } catch (e) { console.log("stadium load error:", e.message); }
+      }
+
+      // Join both bots
+      room.fakePlayerJoin(BOT_RED_ID, `🤖 Bot Vermelho (it4350)`, "br", "🔴", "fake-c1", "fake-a1");
+      room.fakePlayerJoin(BOT_BLUE_ID, `🤖 Bot Azul (it4350)`, "fr", "🔵", "fake-c2", "fake-a2");
+
+      after(() => {
+        room.setPlayerTeam(BOT_RED_ID, RED);
+        room.setPlayerTeam(BOT_BLUE_ID, BLUE);
+        // Start match automatically
+        setTimeout(() => room.startGame(), 1500);
+      });
+
+      room.onRoomLink = (link) => {
+        console.log(`\n  >>> JOIN: ${link}\n  >>> password: ${CONFIG.password}\n`);
+      };
+
+      room.onPlayerJoin = (player) => {
+        console.log(`+ Espectador entrou: ${player.name}`);
+        after(() => {
+          room.setPlayerAdmin(player.id, true);
+          room.setPlayerTeam(player.id, SPEC); // Stay as spectator
+          if (!room.gameState) room.startGame();
+        });
+      };
+
+      room.onTeamVictory = (scores) => {
+        console.log(`Fim de jogo: Vermelho ${scores.red} x ${scores.blue} Azul`);
+        after(() => setTimeout(() => room.startGame(), 2500));
+      };
+
+      room.onGameTick = () => controlBothBots(room);
+    }
+  }
+);

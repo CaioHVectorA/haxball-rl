@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "experiments/gpt_smoke/meta.json",
+      "size": 313,
+      "sha256": "e013ba2bb2f613a5a73cdb66a4bd2bb4a3ea54452609d8940396f85157f4c43d"
+    },
+    {
+      "path": "experiments/gpt_smoke/meta_final.json",
+      "size": 313,
+      "sha256": "e013ba2bb2f613a5a73cdb66a4bd2bb4a3ea54452609d8940396f85157f4c43d"
+    },
+    {
+      "path": "experiments/gpt_smoke/model.pt",
+      "size": 293979,
+      "sha256": "61854cb909e4cb9f2aef6d0694b27b791e4f31c739e496a0e3ee4aaaf7f71deb"
+    },
+    {
+      "path": "experiments/gpt_smoke/model_final.pt",
+      "size": 294599,
+      "sha256": "16d9328cf0e25942cc0c1781241308e8db504f5c2b2fd147a66c95953033d454"
+    }
+  ],
+  "archive_sha256": "0b50f112d8d2d2035b1aca7f68bb94177e6df8c4a67f5f9efa96eb2d43d8b547"
+}

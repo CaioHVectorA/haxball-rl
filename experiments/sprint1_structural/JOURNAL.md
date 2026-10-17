@@ -181,3 +181,65 @@ training.jsonl. Métrica: recompensa média ponderada por transição do learner
 com reward_mean, erro máximo4,77e-8. Média dasprimeiras50:0,09895;
 últimas50:0,27081. Termo de gols domina a elevação; não interpretar média
 de recompensa por transição como retorno descontado episódico ou win-rate.
+
+## Revisão de comportamento solicitada
+
+Tabela ativa conferida na meta do modeloit2550: PBRS0,15/0,08 e gol±25,
+gamma0,9923279463. Análise descritiva de72 exemplos pré-fixados e replayGIF
+gerados em behavior/; distinção entre pressão de chute e chute efetivo,
+limites de uma seed de avaliação e de inferências sobre planejamento registrados.
+Não houve alteração de pesos, recompensa ou novo treinamento.
+
+## Pedido de publicação integral
+
+Usuário autorizou publicar todo o conteúdo do projeto, incluindo dados brutos
+e snapshots antes ignorados. Pacote integral preparado em artifacts/full_runs_20261014:
+951 arquivos de runs,25 checkpointslegados e4 arquivos de smoke, manifestosSHA256,
+partes menores que limites porarquivo, restaurador e script de publicação.
+Credenciais, logsprivados de sala, caches e dependências instaladas excluídos.
+O texto codigo_completo.txt será incluído como cópia histórica, sem ser alterado.
+Publicação não ocorreu: terminal sem resoluçãoDNS degithub.com; GitHubMCP
+create_blob respondeu requiresapproval/policynever. Último remoto confirmadoe1d31fc.
+Análise de comportamento/replay também preparada. Não afirmar envio pendente
+como concluído. MétodoPBRS já estava ativo no treino encerrado; não houve novo
+treino nem mudança recente nos pesosnuméricos0,15/0,08/25.
+
+Restauração integral testada em diretório separado:980 arquivos restaurados
+e conferidos porSHA256. Restaurador compatível com oPython3 local; script
+de publicação passou validação de sintaxe. Bloqueio externo de escrita
+permanece; nenhum commit novo foi enviado nesta solicitação.
+
+## Atualização local do treino GPU e tentativa de sala
+
+Fetch e fast-forward completos para2694aa831cfa5f8a8a6919c70986d846aa0a417f,
+preservando alterações locais. Treino remoto concluiu10000, melhorit9900,
+scorepainel0,8964409842. Bundlegpu_continuation_latest verificado:hashresume,
+pesosfinitos, melhorvsresume, metadados e mapa. Exportação publicada comparada
+tensor a tensor e paridadeJS em256observações dosdoislados aprovada, erro
+máximo6,9561e-6. Tentativa realde sala com essemodelo fechouerro38
+MissingRecaptchaCallbackError antesde emitirlink. Tokenlocalrecusado; novo
+tokenhumano necessário. Não houve novotreino ou mudança de pesos.
+
+## Variante de mapa com contenção
+
+Relato do usuário de fuga de bola reproduzido no motor da sala. Criada variante
+futsal_1v1_contained mantendo geometria/parâmetros e adicionando guardas de
+colisão; teste2160cenários e360trajetórias lentas idênticas, gols funcionando.
+Detalhes, falha do candidato intermediário e limites em experiments/map_containment.
+Modeloit9900 e normalização preservados; sala usa política runtime separada.
+Nenhum novo treino.
+
+## Publicação integral e preparação de 2v2 — 17/10/2026
+
+Autorização renovada para subir tudo. O bloqueio de publicação registrado acima
+é histórico e deixou de existir. Publicação inclui o pacote histórico que estava
+pendente, análise/replays de comportamento, scripts, promptGPU histórico e a cópia
+`codigo_completo.txt` preservada sem alterações. Um delta adicional de dados locais
+inclui a continuação mais recente, com checksums e restaurador. Credenciais e
+arquivos privados de sala permanecem excluídos. Os pacotes não iniciam processos.
+
+O 1v1 foi encerrado em8018; melhor7300 já publicado. Planejamento2v2 em
+`experiments/2v2/ROADMAP.md`: corrigir resets, TeamObs24, transferência semântica,
+crítico novo, adversários por equipe, instrumentação de passes e benchmarks.
+Nenhum treino2v2 foi iniciado e nenhum loader foi afrouxado para aceitar pesos
+incompatíveis. A proposta permanece trabalho futuro, não habilidade demonstrada.

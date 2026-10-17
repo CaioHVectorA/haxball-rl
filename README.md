@@ -65,3 +65,13 @@ uv run live_stats_server.py --port 8085
 O dashboard em `http://127.0.0.1:8085` lê a execução apontada por `runs/active.json` (`{"path":"/caminho/absoluto/da/execucao"}`). O treinador grava estado atômico, registros por iteração e avaliações por adversário. Há uma avaliação inicial na iteração zero; durante avaliações o treino pausa e o painel mostra essa fase. A velocidade de treino exclui avaliações; a estimativa restante é só do treino.
 
 Os adversários são Chase com/sem ruído, atacante posicional, goleiro e a política inicial congelada. Cenários e seeds de avaliação permanecem fixos. O modelo principal é preservado: pesos finais e melhor checkpoint por pontuação equilibrada ficam na pasta da execução. A pontuação conta vitória como 1, empate como 0,5 e derrota como 0; não confundir com proporção dos gols. Kickoffs determinísticos continuam sendo trajetórias correlacionadas, e autoria de gols contra não é classificada.
+
+
+## Próxima etapa: 2v2
+
+O melhor modelo1v1 atual está em `models/local_warmstart_latest/model.pt` (it7300
+da continuação local). O treino foi encerrado em8018. A transição para equipes
+está descrita em [experiments/2v2/ROADMAP.md](experiments/2v2/ROADMAP.md); ainda
+não há preset2v2 validado. Dados completos recuperáveis estão em
+`artifacts/full_runs_20261014` e seu delta `artifacts/local_continuation_20261017`,
+com restauradores e manifestosSHA256. Credenciais e logsprivados não são publicados.
