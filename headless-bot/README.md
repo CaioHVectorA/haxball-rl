@@ -15,7 +15,7 @@ HEADLESS_TOKEN="<token>" node bot.js
 
 O caminho padrão do exportador é `models/`. O estádio vem de `meta.json`; forneça `--stadium` apenas para sobrescrever essa escolha. Políticas corrigidas incluem `repeat_kick`, rearmando o chute entre decisões na sala, assim como no simulador.
 
-O exportador exige observações de 16 dimensões e duas camadas na política. Não está preparado para equipes. Reexporte depois de escolher um checkpoint e confira os metadados e o estádio usados.
+O exportador aceita `default16` (1v1) e `team24_v1` (2v2), com duas camadas na política. A sala cria um ou dois bots conforme `team_size` e aguarda times completos. Para 2v2, veja [a receita](../experiments/team2v2/README.md). Reexporte depois de escolher um checkpoint e confira os metadados e o estádio usados.
 
 O bot imprime o link da sala. Comandos de chat: `!start`, `!stop`, `!restart`, `!swap`, `!reload`, `!who`, `!help`. Consulte `bot.js` para comportamento e variáveis disponíveis, incluindo `ROOM_NAME`, `ROOM_PASS`, `TICK_SKIP` e `FLIP_Y`.
 

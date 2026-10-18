@@ -1,6 +1,6 @@
 # Haxball RL
 
-Agentes de reinforcement learning para Haxball, treinados com PPO e self-play sobre HaxballGym. A prioridade atual é consolidar o 1v1 em `futsal-classic`, com avaliação reproduzível, antes de experimentar equipes e fine-tuning.
+Agentes de reinforcement learning para Haxball, treinados com PPO e self-play sobre HaxballGym. O treino 1v1 chegou a 10000 iterações; a branch `gpt_2v2` adapta o melhor ator para dois contra dois. Veja [receita, acompanhamento e teste web 2v2](experiments/team2v2/README.md).
 
 ## Uso
 

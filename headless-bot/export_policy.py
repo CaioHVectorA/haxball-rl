@@ -10,7 +10,7 @@ policy.json is self-describing: besides the weights it carries the obs normaliza
 switches the bot, its observation, AND the room's map together. bot.js falls back to the
 classic defaults when those fields are absent.
 
-Only the 256×2, obs_dim-16 DefaultObs arch is supported by bot.js (trunk.0/trunk.2)."""
+The room supports depth-2 actors with default16 (1v1) or team24_v1 (2v2)."""
 
 import argparse
 import json
@@ -71,17 +71,15 @@ def main():
 
     sd_path, meta = resolve(args.ckpt)
     sd = torch.load(sd_path,map_location="cpu",weights_only=True)
-    if meta.get('obs_schema','default16') not in ('default16','default'):
+    schema = meta.get('obs_schema','default16')
+    if schema not in ('default16','default','team24_v1'):
         raise SystemExit('Unsupported observation schema; exporter must match browser observations')
     obs_dim = meta.get("obs_dim") or sd["trunk.0.weight"].shape[1]
     depth = sum(1 for k in sd if k.startswith("trunk.") and k.endswith(".weight"))
-    if obs_dim != 16 or depth != 2:
-        raise SystemExit(
-            f"refusing to export: bot.js's buildObs produces the 16-dim DefaultObs (1v1, depth-2 MLP) "
-            f"only, but this checkpoint is obs_dim={obs_dim}, depth={depth}. Deploying it would feed a "
-            f"truncated obs into the policy (silently wrong forward pass). Extend bot.js's buildObs to "
-            f"match this obs (PredictObs/GeoObs/SharedObs/action_stack/team size) before exporting."
-        )
+    expected_dim = 24 if schema=='team24_v1' else 16
+    if obs_dim != expected_dim or depth != 2:
+        raise SystemExit(f'Unsupported schema/architecture: {schema}, obs_dim={obs_dim}, depth={depth}; '
+                         'expected depth-2 default16 or team24_v1')
 
     stadium = args.stadium or meta.get("stadium") or "classic"
     pos_coef, goal_x, hbs = stadium_obs_params(stadium)
@@ -93,6 +91,7 @@ def main():
     if name in ("checkpoints", ""):
         name = sd_path.stem
     policy = {
+        "team_size": 2 if schema=='team24_v1' else 1,
         "obs_dim": obs_dim,
         "obs_schema": meta.get("obs_schema","default16"),
         "repeat_kick": bool(meta.get("repeat_kick", False)),

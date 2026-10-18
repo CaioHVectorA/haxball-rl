@@ -127,6 +127,21 @@ class Policy(nn.Module):
             own['value.bias'] = torch.zeros_like(own['value.bias'])
         self.load_state_dict(own)
 
+    def transfer_1v1_to_2v2(self, state):
+        """Explicit 16 -> team24 actor transfer. New inputs initially have zero effect.
+
+        The separate critic and Adam are fresh for the new task. Never used by resume.
+        """
+        if not self.separate_critic or state['trunk.0.weight'].shape[1] != 16 or self.trunk[0].in_features != 24:
+            raise ValueError('Transfer requires a 16-input source and a separate-critic team24 target')
+        transferred = {k: v.clone() for k, v in state.items() if k.startswith(
+            ('trunk.', 'head_x.', 'head_y.', 'head_k.'))}
+        weight = state['trunk.0.weight']
+        transferred['trunk.0.weight'] = weight.new_zeros((weight.shape[0], 24))
+        transferred['trunk.0.weight'][:, :16] = weight
+        # Strict validation of every transferred actor tensor; leave the new critic untouched.
+        self.load_actor_state(transferred)
+
     def actor_logits(self, obs):
         h = self.trunk(obs)
         return self.head_x(h), self.head_y(h), self.head_k(h)

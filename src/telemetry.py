@@ -55,8 +55,9 @@ class Telemetry:
 
 
 class RewardMeter:
-    def __init__(self, reward):
+    def __init__(self, reward, n_red=1):
         self.reward = reward
+        self.n_red = n_red
         self.last_state = None
         self.clear()
 
@@ -77,8 +78,8 @@ class RewardMeter:
         for fn, weight in self.reward.terms:
             part = fn.get_rewards(state, prev, terminated, truncated)*weight
             result += part
-            self.sums[type(fn).__name__] += float(part[:, 0].sum())
-            self.absolute_sums[type(fn).__name__] += float(np.abs(part[:,0]).sum())
+            self.sums[type(fn).__name__] += float(part[:, :self.n_red].sum())
+            self.absolute_sums[type(fn).__name__] += float(np.abs(part[:,:self.n_red]).sum())
         self.gf += int((state.scored==BLUE).sum())
         self.ga += int((state.scored==RED).sum())
         self.finished += int((terminated|truncated).sum())

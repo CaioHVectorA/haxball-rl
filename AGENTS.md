@@ -1,6 +1,6 @@
 # Arquitetura dos agentes
 
-Este documento descreve o código atual. A prioridade é o 1v1; comportamento cooperativo em equipes ainda precisa de validação.
+Este documento descreve o código atual. O 1v1 consolidado é a base da adaptação experimental 2v2; comportamento cooperativo ainda precisa de validação em partidas.
 
 ## Política e observações
 
@@ -31,8 +31,8 @@ Fora do currículo estacionário, a política controla todos os jogadores vermel
 
 Um snapshot é adicionado a cada 20 iterações; o pool contém no máximo 40. A escolha não ocorre por episódio e pode mudar durante uma partida. O pool reduz a exposição exclusiva ao adversário mais recente, mas não garante progresso monotônico nem elimina ciclos.
 
-## Equipes: etapa futura
+## Adaptação 2v2
 
-A coleta já compartilha parâmetros entre jogadores vermelhos, mas o `KickoffSetter` atual só posiciona explicitamente dois jogadores. Observações, resets, recompensas e exportação devem ser validados antes de treinar 2v2/3v3. O gol recebe peso 25 no treinamento atual; não há garantia de que passes, cobertura ou papéis surjam.
+`--team2v2` usa duas equipes de dois jogadores, `team24_v1`, crítico separado, PBRS e snapshot self-play sem currículo 1v1. Observações: base própria/bola/gols (12), adversário mais próximo (4), companheiro (4), segundo adversário (4). X é espelhado no azul. Os quatro jogadores têm kickoff separado e resets aleatórios sem sobreposição.
 
-Após consolidar o 1v1, comparar treinamento do zero com transferência parcial/fine-tuning. Mudanças na dimensão da observação podem impedir o carregamento direto dos pesos.
+`--transfer-1v1 --warm-start models/sprint1_10000/model.pt` preserva as primeiras 16 colunas do ator e zera as oito novas, mantendo as camadas aprendidas. Crítico e Adam são novos; há 20 iterações iniciais só do crítico. Retomadas posteriores usam `--resume`, sem repetir a transferência. A recompensa de posicionamento é compartilhada pelo time e usa o melhor colocado; progresso e gols também são compartilhados. Não há garantia de passes ou papéis. Avaliação controla equipes completas nos dois lados. Exportador e sala suportam dois bots contra dois humanos, com paridade Python/JS testada; jogo humano real ainda precisa de validação. Veja `experiments/team2v2/README.md`. 3v3 não está habilitado.

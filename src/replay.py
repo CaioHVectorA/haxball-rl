@@ -34,8 +34,14 @@ def dump_trace(model, *, stadium, n_red, n_blue, tick_skip, n_decisions=300, dev
     P = n_red + n_blue
     stad = stadium or "classic"
     eng = TransitionEngine(1, n_red, n_blue, stadium=stadium, tick_skip=tick_skip)
-    obs_builder = DefaultObs(pos_coef="auto") if stadium else DefaultObs()
-    state = KickoffMutator().reset_all(eng)
+    if (n_red,n_blue)==(2,2):
+        from environment import TeamObs
+        from train import KickoffSetter
+        obs_builder = TeamObs(pos_coef='auto')
+        state = KickoffSetter().reset_all(eng)
+    else:
+        obs_builder = DefaultObs(pos_coef="auto") if stadium else DefaultObs()
+        state = KickoffMutator().reset_all(eng)
     obs_builder.reset(state)
     spawns = np.asarray(state.player_pos)[0].tolist()  # record_replay.js maps haxball players by spawn
     decisions = []

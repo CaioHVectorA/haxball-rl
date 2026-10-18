@@ -39,21 +39,31 @@ def load(path: Path):
 @torch.no_grad()
 def h2h(a, b, stadium: str | None = None, n_envs: int = 128, steps: int = 350):
     """Goals (a, b) with `a`=red, `b`=blue over one set of games."""
-    env = create_eval_env(n_envs, 1, 1, stadium or STADIUM, 8)
+    team_size=2 if a.trunk[0].in_features==24 else 1
+    if b.trunk[0].in_features!=a.trunk[0].in_features:
+        raise ValueError('Cannot directly compare 1v1 and 2v2 actors')
+    env = create_eval_env(n_envs, team_size, team_size, stadium or STADIUM, 8)
     obs = env.reset()
     od = obs.shape[-1]
     ag = bg = 0
+    captured=[];reward=env.reward_fn
+    class Capture:
+        def get_rewards(self,state,prev,term,trunc):
+            captured.append(state)
+            return reward.get_rewards(state,prev,term,trunc)
+    env.reward_fn=Capture()
     for _ in range(steps):
-        ra = a.act(torch.as_tensor(obs[:, 0:1].reshape(-1, od), dtype=torch.float32)).numpy()
-        rb = b.act(torch.as_tensor(obs[:, 1:2].reshape(-1, od), dtype=torch.float32)).numpy()
-        obs, rew, term, trunc = env.step(np.stack([ra, rb], axis=1).reshape(n_envs, 2, 3))
-        sc = env.prev_state.scored
+        ra = a.act(torch.as_tensor(obs[:, :team_size].reshape(-1, od), dtype=torch.float32)).numpy()
+        rb = b.act(torch.as_tensor(obs[:, team_size:].reshape(-1, od), dtype=torch.float32)).numpy()
+        obs, rew, term, trunc = env.step(np.concatenate([ra.reshape(n_envs,team_size,3),rb.reshape(n_envs,team_size,3)],axis=1))
+        sc = captured.pop().scored
         ag += int((sc == BLUE).sum())  # blue conceded -> a (red) scored
         bg += int((sc == RED).sum())
     return ag, bg
 
 
 def main():
+    global MODELS
     meta_path = MODELS / "meta.json"
     default_stadium = STADIUM
     if meta_path.exists():
@@ -66,7 +76,10 @@ def main():
     ap.add_argument("--stadium", default=default_stadium, help="stadium name or .hbs path")
     ap.add_argument("--envs", type=int, default=128, help="parallel tournament games")
     ap.add_argument("--steps", type=int, default=300, help="steps per match")
+    ap.add_argument('--model-dir',type=Path,default=MODELS,help='training output or bundle; promotion stays in this directory')
     args = ap.parse_args()
+    MODELS=args.model_dir
+    meta_path=MODELS/'meta.json'
 
     paths = sorted((MODELS / "ckpts").glob("it*.pt"), key=lambda p: int(p.stem[2:]))
     if (MODELS / "model_final.pt").exists() and (MODELS / "model_final.pt") not in paths:
@@ -115,7 +128,12 @@ def main():
         meta = {}
     meta.update(obs_dim=nets[win].trunk[0].in_features, hidden=nets[win].trunk[0].out_features,
                 depth=len(nets[win].trunk)//2, n_acts=list(nets[win].n_acts),
-                n_red=1, n_blue=1, stadium=args.stadium, repeat_kick=True)
+                n_red=2 if nets[win].trunk[0].in_features==24 else 1,
+                n_blue=2 if nets[win].trunk[0].in_features==24 else 1,
+                red=2 if nets[win].trunk[0].in_features==24 else 1,
+                blue=2 if nets[win].trunk[0].in_features==24 else 1,
+                obs_schema='team24_v1' if nets[win].trunk[0].in_features==24 else 'default16',
+                separate_critic=nets[win].separate_critic,stadium=args.stadium,repeat_kick=True)
     meta.pop("it", None)
     meta.pop("net_vs_chase", None)
     meta["selected"] = win

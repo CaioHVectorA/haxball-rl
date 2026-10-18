@@ -7,8 +7,8 @@ from bot import ChaseBot, PositionBot
 
 
 @torch.no_grad()
-def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400, tick_skip=8, eval_seeds=(1701, 1702), greedy=True, extra_opponents=None):
-    from train import create_eval_env
+def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400, tick_skip=8, eval_seeds=(1701, 1702), greedy=True, extra_opponents=None, n_red=1, n_blue=1):
+    from train import create_eval_env, TeamRandomSetter
     device = next(model.parameters()).device
     rows=[]
     neural_opponents={'initial_policy':reference, **(extra_opponents or {})}
@@ -22,9 +22,10 @@ def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400, 
                     # Isolate evaluation RNG from the training sampling sequence.
                     with torch.random.fork_rng(devices=[device.index or 0] if device.type=="cuda" else []):
                         torch.manual_seed(eval_seed)
-                        env=create_eval_env(n,1,1,stadium,tick_skip)
+                        env=create_eval_env(n,n_red,n_blue,stadium,tick_skip)
                         if scenario=='random':
-                            env.state_mutator=RandomStateMutator(ball_speed=3.,rng=eval_seed)
+                            setter=TeamRandomSetter if (n_red,n_blue)==(2,2) else RandomStateMutator
+                            env.state_mutator=setter(ball_speed=3.,rng=eval_seed)
                         obs=env.reset()
                         bot=(ChaseBot(seed=eval_seed,jiggle=0 if opponent=='chase_no_noise' else .25)
                              if opponent.startswith('chase') else PositionBot(defender=opponent=='keeper'))
@@ -39,14 +40,17 @@ def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400, 
                         env.reward_fn=Capture()
                         for step in range(steps):
                             pre=env.prev_state
-                            actions=np.empty((n,2,3),dtype=np.int64)
-                            actions[:,side]=model.act(torch.as_tensor(obs[:,side],device=device,dtype=torch.float32),greedy=greedy).cpu().numpy()
-                            other=1-side
+                            players = np.arange(n_red) if side==0 else np.arange(n_red,n_red+n_blue)
+                            other = np.arange(n_red,n_red+n_blue) if side==0 else np.arange(n_red)
+                            actions=np.empty((n,n_red+n_blue,3),dtype=np.int64)
+                            own_obs=obs[:,players].reshape(-1,obs.shape[-1])
+                            actions[:,players]=model.act(torch.as_tensor(own_obs,device=device,dtype=torch.float32),greedy=greedy).cpu().numpy().reshape(n,len(players),3)
                             if opponent in neural_opponents:
-                                actions[:,other]=neural_opponents[opponent].act(torch.as_tensor(obs[:,other],device=device,dtype=torch.float32),greedy=greedy).cpu().numpy()
-                            else:actions[:,other]=bot.act(pre,[other]).reshape(n,3)
-                            contact=np.linalg.norm(pre.ball_pos-pre.player_pos[:,side],axis=-1)<24.8
-                            contacts+=int(contact.sum());kick_contacts+=int((contact&(actions[:,side,2]==1)).sum())
+                                other_obs=obs[:,other].reshape(-1,obs.shape[-1])
+                                actions[:,other]=neural_opponents[opponent].act(torch.as_tensor(other_obs,device=device,dtype=torch.float32),greedy=greedy).cpu().numpy().reshape(n,len(other),3)
+                            else:actions[:,other]=bot.act(pre,other,n_red=n_red).reshape(n,len(other),3)
+                            contact=np.linalg.norm(pre.ball_pos[:,None]-pre.player_pos[:,players],axis=-1)<24.8
+                            contacts+=int(contact.sum());kick_contacts+=int((contact&(actions[:,players,2]==1)).sum())
                             obs,_,term,trunc=env.step(actions)
                             state=captured.pop()
                             good=state.scored==(BLUE if side==0 else RED)
@@ -61,7 +65,7 @@ def panel(model, reference, stadium, seed, callback, progress, n=16, steps=400, 
                         completed=wins+draws+losses
                         row=dict(opponent=opponent,scenario=scenario,seed=eval_seed,side=side,
                           policy_mode="greedy" if greedy else "sampled",
-                          decisions=steps,envs=n,gf=gf,ga=ga,wins=wins,draws=draws,losses=losses,
+                          decisions=steps,envs=n,red=n_red,blue=n_blue,gf=gf,ga=ga,wins=wins,draws=draws,losses=losses,
                           completed_episodes=completed,score=(wins+.5*draws)/completed if completed else None,
                           stationary_fraction=stationary/(n*steps),contacts=contacts,
                           kick_contact_fraction=kick_contacts/contacts if contacts else None)

@@ -49,6 +49,7 @@ from live_evaluation import panel, balanced_score
 from ppo_returns import gae_returns
 from gradient_metrics import objective_gradient_metrics
 from replay import dump_replay
+from environment import TeamObs, TeamPocketPotential
 
 # PPO / GAE hyperparameters
 T, EPOCHS, N_MB = 64, 6, 4  # rollout length, 6 update epochs, 4 minibatches per epoch
@@ -65,11 +66,28 @@ class KickoffSetter(StateSetterMutator):
         bp = np.zeros((n, 2))
         bv = np.zeros((n, 2))
         pp = np.zeros((n, engine.n_players, 2))
-        pp[:, 0] = [-200.0, 0.0]  # Red
-        if engine.n_players > 1:
-            pp[:, 1] = [200.0, 0.0]  # Blue
+        teams = engine.snapshot().team[0]
+        for team, sign in ((RED, -1.), (BLUE, 1.)):
+            players = np.flatnonzero(teams == team)
+            ys = np.linspace(-65., 65., len(players)) if len(players)>1 else [0.]
+            for player, y in zip(players, ys):
+                pp[:, player] = [sign*200., y]
         pv = np.zeros((n, engine.n_players, 2))
         return bp, bv, pp, pv
+
+
+class TeamRandomSetter(RandomStateMutator):
+    """Scatter all four players without player/player or player/ball overlaps."""
+    def sample(self, engine, n):
+        bp, bv, pp, pv = super().sample(engine,n)
+        for attempt in range(100):
+            distance = np.linalg.norm(pp[:,:,None]-pp[:,None,:],axis=-1)
+            invalid = ((distance < 32.) & ~np.eye(engine.n_players,dtype=bool)[None]).any(axis=(1,2))
+            invalid |= (np.linalg.norm(pp-bp[:,None],axis=-1)<24.8).any(axis=1)
+            if not invalid.any():
+                return bp,bv,pp,pv
+            bp[invalid],bv[invalid],pp[invalid],pv[invalid] = super().sample(engine,int(invalid.sum()))
+        raise RuntimeError('Could not sample nonoverlapping team reset')
 
 
 from haxballgym.reward import RewardFunction, VelocityBallToGoal
@@ -170,13 +188,13 @@ class PenaltyTackleLostReward(RewardFunction):
 
 
 def build_reward(table="corrected", stadium=STADIUM, tick_skip=8, approach_weight=0.15,
-                 gamma=None, progress_weight=.08, goal_weight=25., pocket_offset=22., pocket_radius=2.):
+                 gamma=None, progress_weight=.08, goal_weight=25., pocket_offset=22., pocket_radius=2., team=False):
     """Signed shaping; retain the previous table for controlled POC comparisons."""
     if table == "pbrs":
         scale = motion_scale(stadium, tick_skip)
         gamma = discount_gamma(tick_skip) if gamma is None else gamma
         return CombinedReward(
-            (DiscountedPocketPotential(scale,gamma,pocket_offset,pocket_radius),approach_weight),
+            ((TeamPocketPotential if team else DiscountedPocketPotential)(scale,gamma,pocket_offset,pocket_radius),approach_weight),
             (DiscountedBallGoalPotential(scale,gamma),progress_weight),
             (GoalReward(),goal_weight),
         )
@@ -212,9 +230,9 @@ def create_training_env(
 ):
     """Creates training environment with auto-calibrated obs_builder and multi-scenario resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
-    obs_builder = DefaultObs(pos_coef="auto")
+    obs_builder = (TeamObs if (n_red,n_blue)==(2,2) else DefaultObs)(pos_coef="auto")
     mutator = MultiSetter(
-        [KickoffSetter(), RandomStateMutator(ball_speed=3.0, rng=seed)],
+        [KickoffSetter(), (TeamRandomSetter if (n_red,n_blue)==(2,2) else RandomStateMutator)(ball_speed=3.0, rng=seed)],
         weights=[0.4, 0.6],
         rng=seed,
     )
@@ -222,7 +240,7 @@ def create_training_env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
-        reward_fn=build_reward(table, stadium, tick_skip, approach_weight, gamma, progress_weight, goal_weight, pocket_offset, pocket_radius),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight, gamma, progress_weight, goal_weight, pocket_offset, pocket_radius, team=(n_red,n_blue)==(2,2)),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -236,13 +254,13 @@ def create_eval_env(
 ):
     """Creates evaluation environment with standard kickoff resets."""
     engine = TransitionEngine(n_envs, n_red, n_blue, step_limit=2000, tick_skip=tick_skip, stadium=stadium)
-    obs_builder = DefaultObs(pos_coef="auto")
+    obs_builder = (TeamObs if (n_red,n_blue)==(2,2) else DefaultObs)(pos_coef="auto")
     mutator = KickoffSetter()
     return Env(
         engine=engine,
         obs_builder=obs_builder,
         action_parser=RepeatKickAction() if repeat_kick else DiscreteAction(kick_values=2),
-        reward_fn=build_reward(table, stadium, tick_skip, approach_weight, gamma, progress_weight, goal_weight, pocket_offset, pocket_radius),
+        reward_fn=build_reward(table, stadium, tick_skip, approach_weight, gamma, progress_weight, goal_weight, pocket_offset, pocket_radius, team=(n_red,n_blue)==(2,2)),
         termination_cond=GoalCondition(),
         truncation_cond=TimeoutCondition(2000),
         state_mutator=mutator,
@@ -297,6 +315,8 @@ def main():
     ap.add_argument("--deadline-reserve-seconds", type=float, default=120.,
                     help="reserve for final evaluation and checkpoint (default 120 s)")
     ap.add_argument("--sprint1", action="store_true", help="PBRS + separate critic + fixed curriculum + dual-mode validation")
+    ap.add_argument('--team2v2', action='store_true', help='team24 observations, PBRS, separate critic and snapshot self-play')
+    ap.add_argument('--transfer-1v1', action='store_true', help='explicit 16-to-24 actor transfer; requires --warm-start --team2v2')
     ap.add_argument("--reward-table", choices=("corrected","pbrs","simple","simple_progress1","previous"))
     group=ap.add_mutually_exclusive_group()
     group.add_argument("--separate-critic",dest="separate_critic",action="store_true")
@@ -321,7 +341,8 @@ def main():
     if resume is not None:
         if resume.get('schema_version') != 1:
             ap.error('unsupported resume schema')
-        protected=('envs','red','blue','tick_skip','seed','reward_table','separate_critic',
+        resume['config'].setdefault('team2v2',False)
+        protected=('envs','red','blue','tick_skip','seed','reward_table','separate_critic','team2v2',
                    'curriculum_frac','approach_weight','progress_weight','goal_weight',
                    'pocket_offset','pocket_radius','actor_lr','critic_lr','target_kl',
                    'eval_modes','selection_metric','timeout_bootstrap','iters','eval_envs','eval_steps','eval_every','critic_warmup_iters')
@@ -338,14 +359,24 @@ def main():
             restored_map.parent.mkdir(parents=True,exist_ok=True)
             restored_map.write_text(resume['stadium_text'])
             args.stadium=str(restored_map.resolve())
-    args.reward_table = args.reward_table or ('pbrs' if args.sprint1 else 'corrected')
-    args.separate_critic = args.sprint1 if args.separate_critic is None else args.separate_critic
+    if args.team2v2:
+        if args.sprint1:
+            ap.error('use --team2v2 instead of --sprint1 for the team task')
+        for key in ('red','blue'):
+            if '--'+key in sys.argv and getattr(args,key)!=2:
+                ap.error('--team2v2 requires --red 2 --blue 2')
+            setattr(args,key,2)
+    if args.transfer_1v1 and (not args.team2v2 or not args.warm_start or resume or args.keep_critic):
+        ap.error('--transfer-1v1 requires --team2v2 --warm-start, without --resume/--keep-critic')
+    structural = args.sprint1 or args.team2v2
+    args.reward_table = args.reward_table or ('pbrs' if structural else 'corrected')
+    args.separate_critic = structural if args.separate_critic is None else args.separate_critic
     args.curriculum_frac = (1. if args.sprint1 else 0.) if args.curriculum_frac is None else args.curriculum_frac
-    args.timeout_bootstrap = args.timeout_bootstrap or ('final' if args.sprint1 else 'zero')
-    args.eval_modes = args.eval_modes or (['greedy','sampled'] if args.sprint1 else ['greedy'])
-    args.selection_metric = args.selection_metric or ('minimum' if args.sprint1 else 'mean')
-    args.target_kl = (.03 if args.sprint1 else 0.) if args.target_kl is None else args.target_kl
-    args.critic_warmup_iters = (20 if args.sprint1 and args.separate_critic else 0) if args.critic_warmup_iters is None else args.critic_warmup_iters
+    args.timeout_bootstrap = args.timeout_bootstrap or ('final' if structural else 'zero')
+    args.eval_modes = args.eval_modes or (['greedy','sampled'] if structural else ['greedy'])
+    args.selection_metric = args.selection_metric or ('minimum' if structural else 'mean')
+    args.target_kl = (.03 if structural else 0.) if args.target_kl is None else args.target_kl
+    args.critic_warmup_iters = (20 if structural and args.separate_critic else 0) if args.critic_warmup_iters is None else args.critic_warmup_iters
     if args.critic_warmup_iters<0 or (args.critic_warmup_iters>0 and not args.separate_critic):
         ap.error('critic warmup requires a separate critic and nonnegative iteration count')
     if args.reward_table=='pbrs' and args.timeout_bootstrap!='final':
@@ -356,6 +387,10 @@ def main():
         ap.error('checkpoint-every must be positive')
     if (args.sprint1 or args.curriculum_frac>0) and (args.red,args.blue)!=(1,1):
         ap.error('Sprint 1 and curriculum are currently validated only for 1v1')
+    if (args.red,args.blue)!=(1,1) and not args.team2v2:
+        ap.error('use --team2v2 for validated four-player tensor layouts')
+    if args.team2v2 and not args.separate_critic:
+        ap.error('--team2v2 requires a separate critic')
     deadline = None
     if args.stop_at:
         try:
@@ -407,7 +442,11 @@ def main():
             raise FileNotFoundError(f"Warm-start checkpoint not found: {ws_path}")
         if ws_path.exists():
             print(f"Warm-starting policy weights from {ws_path}")
-            model.load_compatible(torch.load(ws_path,map_location=dev,weights_only=True),keep_critic=args.keep_critic)
+            state = torch.load(ws_path,map_location=dev,weights_only=True)
+            if args.transfer_1v1:
+                model.transfer_1v1_to_2v2(state)
+            else:
+                model.load_compatible(state,keep_critic=args.keep_critic)
     opp = Policy(obs_dim, n_acts).to(dev)
     opp.eval()
     if args.separate_critic:
@@ -447,15 +486,24 @@ def main():
     config = dict(vars(args), obs_dim=obs_dim, n_acts=list(n_acts), hidden=256, depth=2,
                   rollout_steps=T, epochs=EPOCHS, minibatches=N_MB, gamma=gamma,
                   reward_weights={"goal":args.goal_weight,"approach":args.approach_weight,"progress":args.progress_weight},
-                  obs_schema="default16" if obs_dim==16 else "default",ppo_contract=ppo_contract,
+                  obs_schema="team24_v1" if args.team2v2 else "default16",ppo_contract=ppo_contract,
                   repeat_kick=True, samples_per_iteration=T*B,
                   gradient_metric_sampling='first_minibatch_each_epoch',
                   actor_gradient_objective='ppo_surrogate_minus_entropy',
                   critic_gradient_objective='VF_COEF_times_value_loss',
                   revision=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip())
     config['warm_start_sha256'] = hashlib.sha256(Path(args.warm_start).read_bytes()).hexdigest() if args.warm_start else None
+    if args.team2v2:
+        config['transfer_source'] = (resume['config'].get('transfer_source') if resume else
+            dict(path=args.warm_start,sha256=config['warm_start_sha256'],method='actor16_to_team24_zero_extension')
+            if args.transfer_1v1 else None)
+        config['selfplay_contract'] = dict(snapshot_every=SNAPSHOT_EVERY,pool_size=POOL_SIZE,
+            past_snapshot_probability=POOL_PROB,assignment='one_frozen_opponent_per_rollout',
+            shared_policy_per_team=True)
+        if resume and resume['config'].get('selfplay_contract',config['selfplay_contract'])!=config['selfplay_contract']:
+            ap.error('resume self-play contract differs from checkpoint')
     telemetry = Telemetry(out, config)
-    meter = RewardMeter(env.reward_fn)
+    meter = RewardMeter(env.reward_fn,n_red=args.red)
     env.reward_fn = meter
     reference = Policy(obs_dim,n_acts).to(dev)
     reference.load_actor_state(model.actor_state_dict()); reference.eval(); reference.requires_grad_(False)
@@ -515,7 +563,7 @@ def main():
               lambda case,total,bot,scenario:telemetry.update(phase='evaluating',evaluation_completed=case,
                 evaluation_total=total,evaluation_opponent=bot,evaluation_scenario=scenario,evaluation_mode=mode),
               n=args.eval_envs,steps=args.eval_steps,tick_skip=args.tick_skip,greedy=mode=='greedy',
-              extra_opponents={f'anchor_{i}':a for i,a in enumerate(anchors)}))
+              extra_opponents={f'anchor_{i}':a for i,a in enumerate(anchors)},n_red=args.red,n_blue=args.blue))
         mean_score=balanced_score(rows)
         groups={f'{mode}_{scenario}':balanced_score([r for r in rows if r['policy_mode']==mode and r['scenario']==scenario])
                 for mode in args.eval_modes for scenario in ('random','kickoff')}
@@ -541,6 +589,7 @@ def main():
         completed = start_iteration
         save_resume(completed)
         for it in range(start_iteration+1,args.iters+1):
+            if (out/'STOP').exists():stop_requested=True
             if stop_requested:break
             if deadline is not None and time.time() >= deadline - args.deadline_reserve_seconds:
                 break

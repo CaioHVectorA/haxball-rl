@@ -40,28 +40,23 @@ const CONFIG = {
   flipY: process.env.FLIP_Y === "1", // flip if the bot moves up/down the wrong way
 };
 const BOT_ID = 65535;
+const runtime = require("./policy_runtime");
 const RED = 1, BLUE = 2, SPEC = 0;
 
 // ── Policy (the trained MLP; weights from export_policy.py) ───────────────────
-const VS = 1 / 10;
 // Obs normalization is map-aware and travels in policy.json (pos_coef/goal_x), so the room
 // obs matches what the bot trained on (futsal's bigger field needs a different scale than
 // classic). Absent fields fall back to the classic defaults. `let` so a reload updates them.
-let PX, PY, GOAL_X;
 const POLICY_PATH = process.env.POLICY_PATH ? path.resolve(process.env.POLICY_PATH) : path.join(__dirname, "policy.json");
 // `let` so we can HOT-RELOAD new weights live (the `!reload` command / file-watch) without
 // restarting the room — re-export policy.json, the running bot picks it up, same link.
-let P = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
+let P = runtime.validatePolicy(JSON.parse(fs.readFileSync(POLICY_PATH, "utf8")));
+const BOT_IDS = Array.from({length: P.team_size || 1}, (_, i) => BOT_ID - i);
 let roomRef = null; // set in onOpen; lets the file-watch announce the new bot in-room
-function applyObsParams() {
-  PX = P.pos_coef ? P.pos_coef[0] : 1 / 420;
-  PY = P.pos_coef ? P.pos_coef[1] : 1 / 200;
-  GOAL_X = P.goal_x != null ? P.goal_x : 370;
-}
-applyObsParams();
 function reloadPolicy() {
-  P = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
-  applyObsParams(); // pick up the new bot's obs scaling too (not just weights)
+  const next = runtime.validatePolicy(JSON.parse(fs.readFileSync(POLICY_PATH, "utf8")));
+  if ((next.team_size || 1) !== BOT_IDS.length) throw new Error("Restart room to change team size");
+  P = next;
   return P.obs_dim;
 }
 // auto-reload whenever policy.json changes on disk (so a fresh export swaps the bot instantly)
@@ -75,125 +70,70 @@ try {
   });
 } catch { /* watch unsupported; !reload still works */ }
 
-function linear(x, layer) {
-  const out = new Array(layer.b.length);
-  for (let i = 0; i < out.length; i++) {
-    let sum = layer.b[i];
-    const row = layer.w[i];
-    for (let j = 0; j < x.length; j++) sum += row[j] * x[j];
-    out[i] = sum;
-  }
-  return out;
-}
-const tanh = (a) => a.map(Math.tanh);
-const argmax = (a) => a.reduce((best, v, i, arr) => (v > arr[best] ? i : best), 0);
-
-function act(obs) {
-  let h = tanh(linear(obs, P.trunk0));
-  h = tanh(linear(h, P.trunk2));
-  const kickVal = argmax(linear(h, P.head_k)); // 0=release, 1=hold, 2=rocket (3-way heads only)
-  return {
-    dx: argmax(linear(h, P.head_x)) - 1, // {0,1,2} -> {-1,0,1}
-    dy: argmax(linear(h, P.head_y)) - 1,
-    kick: kickVal >= 1,
-    rocket: kickVal === 2, // rapid-fire: re-kick every tick
-  };
-}
-
-// Goal-relative, side-aware observation — identical to haxballgym DefaultObs.
-// CRITICAL: DefaultObs MIRRORS the x-axis for blue (so both teams see "attacking +x" and one
-// net plays both sides). We must apply the SAME mirror here — `sx = -1` for blue negates every
-// x-component — or a blue bot gets left/right inverted and runs the wrong way. The action's dx
-// is un-mirrored by the same `sx` in controlBot (matches env.py `engine_actions[...,0]*=mirror`).
-function buildObs(self, ball, opp, team) {
-  const fy = CONFIG.flipY ? -1 : 1;
-  const sx = team === RED ? 1 : -1; // blue x-mirror, matching DefaultObs (out[...,0::2] *= sx)
-  const targetX = team === RED ? GOAL_X : -GOAL_X; // attacked goal in WORLD: red +x, blue -x
-  return [
-    sx * self.pos.x * PX, self.pos.y * fy * PY,
-    sx * self.speed.x * VS, self.speed.y * fy * VS,
-    sx * (ball.pos.x - self.pos.x) * PX, (ball.pos.y - self.pos.y) * fy * PY,
-    sx * ball.speed.x * VS, ball.speed.y * fy * VS,
-    sx * (targetX - self.pos.x) * PX, -self.pos.y * fy * PY,
-    sx * (-targetX - self.pos.x) * PX, -self.pos.y * fy * PY,
-    sx * (opp.pos.x - self.pos.x) * PX, (opp.pos.y - self.pos.y) * fy * PY,
-    sx * opp.speed.x * VS, opp.speed.y * fy * VS,
-  ];
-}
+function act(obs) { return runtime.act(P, obs); }
 
 // ── Room ──────────────────────────────────────────────────────────────────────
-let tick = 0, lastKey = -1, decisions = 0;
-const DEBUG = process.env.DEBUG === "1";
+let tick = 0, decisions = 0;
+const lastKeys = new Map();
 const announce = (room, msg, to = null, color = 0x88ccff) =>
   Utils.runAfterGameTick(() => room.sendAnnouncement(msg, to, color, "normal", 0));
 const after = (fn) => Utils.runAfterGameTick(fn);
 
 function humans(room) {
-  return room.players.filter((p) => p.id !== BOT_ID);
+  return room.players.filter((p) => !BOT_IDS.includes(p.id));
 }
 
 function startIfReady(room) {
-  const blue = humans(room).find((p) => p.team?.id === BLUE);
-  if (blue && !room.gameState) after(() => room.startGame());
+  const size = P.team_size || 1;
+  const ready = [RED, BLUE].every(team => room.players.filter(p => p.team?.id === team).length === size);
+  if (ready && !room.gameState) after(() => room.startGame());
 }
 
 function controlBot(room) {
   if (++tick % CONFIG.tickSkip !== 0) {
-    if (P.repeat_kick && lastKey >= 0 && (lastKey & 16)) {
-      after(() => {
-        room.fakeSendPlayerInput(lastKey & ~16, BOT_ID);
-        room.fakeSendPlayerInput(lastKey, BOT_ID);
+    for (const id of BOT_IDS) {
+      const key = lastKeys.get(id);
+      if (P.repeat_kick && key != null && (key & 16)) after(() => {
+        room.fakeSendPlayerInput(key & ~16, id);
+        room.fakeSendPlayerInput(key, id);
       });
     }
     return;
   }
   room.extrapolate();
-  const me = room.getPlayer(BOT_ID);
-  const self = me?.disc?.ext;
   const ball = room.gameState?.physicsState?.discs?.[0];
-  const opp = humans(room).find((p) => p.team?.id && p.team.id !== SPEC)?.disc?.ext;
-  if (!self || !ball || !opp) return;
-
-  const { dx, dy, kick, rocket } = act(buildObs(self, ball, opp, me.team.id));
-  // un-mirror dx for blue (the obs was x-mirrored): world dx = sx·dx, matching env.py.
-  const sx = me.team.id === RED ? 1 : -1;
-  if (DEBUG && tick % (CONFIG.tickSkip * 15) === 0) {
-    const wdx = sx * dx, wdy = CONFIG.flipY ? -dy : dy;
-    const tbx = Math.sign(ball.pos.x - self.pos.x), tby = Math.sign(ball.pos.y - self.pos.y);
-    const d = Math.hypot(ball.pos.x - self.pos.x, ball.pos.y - self.pos.y);
-    console.log(
-      `bot(${me.team.id})@(${self.pos.x.toFixed(0)},${self.pos.y.toFixed(0)}) ` +
-      `ball@(${ball.pos.x.toFixed(0)},${ball.pos.y.toFixed(0)}) v(${ball.speed.x.toFixed(1)},${ball.speed.y.toFixed(1)}) ` +
-      `dist=${d.toFixed(0)} move(${wdx},${wdy}) kick=${kick} toBall(${tbx},${tby}) ` +
-      (wdx === tbx && wdy === tby ? "TOWARD" : "off")
-    );
+  if (!ball) return;
+  for (const id of BOT_IDS) {
+    const me = room.getPlayer(id), self = me?.disc?.ext;
+    if (!self) continue;
+    const others = room.players.filter(p => p.id !== id && p.team?.id !== SPEC && p.disc?.ext);
+    const disc = p => ({id: p.id, pos: p.disc.ext.pos, speed: p.disc.ext.speed});
+    const mates = others.filter(p => p.team.id === me.team.id).map(disc);
+    const opponents = others.filter(p => p.team.id !== me.team.id).map(disc);
+    if (mates.length !== BOT_IDS.length - 1 || opponents.length !== BOT_IDS.length) continue;
+    const obs = runtime.buildObs(P, self, ball, mates, opponents, me.team.id, CONFIG.flipY);
+    const {dx, dy, kick} = act(obs);
+    const sx = me.team.id === RED ? 1 : -1;
+    const key = Utils.keyState(sx * dx, CONFIG.flipY ? -dy : dy, kick);
+    after(() => {
+      if (kick) room.fakeSendPlayerInput(key & ~16, id);
+      room.fakeSendPlayerInput(key, id);
+      lastKeys.set(id, key);
+    });
   }
-  const key = Utils.keyState(sx * dx, CONFIG.flipY ? -dy : dy, kick);
-  after(() => {
-    if (kick) {
-      // Re-arm on decisions; repeat_kick policies also re-arm between decisions.
-      room.fakeSendPlayerInput(key & ~16, BOT_ID);
-      room.fakeSendPlayerInput(key, BOT_ID);
-      lastKey = key;
-    } else {
-      room.fakeSendPlayerInput(key, BOT_ID);
-      lastKey = key;
-    }
-  });
 }
 
 function handleCommand(room, player, text) {
   const [cmd] = text.slice(1).toLowerCase().split(/\s+/);
   switch (cmd) {
     case "restart": after(() => { room.stopGame(); room.startGame(); }); break;
-    case "start": after(() => room.startGame()); break;
+    case "start": startIfReady(room); break;
     case "stop": after(() => room.stopGame()); break;
     case "swap": // swap the bot and you between teams
       after(() => {
-        const me = humans(room)[0];
-        const botTeam = room.getPlayer(BOT_ID).team.id;
-        room.setPlayerTeam(BOT_ID, botTeam === RED ? BLUE : RED);
-        if (me) room.setPlayerTeam(me.id, botTeam === RED ? RED : BLUE);
+        for (const p of room.players.filter(p => p.team?.id === RED || p.team?.id === BLUE)) {
+          room.setPlayerTeam(p.id, p.team.id === RED ? BLUE : RED);
+        }
       });
       break;
     case "reload": // hot-swap the bot's weights from policy.json — no room restart
@@ -235,26 +175,34 @@ Room.create(
           console.log(`stadium -> ${P.stadium_name || "custom"}`);
         } catch (e) { console.log("stadium load failed:", e.message); }
       }
-      room.fakePlayerJoin(BOT_ID, `🤖 RL · ${P.name || "bot"}`, "tr", "🤖", "fake-conn", "fake-auth");
-      after(() => room.setPlayerTeam(BOT_ID, RED));
+      for (const id of BOT_IDS) {
+      room.fakePlayerJoin(id, `🤖 RL · ${P.name || "bot"}`, "tr", "🤖", "fake-conn", "fake-auth");
+      after(() => room.setPlayerTeam(id, RED));
+      }
 
       room.onRoomLink = (link) =>
         console.log(`\n  >>> JOIN: ${link}\n  >>> password: ${CONFIG.password}\n`);
 
       room.onPlayerJoin = (player) => {
+        if (BOT_IDS.includes(player.id)) return;
         console.log(`+ ${player.name} (id ${player.id})`);
         after(() => {
           room.setPlayerAdmin(player.id, true); // you control the room (restart, teams, …)
-          const blueTaken = humans(room).some((p) => p.id !== player.id && p.team?.id === BLUE);
-          room.setPlayerTeam(player.id, blueTaken ? SPEC : BLUE);
+          const botTeam = room.getPlayer(BOT_ID).team?.id || RED;
+          const humanTeam = botTeam === RED ? BLUE : RED;
+          const full = humans(room).filter(p => p.id !== player.id && p.team?.id === humanTeam).length >= BOT_IDS.length;
+          room.setPlayerTeam(player.id, full ? SPEC : humanTeam);
+          startIfReady(room);
         });
         announce(room, `You're admin. Bot on red, playing "${P.name || "bot"}". Type !help.`, player.id);
         startIfReady(room);
       };
 
       room.onPlayerLeave = () => {
-        if (!humans(room).some((p) => p.team?.id === BLUE) && room.gameState) after(() => room.stopGame());
+        const size = P.team_size || 1;
+        if (room.gameState && [RED,BLUE].some(team => room.players.filter(p => p.team?.id === team).length !== size)) after(() => room.stopGame());
       };
+      room.onPlayerTeamChange = () => startIfReady(room);
 
       // chat commands (suppress them from the public chat)
       room.onBeforeOperationReceived = (type, msg) => {
@@ -269,7 +217,7 @@ Room.create(
       room.onGameEnd = () => setTimeout(() => startIfReady(room), 3000);
       room.onTeamGoal = () => startIfReady(room);
 
-      room.onGameStart = () => { tick = 0; lastKey = -1; decisions = 0; };
+      room.onGameStart = () => { tick = 0; lastKeys.clear(); decisions = 0; };
       room.onGameTick = () => controlBot(room);
     },
     onClose: (msg) => {

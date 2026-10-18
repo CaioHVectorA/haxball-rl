@@ -3,9 +3,39 @@ from pathlib import Path
 import json
 import numpy as np
 from haxballgym import DiscreteAction
+from haxballgym.obs import DefaultObs
 from haxballgym.reward import RewardFunction
 
 STADIUM = str(Path(__file__).resolve().parent.parent / 'maps' / 'futsal_1v1.hbs')
+
+
+class TeamObs(DefaultObs):
+    """2v2: base 12, nearest opponent 4, teammate 4, second opponent 4.
+
+    Slots describe relations, not engine player indices. The first 16 features
+    retain the 1v1 meaning for transfer; x is mirrored for the blue team.
+    """
+    def obs_dim(self, n_players):
+        if n_players != 4:
+            raise ValueError('TeamObs requires exactly four players')
+        return 24
+
+    def build_obs(self, state):
+        raw = super().build_obs(state)
+        self.obs_dim(state.n_players)
+        out = raw.copy()
+        for player in range(4):
+            others = [i for i in range(4) if i != player]
+            same = state.team[:, others] == state.team[:, player, None]
+            if not np.all(same.sum(axis=1) == 1):
+                raise ValueError('TeamObs requires two players per team')
+            distances = np.linalg.norm(state.player_pos[:, others]-state.player_pos[:, player, None], axis=-1)
+            opponent_order = np.argsort(np.where(same, np.inf, distances), axis=1, kind='stable')[:, :2]
+            mate = same.argmax(axis=1)
+            order = np.stack([opponent_order[:, 0], mate, opponent_order[:, 1]], axis=1)
+            blocks = raw[:, player, 12:].reshape(state.n_envs, 3, 4)
+            out[:, player, 12:] = np.take_along_axis(blocks, order[:, :, None], axis=1).reshape(state.n_envs, 12)
+        return out
 
 
 def motion_scale(stadium: str | None, tick_skip: int) -> float:
@@ -126,6 +156,14 @@ class DiscountedPocketPotential(DiscountedPotentialReward):
         pocket = ball-self.pocket_offset*direction
         distance = np.linalg.norm(state.player_pos-pocket, axis=-1)
         return -np.clip(distance-self.plateau_radius, 0., self.max_distance)/self.scale
+
+
+class TeamPocketPotential(DiscountedPocketPotential):
+    """Shared PBRS potential of the best-positioned teammate, not two ball chasers."""
+    def potential(self, state):
+        individual = super().potential(state)
+        same_team = state.team[:, :, None] == state.team[:, None, :]
+        return np.max(np.where(same_team, individual[:, None, :], -np.inf), axis=-1)
 
 
 class DiscountedBallGoalPotential(DiscountedPotentialReward):
