@@ -1,0 +1,20 @@
+{
+  "run": "runs\\team2v2_20261018_125908",
+  "branch": "gpt_2v2",
+  "source_model": "models/sprint1_10000/model.pt",
+  "source_iteration": 9900,
+  "source_sha256": "abc8b46418ed57179bc5da6d2649a5c93bf2122b6888e1de6278f99329fb69cb",
+  "training_budget": 10000,
+  "checkpoint_iteration": 50,
+  "red": 2,
+  "blue": 2,
+  "obs_schema": "team24_v1",
+  "device": "cuda",
+  "envs": 256,
+  "tests": {
+    "team_checks": 6,
+    "cuda_train_and_resume": "passed",
+    "javascript_parity": "passed",
+    "legacy_suite": "38/39; Linux /proc watcher test fails on Windows"
+  }
+}
